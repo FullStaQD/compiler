@@ -55,8 +55,8 @@ Please adhere to the following guidelines to help the project grow sustainably.
   Respond to comments to signal that you have addressed the feedback.
   Do not resolve review comments yourself; the reviewer will do so once satisfied.
 - Re-request a review after pushing changes that address feedback.
-- Do not squash commits locally; maintainers typically squash on merge.
-  Avoid rebasing or force-pushing before reviews; you may rebase after addressing feedback if desired.
+- Avoid rebasing and force-pushing _after_ you requested your first review; you may
+  rebase after receiving approval, if desired.
 
 ### Use of AI and LLMs
 
