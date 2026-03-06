@@ -56,7 +56,7 @@ Please adhere to the following guidelines to help the project grow sustainably.
   Do not resolve review comments yourself; the reviewer will do so once satisfied.
 - Re-request a review after pushing changes that address feedback.
 - Avoid rebasing and force-pushing _after_ you requested your first review; you may
-  rebase after addressing feedback if desired.
+  rebase after receiving approval, if desired.
 
 ### Use of AI and LLMs
 
