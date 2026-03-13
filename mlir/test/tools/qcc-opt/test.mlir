@@ -1,0 +1,3 @@
+func.func @test() -> () {
+  return
+}
