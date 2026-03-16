@@ -13,6 +13,7 @@ if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
     )
 endif()
 
+# FIXME: document that order is imporant. And briefly why.
 include(mlir/cmake/ExternalDependencies.cmake)
 include(mlir/cmake/SetupMLIR.cmake)
 

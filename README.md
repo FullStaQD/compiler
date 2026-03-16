@@ -40,14 +40,14 @@ If you prefer to build outside the container, you need LLVM/MLIR 22.1.0 installe
 ---
 ## Building
 ```
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=path/to/mlir/installation/dir -DLLVM_DIR=/path/to/llvm/installation/dir
+cmake -S . -B build/dev -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=path/to/mlir/installation/dir -DLLVM_DIR=/path/to/llvm/installation/dir
 ```
 
 > **Note:** If using the dev container, LLVM/MLIR is installed at `/opt/llvm`, so use `-DMLIR_DIR=/opt/llvm/lib/cmake/mlir` and `-DLLVM_DIR=/opt/llvm/lib/cmake/llvm`.
 
 followed by:
 ```
-cmake --build build
+cmake --build build/dev
 ```
 > **Note:** this command is going to Compile `MQTCore` as well. So it may take some time to complete. _However_, way less than compiling the whole LLVM/MLIR project. 
 

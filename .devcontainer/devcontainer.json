@@ -1,14 +1,16 @@
 {
     "name": "FullStaQD MLIR",
-    "image": "ubuntu:24.04",
-    "postCreateCommand": "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build clang clang-tools gcc g++ curl zstd git zlib1g-dev && curl -LsSf https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.sh | bash -s -- -v 22.1.0 -p /opt/llvm",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "."
+    },
+    "postCreateCommand": "",
     "customizations": {
         "vscode": {
             "extensions": [
+                "llvm-vs-code-extensions.vscode-clangd",
                 "llvm-vs-code-extensions.vscode-mlir",
-                "ms-vscode.cpptools",
-                "ms-vscode.cmake-tools",
-                "llvm-vs-code-extensions.vscode-clangd"
+                "ms-vscode.cmake-tools"
             ],
             "settings": {
                 "cmake.configureArgs": [
@@ -16,8 +18,9 @@
                     "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm"
                 ],
                 "clangd.arguments": [
-                    "--compile-commands-dir=${workspaceFolder}/build"
-                ]
+                    "--compile-commands-dir=${workspaceFolder}/build/dev"
+                ],
+                "clangd.path": "clangd"
             }
         }
     }
