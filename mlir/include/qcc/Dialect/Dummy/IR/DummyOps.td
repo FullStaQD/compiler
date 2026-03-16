@@ -1,5 +1,3 @@
-// ParityQC © 2025. See LICENSE.md in the top level directory for details.
-
 #ifndef INCLUDE_QCC_DIALECT_DUMMY_IR_DUMMYOPS_TD_
 #define INCLUDE_QCC_DIALECT_DUMMY_IR_DUMMYOPS_TD_
 

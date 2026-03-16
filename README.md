@@ -49,7 +49,7 @@ followed by:
 ```
 cmake --build build/dev
 ```
-> **Note:** this command is going to Compile `MQTCore` as well. So it may take some time to complete. _However_, way less than compiling the whole LLVM/MLIR project. 
+> **Note:** this command is going to compile `MQTCore` as well. So it may take some time to complete. _However_, way less than compiling the whole LLVM/MLIR project. 
 
 
 ---

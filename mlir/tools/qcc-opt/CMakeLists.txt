@@ -8,8 +8,3 @@ target_link_libraries(qcc-opt PRIVATE
     QCCMLIRDummyDialect
     MLIRQCDialect
 )
-
-# target_include_directories(qcc-opt PRIVATE
-#     ${CMAKE_BINARY_DIR}/_deps/mqt-core-src/mlir/include
-#     ${CMAKE_BINARY_DIR}/_deps/mqt-core-build/mlir/include
-# )

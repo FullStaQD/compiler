@@ -10,7 +10,6 @@ class Dummy_Type<string name, string typeMnemonic> : TypeDef<Dummy_Dialect, name
   let mnemonic = typeMnemonic;
 }
 
-/// Dummy operations act on Qubits as their "primary" arguments.
 def Qubit : Dummy_Type<"Qubit", "qubit"> {
 
   let summary = "Represents a single qubit.";

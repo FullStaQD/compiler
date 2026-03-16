@@ -5,7 +5,6 @@
 using namespace mlir;
 using namespace qcc::dummy;
 
-// All .cpp.inc at file scope — MLIR_DEFINE_EXPLICIT_TYPE_ID requires global scope
 #include "qcc/Dialect/Dummy/IR/DummyDialect.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES

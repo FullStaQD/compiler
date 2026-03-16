@@ -1,5 +1,3 @@
-// ParityQC © 2025. See LICENSE.md in the top level directory for details.
-
 #include "qcc/Dialect/Dummy/IR/Dummy.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"

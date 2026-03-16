@@ -6,14 +6,15 @@ project(
     LANGUAGES CXX C
 )
 
-if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
+if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 20)
     set(CMAKE_CXX_STANDARD
-        17
+        20
         CACHE STRING "C++ standard to conform to"
     )
 endif()
 
-# FIXME: document that order is imporant. And briefly why.
+# ExternalDependencies MUST be included before SetupMLIR.
+# `mqt-core` calls find_package(MLIR) internally. Setting up MLIR here before they are done with the build would create conflicts.
 include(mlir/cmake/ExternalDependencies.cmake)
 include(mlir/cmake/SetupMLIR.cmake)
 

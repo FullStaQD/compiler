@@ -1,8 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS DummyDialect.td)
-# add_mlir_dialect(DummyDialect dummy)
-# add_mlir_doc(DummyDialect Dummy Dialect/ -gen-dialect-doc)
 
-# Explicitly generate dialect decls/defs
 mlir_tablegen(DummyDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(DummyDialect.cpp.inc -gen-dialect-defs)
 add_public_tablegen_target(QCCMLIRDummyDialectIncGen)
