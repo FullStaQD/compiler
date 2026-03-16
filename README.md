@@ -40,10 +40,7 @@ If you prefer to build outside the container, you need LLVM/MLIR 22.1.0 installe
 ---
 ## Building
 ```
-cmake -S . -B build -G Ninja \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DMLIR_DIR=path/to/mlir/installation/dir \
-    -DLLVM_DIR=/path/to/llvm/installation/dir
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=path/to/mlir/installation/dir -DLLVM_DIR=/path/to/llvm/installation/dir
 ```
 
 > **Note:** If using the dev container, LLVM/MLIR is installed at `/opt/llvm`, so use `-DMLIR_DIR=/opt/llvm/lib/cmake/mlir` and `-DLLVM_DIR=/opt/llvm/lib/cmake/llvm`.
@@ -52,11 +49,13 @@ followed by:
 ```
 cmake --build build
 ```
+> **Note:** this command is going to Compile `MQTCore` as well. So it may take some time to complete. _However_, way less than compiling the whole LLVM/MLIR project. 
+
 
 ---
 ## Testing
 
-Once the build has completed, verify everything works:
+Once the build has completed, verify that everything works using:
 ```
 ./build/mlir/tools/qcc-opt/qcc-opt mlir/test/tools/qcc-opt/test.mlir 
 ```
@@ -64,8 +63,12 @@ Once the build has completed, verify everything works:
 Expected output:
 ```
 module {
-  func.func @test() {
-    return
+  func.func @main() -> i64 attributes {passthrough = ["entry_point"]} {
+    %0 = qc.alloc("q", 1, 0) : !qc.qubit
+    qc.x %0 : !qc.qubit
+    qc.dealloc %0 : !qc.qubit
+    %c0_i64 = arith.constant 0 : i64
+    return %c0_i64 : i64
   }
 }
 ```

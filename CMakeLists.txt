@@ -13,8 +13,8 @@ if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 17)
     )
 endif()
 
-include(mlir/cmake/SetupMLIR.cmake)
 include(mlir/cmake/ExternalDependencies.cmake)
+include(mlir/cmake/SetupMLIR.cmake)
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})

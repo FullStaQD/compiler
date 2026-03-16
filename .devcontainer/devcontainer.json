@@ -1,7 +1,7 @@
 {
     "name": "FullStaQD MLIR",
     "image": "ubuntu:24.04",
-    "postCreateCommand": "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build clang clang-tools curl zstd git zlib1g-dev && ln -sf $(find /usr/bin -name 'clang-scan-deps*' | head -1) /usr/bin/clang-scan-deps && curl -LsSf https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.sh | bash -s -- -v 22.1.0 -p /opt/llvm",
+    "postCreateCommand": "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake ninja-build clang clang-tools gcc g++ curl zstd git zlib1g-dev && curl -LsSf https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.sh | bash -s -- -v 22.1.0 -p /opt/llvm",
     "customizations": {
         "vscode": {
             "extensions": [
