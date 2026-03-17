@@ -1,5 +1,5 @@
 format:
-  line_width: 100
+  line_width: 120
   keyword_case: "upper"
   autosort: true
 
