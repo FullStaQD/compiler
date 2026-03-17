@@ -11,6 +11,11 @@
 #     prek install
 #
 
+ci:
+  autoupdate_commit_msg: "⬆️🪝 update pre-commit hooks"
+  autoupdate_schedule: quarterly
+  autofix_commit_msg: "🎨 pre-commit fixes"
+
 repos:
   # Priority 0: Fast validation and independent fixers
 
