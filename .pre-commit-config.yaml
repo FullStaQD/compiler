@@ -1,3 +1,7 @@
+# We recommend using prek:
+#
+#     https://prek.j178.dev/
+#
 # To run all pre-commit checks, use:
 #
 #     prek run -a
