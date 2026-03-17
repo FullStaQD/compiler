@@ -1,3 +1,4 @@
+// RUN: qcc-opt %s
 module {                                                                                                             
   func.func @main() -> i64 attributes {passthrough = ["entry_point"]} {                                              
     %0 = qc.alloc("q", 1, 0) : !qc.qubit                                                                             

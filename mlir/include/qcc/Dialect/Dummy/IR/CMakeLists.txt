@@ -2,14 +2,14 @@ set(LLVM_TARGET_DEFINITIONS DummyDialect.td)
 
 mlir_tablegen(DummyDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(DummyDialect.cpp.inc -gen-dialect-defs)
-add_public_tablegen_target(QCCMLIRDummyDialectIncGen)
+add_public_tablegen_target(QCCDummyDialectIncGen)
 
 set(LLVM_TARGET_DEFINITIONS DummyTypes.td)
 mlir_tablegen(DummyTypes.h.inc -gen-typedef-decls --typedefs-dialect=dummy)
 mlir_tablegen(DummyTypes.cpp.inc -gen-typedef-defs --typedefs-dialect=dummy)
-add_public_tablegen_target(QCCMLIRDummyTypesIncGen)
+add_public_tablegen_target(QCCDummyTypesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS DummyOps.td)
 mlir_tablegen(DummyOps.h.inc -gen-op-decls)
 mlir_tablegen(DummyOps.cpp.inc -gen-op-defs)
-add_public_tablegen_target(QCCMLIRDummyOpsIncGen)
+add_public_tablegen_target(QCCDummyOpsIncGen)

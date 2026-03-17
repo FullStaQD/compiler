@@ -1,5 +1,4 @@
-#ifndef INCLUDE_QCC_DIALECT_DUMMY_IR_DUMMY_H_
-#define INCLUDE_QCC_DIALECT_DUMMY_IR_DUMMY_H_
+#pragma once
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -29,9 +28,3 @@
 
 #define GET_OP_CLASSES
 #include "qcc/Dialect/Dummy/IR/DummyOps.h.inc"
-
-namespace qcc {
-namespace dummy {} // namespace dummy
-} // namespace qcc
-
-#endif // INCLUDE_QCC_DIALECT_DUMMY_IR_DUMMY_H_f

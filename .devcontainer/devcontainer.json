@@ -5,6 +5,12 @@
         "context": "."
     },
     "postCreateCommand": "",
+    // To run just cmake -S . -B build/dev -G Ninja
+    "remoteEnv": {
+        "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
+        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+    },
     "customizations": {
         "vscode": {
             "extensions": [
@@ -14,6 +20,7 @@
             ],
             "settings": {
                 "cmake.configureArgs": [
+                    "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
                     "-DMLIR_DIR=/opt/llvm/lib/cmake/mlir",
                     "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm"
                 ],

@@ -1,11 +1,11 @@
-add_mlir_dialect_library(QCCMLIRDummyDialect
+add_mlir_dialect_library(QCCDummyDialect
   DummyDialect.cpp
   DummyOps.cpp
 
   DEPENDS
-  QCCMLIRDummyDialectIncGen
-  QCCMLIRDummyTypesIncGen
-  QCCMLIRDummyOpsIncGen
+  QCCDummyDialectIncGen
+  QCCDummyTypesIncGen
+  QCCDummyOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

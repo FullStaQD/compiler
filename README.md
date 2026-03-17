@@ -35,40 +35,46 @@ The easiest way to get started is via the provided dev container, which automati
 4. Run the build commands below
 
 ### Option 2: Manual Setup
-If you prefer to build outside the container, you need LLVM/MLIR 22.1.0 installed. If you have no previous installation, check the guide [here](https://mqt.readthedocs.io/projects/core/en/latest/installation.html#setting-up-mlir).
+If you prefer to build outside the container, you need LLVM/MLIR >=21.1.0 installed. If you have no previous installation, check the guide [here](https://mqt.readthedocs.io/projects/core/en/latest/installation.html#setting-up-mlir).
 
 ---
 ## Building
+If you are using a Dev container, then u just need to run the following command: 
 ```
-cmake -S . -B build/dev -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=path/to/mlir/installation/dir -DLLVM_DIR=/path/to/llvm/installation/dir
+ cmake -S . -B build/dev -G Ninja -DLLVM_EXTERNAL_LIT=$(which lit) 
 ```
 
-> **Note:** If using the dev container, LLVM/MLIR is installed at `/opt/llvm`, so use `-DMLIR_DIR=/opt/llvm/lib/cmake/mlir` and `-DLLVM_DIR=/opt/llvm/lib/cmake/llvm`.
+On the other hand, if you manually installed LLVM and MLIR, run:
+```
+cmake -S . -B build/dev -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=path/to/mlir/installation/dir -DLLVM_DIR=/path/to/llvm/installation/dir -DLLVM_EXTERNAL_LIT=$(which lit) 
+```
+
+In both cases, you need to run this:
 
 followed by:
 ```
 cmake --build build/dev
 ```
-> **Note:** this command is going to compile `MQTCore` as well. So it may take some time to complete. _However_, way less than compiling the whole LLVM/MLIR project. 
 
+> **Note for Windows users:** if you are not using Linux/macOS where the build type is set at configure time., you need to specify the build configuration explicitly:
+> ```
+> cmake --build build/dev --config RelWithDebInfo
+> ```
+
+### Post build verification
+
+To make sure that the build procedure worked correctly, run the following:
+```
+./build/mlir/tools/qcc-opt/qcc-opt mlir/test/tools/qcc-opt/mqt-core-integration-test.mlir 
+```
+and it should output some plain mlir source.
 
 ---
+
 ## Testing
 
-Once the build has completed, verify that everything works using:
+Once the project has been built, it is possible to run the tests using the following command:
 ```
-./build/mlir/tools/qcc-opt/qcc-opt mlir/test/tools/qcc-opt/test.mlir 
+cmake --build build/dev --target test-qcc-project
 ```
-
-Expected output:
-```
-module {
-  func.func @main() -> i64 attributes {passthrough = ["entry_point"]} {
-    %0 = qc.alloc("q", 1, 0) : !qc.qubit
-    qc.x %0 : !qc.qubit
-    qc.dealloc %0 : !qc.qubit
-    %c0_i64 = arith.constant 0 : i64
-    return %c0_i64 : i64
-  }
-}
-```
+If everything works correctly, it should print a 100% success rate. 

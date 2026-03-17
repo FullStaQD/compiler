@@ -13,9 +13,3 @@
 
 #include <atomic>
 #include <cmath>
-
-namespace qcc {
-namespace dummy {
-namespace impl {} // namespace impl
-} // namespace dummy
-} // namespace parityqc

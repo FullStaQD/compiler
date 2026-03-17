@@ -8,7 +8,7 @@ def Dummy_Dialect : Dialect {
   let name = "dummy";
   let summary = "Basic dummy dialect.";
   let description = [{
-    At the moment, this dialect is a stub whose purpose is to test the C API and the Python bindings.
+    A dummy dialect to setup the project.
   }];
   let cppNamespace = "::qcc::dummy";
 
