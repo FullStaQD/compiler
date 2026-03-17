@@ -74,5 +74,5 @@ repos:
     rev: v3.8.1
     hooks:
       - id: prettier
-        types_or: [yaml, markdown, html, css, scss, javascript, json, json5]
+        types_or: [yaml, markdown, json5]
         priority: 1
