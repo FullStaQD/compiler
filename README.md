@@ -39,7 +39,7 @@ If you prefer to build outside the container, you need LLVM/MLIR >=21.1.0 instal
 
 ---
 ## Building
-If you are using a Dev container, then u just need to run the following command: 
+If you are using a Dev container, then you just need to run the following command: 
 ```
  cmake -S . -B build/dev -G Ninja -DLLVM_EXTERNAL_LIT=$(which lit) 
 ```
@@ -56,10 +56,10 @@ followed by:
 cmake --build build/dev
 ```
 
-> **Note for Windows users:** if you are not using Linux/macOS where the build type is set at configure time., you need to specify the build configuration explicitly:
-> ```
-> cmake --build build/dev --config RelWithDebInfo
-> ```
+> [!NOTE]
+>
+> If you are not using a single-config generator (such as when using MSVC on Windows), you need to specify the build configuration explicitly for the build command:
+> 
 
 ### Post build verification
 
@@ -67,7 +67,7 @@ To make sure that the build procedure worked correctly, run the following:
 ```
 ./build/mlir/tools/qcc-opt/qcc-opt mlir/test/tools/qcc-opt/mqt-core-integration-test.mlir 
 ```
-and it should output some plain mlir source.
+and it should output some plain MLIR source.
 
 ---
 
