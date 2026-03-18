@@ -1,35 +1,35 @@
 {
-    "name": "FullStaQD MLIR",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": "."
-    },
-    "postCreateCommand": "",
-    "remoteEnv": {
-        "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
-        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
-        "LLVM_EXTERNAL_LIT": "/usr/local/bin/lit",
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
-    },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "llvm-vs-code-extensions.vscode-clangd",
-                "llvm-vs-code-extensions.vscode-mlir",
-                "ms-vscode.cmake-tools"
-            ],
-            "settings": {
-                "cmake.configureArgs": [
-                    "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
-                    "-DMLIR_DIR=/opt/llvm/lib/cmake/mlir",
-                    "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm",
-                    "-DLLVM_EXTERNAL_LIT=/usr/local/bin/lit"
-                ],
-                "clangd.arguments": [
-                    "--compile-commands-dir=${workspaceFolder}/build/dev"
-                ],
-                "clangd.path": "clangd"
-            }
-        }
+  "name": "FullStaQD MLIR",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "postCreateCommand": "",
+  "remoteEnv": {
+    "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
+    "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
+    "LLVM_EXTERNAL_LIT": "/usr/local/bin/lit",
+    "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "llvm-vs-code-extensions.vscode-mlir",
+        "ms-vscode.cmake-tools"
+      ],
+      "settings": {
+        "cmake.configureArgs": [
+          "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
+          "-DMLIR_DIR=/opt/llvm/lib/cmake/mlir",
+          "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm",
+          "-DLLVM_EXTERNAL_LIT=/usr/local/bin/lit"
+        ],
+        "clangd.arguments": [
+          "--compile-commands-dir=${workspaceFolder}/build/dev"
+        ],
+        "clangd.path": "clangd"
+      }
     }
+  }
 }

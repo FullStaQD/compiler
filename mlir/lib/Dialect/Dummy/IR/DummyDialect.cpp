@@ -1,6 +1,6 @@
-#include "qcc/Dialect/Dummy/IR/Dummy.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "qcc/Dialect/Dummy/IR/Dummy.h"
 
 using namespace mlir;
 using namespace qcc::dummy;
@@ -14,13 +14,13 @@ using namespace qcc::dummy;
 #include "qcc/Dialect/Dummy/IR/DummyOps.cpp.inc"
 
 void DummyDialect::initialize() {
-    addTypes<
+  addTypes<
 #define GET_TYPEDEF_LIST
 #include "qcc/Dialect/Dummy/IR/DummyTypes.cpp.inc"
-    >();
+      >();
 
-    addOperations<
+  addOperations<
 #define GET_OP_LIST
 #include "qcc/Dialect/Dummy/IR/DummyOps.cpp.inc"
-    >();
+      >();
 }
