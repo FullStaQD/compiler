@@ -59,9 +59,7 @@ cmake --build build/dev
 > [!NOTE]
 >
 > If you are not using a single-config generator (such as when using MSVC on Windows), you need to specify the build configuration explicitly for the build command:
-> ```
-> cmake --build build/dev --config RelWithDebInfo
-> ```
+> 
 
 ### Post build verification
 
