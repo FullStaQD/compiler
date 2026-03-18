@@ -7,7 +7,7 @@ add_mlir_dialect_library(
   QCCDummyTypesIncGen
   QCCDummyOpsIncGen
   LINK_LIBS
-  PUBLIC
+  PRIVATE
   MLIRIR
   MLIRSupport
   MLIRInferTypeOpInterface
