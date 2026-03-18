@@ -13,13 +13,14 @@ if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 20)
     )
 endif()
 
+if(DEFINED ENV{LLVM_EXTERNAL_LIT} AND NOT DEFINED LLVM_EXTERNAL_LIT)
+    set(LLVM_EXTERNAL_LIT $ENV{LLVM_EXTERNAL_LIT} CACHE STRING "")
+endif()
+
 # ExternalDependencies MUST be included before SetupMLIR.
 # `mqt-core` calls find_package(MLIR) internally. Setting up MLIR here before they are done with the build would create conflicts.
 include(mlir/cmake/ExternalDependencies.cmake)
 include(mlir/cmake/SetupMLIR.cmake)
-
-include_directories(${PROJECT_SOURCE_DIR}/mlir/include)
-include_directories(${PROJECT_BINARY_DIR}/mlir/include)
 
 add_subdirectory(mlir/include)
 add_subdirectory(mlir/lib)
