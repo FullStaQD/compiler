@@ -1,6 +1,4 @@
 include(FetchContent)
-include(CMakeDependentOption)
-include(GNUInstallDirs)
 set(FETCH_PACKAGES "")
 
 FetchContent_Declare(
