@@ -1,0 +1,83 @@
+# We recommend using prek:
+#
+#     https://prek.j178.dev/
+#
+# To run all pre-commit checks, use:
+#
+#     prek run -a
+#
+# To install pre-commit hooks that run every time you commit:
+#
+#     prek install
+#
+
+ci:
+  autoupdate_commit_msg: "⬆️🪝 update pre-commit hooks"
+  autoupdate_schedule: quarterly
+  autofix_commit_msg: "🎨 pre-commit fixes"
+
+repos:
+  # Priority 0: Fast validation and independent fixers
+
+  ## Standard hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+        priority: 0
+      - id: end-of-file-fixer
+        priority: 1
+      - id: trailing-whitespace
+        priority: 1
+
+  ## Check JSON schemata
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.0
+    hooks:
+      - id: check-github-workflows
+        priority: 0
+
+  ## Catch common capitalization mistakes
+  - repo: local
+    hooks:
+      - id: disallow-caps
+        name: Disallow improper capitalization
+        language: pygrep
+        entry: \b(Cmake|Github|Mqt)\b
+        exclude: ^(\.pre-commit-config\.yaml)$
+        priority: 0
+
+  ## Check for spelling
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.44.0
+    hooks:
+      - id: typos
+        priority: 0
+
+  # Priority 1: Second-pass fixers
+
+  ## Clang-format the C++ part of the code base automatically
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v22.1.0
+    hooks:
+      - id: clang-format
+        types_or: [c++, c, cuda]
+        priority: 1
+
+  ## Format the CMakeLists.txt files
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+        additional_dependencies: [pyyaml]
+        types: [file]
+        files: (\.cmake|CMakeLists.txt)(.in)?$
+        priority: 1
+
+  ## Format configuration files with prettier
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.8.1
+    hooks:
+      - id: prettier
+        types_or: [css, html, markdown, json, json5, scss, yaml]
+        priority: 1
