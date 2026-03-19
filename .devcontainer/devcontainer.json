@@ -20,6 +20,8 @@
         "ms-vscode.cmake-tools"
       ],
       "settings": {
+        "cmake.buildDirectory": "${workspaceFolder}/build/dev",
+        "cmake.configureOnOpen": false,
         "cmake.configureArgs": [
           "-G",
           "Ninja",
