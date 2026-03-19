@@ -17,9 +17,9 @@ This project is currently in its **infant stages**, so we are keeping things "in
 
 # Compiler
 
-The structure of the project follows that of standard MLIR compilers.
-The root directory is `mlir`, which contains all the source code.
-The tools that is generated is called `qcc-opt`.
+The structure of the project follows that of standard MLIR compilers. The root
+directory is `mlir`, which contains all the source code. The tool that is
+generated is called `qcc-opt`.
 
 ---
 
@@ -53,12 +53,14 @@ If you are using a Dev container, then you just need to run the following comman
 On the other hand, if you manually installed LLVM and MLIR, run:
 
 ```
-cmake -S . -B build/dev -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMLIR_DIR=path/to/mlir/installation/dir -DLLVM_DIR=/path/to/llvm/installation/dir -DLLVM_EXTERNAL_LIT=$(which lit)
+cmake -S . -B build/dev -G Ninja \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DMLIR_DIR=path/to/mlir/installation/dir \
+  -DLLVM_DIR=/path/to/llvm/installation/dir \
+  -DLLVM_EXTERNAL_LIT=$(which lit)
 ```
 
-In both cases, you need to run this:
-
-followed by:
+In both cases, you finally need to run:
 
 ```
 cmake --build build/dev
