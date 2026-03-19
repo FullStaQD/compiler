@@ -4,11 +4,8 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 RUN apt-get -y update && \
   apt-get install -y --no-install-recommends clang clang-tools clangd curl ca-certificates zstd git gcc g++
 
-# Download the latest uv installer
-ADD https://astral.sh/uv/0.10.11/install.sh /uv-installer.sh
-
-# Install uv into /usr/local/bin so all users can access it
-RUN UV_INSTALL_DIR=/usr/local/bin sh /uv-installer.sh && rm /uv-installer.sh
+# Copy uv and uvx binaries from the official image and make them accessible to all users
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # Store tool binaries and environments in system-wide locations
 ENV UV_TOOL_BIN_DIR=/usr/local/bin
