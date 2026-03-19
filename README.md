@@ -75,7 +75,7 @@ cmake --build build/dev
 To make sure that the build procedure worked correctly, run the following:
 
 ```
-./build/mlir/tools/qcc-opt/qcc-opt mlir/test/tools/qcc-opt/mqt-core-integration-test.mlir
+./build/dev/mlir/tools/qcc-opt/qcc-opt mlir/test/tools/qcc-opt/mqt-core-integration-test.mlir
 ```
 
 and it should output some plain MLIR source.
