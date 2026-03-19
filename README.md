@@ -17,9 +17,9 @@ This project is currently in its **infant stages**, so we are keeping things "in
 
 # Compiler
 
-The structure of the project follows that of standard MLIR compilers. The root
-directory is `mlir`, which contains all the source code. The tool that is
-generated is called `qcc-opt`.
+The structure of the project follows that of standard MLIR compilers.
+The root directory is `mlir`, which contains all the source code.
+The tool that is generated is called `qcc-opt`.
 
 ---
 
