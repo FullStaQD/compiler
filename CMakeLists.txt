@@ -21,9 +21,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
 include(mlir/cmake/ExternalDependencies.cmake)
 include(mlir/cmake/SetupMLIR.cmake)
 
-include_directories(${PROJECT_SOURCE_DIR}/mlir/include)
-include_directories(${PROJECT_BINARY_DIR}/mlir/include)
-
 add_subdirectory(mlir/include)
 add_subdirectory(mlir/lib)
 add_subdirectory(mlir/test)
