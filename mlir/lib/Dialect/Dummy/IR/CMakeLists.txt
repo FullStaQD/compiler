@@ -1,0 +1,14 @@
+add_mlir_dialect_library(
+  QCCDummyDialect
+  DummyDialect.cpp
+  DummyOps.cpp
+  DEPENDS
+  QCCDummyDialectIncGen
+  QCCDummyTypesIncGen
+  QCCDummyOpsIncGen
+  LINK_LIBS
+  PRIVATE
+  MLIRIR
+  MLIRSupport
+  MLIRInferTypeOpInterface
+  MLIRSideEffectInterfaces)
