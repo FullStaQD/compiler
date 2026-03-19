@@ -7,4 +7,5 @@ target_link_libraries(
           MLIRFuncDialect
           MLIRArithDialect
           QCCDummyDialect
+          QCCJaspDialect
           MLIRQCDialect)

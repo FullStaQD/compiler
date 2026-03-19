@@ -1,0 +1,14 @@
+add_mlir_dialect_library(
+  QCCJaspDialect
+  JaspDialect.cpp
+  JaspOps.cpp
+  DEPENDS
+  QCCJaspDialectIncGen
+  QCCJaspTypesIncGen
+  QCCJaspOpsIncGen
+  LINK_LIBS
+  PRIVATE
+  MLIRIR
+  MLIRSupport
+  MLIRInferTypeOpInterface
+  MLIRSideEffectInterfaces)
