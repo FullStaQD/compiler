@@ -6,11 +6,7 @@
   },
   "postCreateCommand": "prek install",
   "remoteEnv": {
-    "UV_PYTHON": "3.14",
-    "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
-    "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
-    "LLVM_EXTERNAL_LIT": "/usr/local/bin/lit",
-    "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+    "UV_PYTHON": "3.14"
   },
   "customizations": {
     "vscode": {
@@ -20,16 +16,6 @@
         "ms-vscode.cmake-tools"
       ],
       "settings": {
-        "cmake.buildDirectory": "${workspaceFolder}/build/dev",
-        "cmake.configureOnOpen": false,
-        "cmake.configureArgs": [
-          "-G",
-          "Ninja",
-          "-DCMAKE_BUILD_TYPE=RelWithDebInfo",
-          "-DMLIR_DIR=/opt/llvm/lib/cmake/mlir",
-          "-DLLVM_DIR=/opt/llvm/lib/cmake/llvm",
-          "-DLLVM_EXTERNAL_LIT=/usr/local/bin/lit"
-        ],
         "clangd.arguments": [
           "--compile-commands-dir=${workspaceFolder}/build/dev"
         ],
