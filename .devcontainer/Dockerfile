@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 # Installs the basic underlying framework
 RUN apt-get -y update && \
-  apt-get install -y --no-install-recommends clang clang-tools clangd curl ca-certificates zstd git gcc g++
+  apt-get install -y --no-install-recommends clang clang-tools clangd lld curl ca-certificates zstd git gcc g++
 
 # Copy uv and uvx binaries from the official image and make them accessible to all users
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/

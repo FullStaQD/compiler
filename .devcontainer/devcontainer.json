@@ -36,5 +36,12 @@
         "clangd.path": "clangd"
       }
     }
-  }
+  },
+  "mounts": [
+    {
+      "source": "${localEnv:QCC_PROJECT_DEVCONTAINER_CUSTOM_MOUNT:./.devcontainer/custom}",
+      "target": "/home/vscode/external",
+      "type": "bind"
+    }
+  ]
 }
