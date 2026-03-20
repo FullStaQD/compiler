@@ -1,0 +1,31 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
+        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm"
+      }
+    },
+    {
+      "name": "dev",
+      "inherits": "base",
+      "displayName": "dev config",
+      "cacheVariables": {
+        "LLVM_EXTERNAL_LIT": "$(which lit)"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "displayName": "dev build",
+      "configurePreset": "dev"
+    }
+  ]
+}
