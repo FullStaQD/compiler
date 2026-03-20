@@ -10,7 +10,6 @@
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
         "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
     {
