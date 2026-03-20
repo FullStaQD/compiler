@@ -21,5 +21,12 @@
         "LLVM_EXTERNAL_LIT": "$(which lit)"
       }
     }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "displayName": "dev build",
+      "configurePreset": "dev"
+    }
   ]
 }
