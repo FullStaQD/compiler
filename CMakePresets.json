@@ -9,7 +9,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
-        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
+        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm"
       }
     },
     {
