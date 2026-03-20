@@ -42,7 +42,7 @@ You could for example put a checkout of LLVM in there, build it, and link agains
 
 ### Option 2: Manual Setup
 
-If you prefer to build outside the container, you need LLVM/MLIR >= [VERSION_USED_BY_DEVCONTAINER_IMAGE](.devcontainer/Dockerfile) installed. If you have no previous installation, check the guide [here](https://mqt.readthedocs.io/projects/core/en/latest/installation.html#setting-up-mlir).
+If you prefer to build outside the container, you need LLVM/MLIR version >= [VERSION_USED_BY_DEVCONTAINER_IMAGE](.devcontainer/Dockerfile) installed. If you have no previous installation, check the guide [here](https://mqt.readthedocs.io/projects/core/en/latest/installation.html#setting-up-mlir).
 
 ---
 
