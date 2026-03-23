@@ -1,1 +1,6 @@
 /build
+/CMakeUserPresets.json
+
+# vscode
+/.vscode
+/*.code-workspace
