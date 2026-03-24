@@ -3,6 +3,7 @@
 
 // Copied from https://github.com/eclipse-qrisp/Qrisp/tree/main/src/qrisp/jasp/mlir/dialect_definition
 // TODO: Agree on a single source of truth for the dialect definition.
+// See also issue https://github.com/FullStaQD/compiler/issues/16
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinTypes.td"
