@@ -7,6 +7,9 @@ using namespace jasp;
 
 #include "qcc/Dialect/Jasp/IR/JaspDialect.cpp.inc"
 
+#define GET_TYPEDEF_CLASSES
+#include "qcc/Dialect/Jasp/IR/JaspTypes.cpp.inc"
+
 #define GET_OP_CLASSES
 #include "qcc/Dialect/Jasp/IR/JaspOps.cpp.inc"
 
