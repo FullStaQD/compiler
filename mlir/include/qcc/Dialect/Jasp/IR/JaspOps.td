@@ -1,6 +1,9 @@
 #ifndef INCLUDE_QCC_DIALECT_JASP_IR_JASPOPS_TD_
 #define INCLUDE_QCC_DIALECT_JASP_IR_JASPOPS_TD_
 
+// Copied from https://github.com/eclipse-qrisp/Qrisp/tree/main/src/qrisp/jasp/mlir/dialect_definition
+// TODO: Agree on a single source of truth for the dialect definition.
+
 include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinTypes.td"
 include "JaspDialect.td"
