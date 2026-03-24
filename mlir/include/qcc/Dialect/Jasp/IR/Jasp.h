@@ -1,12 +1,9 @@
 #pragma once
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 
 //===----------------------------------------------------------------------===//
 // Jasp Dialect
