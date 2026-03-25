@@ -1,11 +1,10 @@
 add_mlir_dialect_library(
-  QCCDummyDialect
-  DummyDialect.cpp
-  DummyOps.cpp
+  QCCJaspDialect
+  JaspDialect.cpp
   DEPENDS
-  QCCDummyDialectIncGen
-  QCCDummyTypesIncGen
-  QCCDummyOpsIncGen
+  QCCJaspDialectIncGen
+  QCCJaspTypesIncGen
+  QCCJaspOpsIncGen
   LINK_LIBS
   PRIVATE
   MLIRIR
