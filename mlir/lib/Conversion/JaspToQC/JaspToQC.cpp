@@ -1,10 +1,9 @@
 
-#include "mlir/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
-#include "mlir/Dialect/Jasp/IR/JaspDialect.h"
-#include "mlir/Dialect/Jasp/IR/JaspOps.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
+#include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Func/Transforms/FuncConversions.h>
@@ -20,11 +19,12 @@
 #include <utility>
 
 using namespace jasp;
-namespace mlir {
-using namespace qc;
+namespace qcc {
+using namespace mlir;
+using namespace mlir::qc;
 
 #define GEN_PASS_DEF_JASPTOQC
-#include "mlir/Conversion/JaspToQC/JaspToQC.h.inc"
+#include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
 
 /**
  * @brief Type converter for jasp-to-QC conversion
@@ -68,7 +68,7 @@ protected:
 
     // Register operation conversion patterns
     // Note: No state tracking needed - OpAdaptors handle type conversion
-    patterns.add<>(typeConverter, context);
+    // patterns.add<>(typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
@@ -95,4 +95,4 @@ protected:
   }
 };
 
-} // namespace mlir
+} // namespace qcc

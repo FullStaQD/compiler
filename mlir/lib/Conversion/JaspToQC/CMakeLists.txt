@@ -7,7 +7,7 @@ add_mlir_conversion_library(
   JaspToQCIncGen
   LINK_LIBS
   MLIRQCDialect
-  MLIRJaspDialect
+  QCCJaspDialect
   MLIRArithDialect
   MLIRFuncDialect
   MLIRTransforms
