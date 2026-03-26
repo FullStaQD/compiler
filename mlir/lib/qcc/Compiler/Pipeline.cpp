@@ -13,23 +13,12 @@ namespace qcc {
 
 void addCleanupPasses(PassManager& pm) {
   pm.addPass(createCanonicalizerPass());
-  // Note: 'createRemoveDeadValuesPass' isn't standard MLIR,
-  // assuming it's your custom pass or SymbolDCE
   pm.addPass(createRemoveDeadValuesPass());
 }
 
 void buildQuantumPipeline(PassManager& pm) {
-  llvm::errs() << "test\n";
   // Initial QC Canonicalization
   pm.addPass(createCanonicalizerPass());
-
-  // QC → QCO Conversion
-  pm.addPass(createQCToQCO());
-  addCleanupPasses(pm); // QCO Canonicalization
-
-  // QCO → QC Conversion
-  pm.addPass(createQCOToQC());
-  addCleanupPasses(pm); // Final QC Canonicalization
 
   // QC → QIR Conversion
   pm.addPass(createQCToQIR());

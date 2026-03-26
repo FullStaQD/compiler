@@ -9,6 +9,4 @@ target_link_libraries(
           MLIRFuncDialect
           MLIRArithDialect
           QCCPipeline
-          QCCJaspDialect
-          MLIRQCDialect
-          MLIRQCODialect)
+          MLIRQCDialect)

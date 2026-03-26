@@ -5,6 +5,4 @@ add_mlir_library(
   MLIRPass
   MLIRTransforms
   MLIRTransformUtils
-  MLIRQCToQCO
-  MLIRQCOToQC
   MLIRQCToQIR)

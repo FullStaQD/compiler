@@ -3,9 +3,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
-#include "mlir/Dialect/QCO/IR/QCODialect.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/InitAllPasses.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
@@ -19,7 +17,7 @@ int main(int argc, char** argv) {
   }
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::qc::QCDialect, mlir::qco::QCODialect>();
+  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::qc::QCDialect>();
 
   mlir::MLIRContext context(registry);
   context.loadAllAvailableDialects();
