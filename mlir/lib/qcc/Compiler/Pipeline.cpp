@@ -1,8 +1,6 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
-#include "mlir/Conversion/QCOToQC/QCOToQC.h"
-#include "mlir/Conversion/QCToQCO/QCToQCO.h"
 #include "mlir/Conversion/QCToQIR/QCToQIR.h"
 #include "mlir/Transforms/Passes.h"
 
