@@ -6,21 +6,19 @@
 
 #include <llvm/Support/raw_ostream.h>
 
-namespace mlir {
 namespace qcc {
 
-void addCleanupPasses(PassManager& pm) {
-  pm.addPass(createCanonicalizerPass());
-  pm.addPass(createRemoveDeadValuesPass());
+void addCleanupPasses(mlir::PassManager& pm) {
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createRemoveDeadValuesPass());
 }
 
-void buildQuantumPipeline(PassManager& pm) {
+void buildQuantumPipeline(mlir::PassManager& pm) {
   addCleanupPasses(pm); // QC Canonicalization
 
   // QC → QIR Conversion
-  pm.addPass(createQCToQIR());
+  pm.addPass(mlir::createQCToQIR());
   addCleanupPasses(pm); // QIR Canonicalization
 }
 
 } // namespace qcc
-} // namespace mlir

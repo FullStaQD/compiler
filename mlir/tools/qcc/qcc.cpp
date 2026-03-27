@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
   }
 
   mlir::PassManager pm(&context);
-  mlir::qcc::buildQuantumPipeline(pm);
+  qcc::buildQuantumPipeline(pm);
 
   llvm::errs() << "Running pipeline...\n";
   if (mlir::failed(pm.run(*module))) {
