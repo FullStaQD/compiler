@@ -6,6 +6,9 @@ target_link_libraries(
           MLIRSupport
           MLIRFuncDialect
           MLIRArithDialect
+          MLIRSCFDialect
+          MLIRTensorDialect
           QCCJaspDialect
           QCCJaspToQC
+          StablehloRegister
           MLIRQCDialect)
