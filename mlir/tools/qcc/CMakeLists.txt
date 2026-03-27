@@ -8,5 +8,4 @@ target_link_libraries(
           MLIRSupport
           MLIRFuncDialect
           MLIRArithDialect
-          QCCPipeline
-          MLIRQCDialect)
+          QCCPipeline)

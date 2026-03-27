@@ -15,8 +15,7 @@ void addCleanupPasses(PassManager& pm) {
 }
 
 void buildQuantumPipeline(PassManager& pm) {
-  // Initial QC Canonicalization
-  pm.addPass(createCanonicalizerPass());
+  addCleanupPasses(pm); // QC Canonicalization
 
   // QC → QIR Conversion
   pm.addPass(createQCToQIR());
