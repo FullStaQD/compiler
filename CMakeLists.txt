@@ -16,10 +16,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS
     ON
     CACHE BOOL "Export compile commands" FORCE)
 
-# ExternalDependencies MUST be included before SetupMLIR. `mqt-core` calls find_package(MLIR) internally. Setting up
-# MLIR here before they are done with the build would create conflicts.
-include(mlir/cmake/ExternalDependencies.cmake)
+# EarlyExternalDependencies MUST be included before SetupMLIR. `mqt-core` calls find_package(MLIR) internally. Setting
+# up MLIR here before they are done with the build would create conflicts. Other dependencies require SetupMLIR to be
+# finished. These are to be listed in LateExternalDependencies.
+include(mlir/cmake/EarlyExternalDependencies.cmake)
 include(mlir/cmake/SetupMLIR.cmake)
+include(mlir/cmake/LateExternalDependencies.cmake)
 
 add_subdirectory(mlir/include)
 add_subdirectory(mlir/lib)
