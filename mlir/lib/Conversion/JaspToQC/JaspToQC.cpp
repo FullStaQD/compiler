@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include <mlir/Dialect/Func/IR/FuncOps.h>
@@ -201,6 +202,44 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
 };
 
 /**
+ * @brief Converts jasp.measure to qc.measure
+ *
+ * @details
+ * The conversion is straightforward. However, the measurement result in jasp is
+ * of type `tensor<i1>`, whereas in QC it is of type `i1`.
+ * Therefore, a conversion between these types is inserted.
+ *
+ * Example transformation:
+ * ```mlir
+ * %measured, %state1 = jasp.measure %q, %state0 : !jasp.Qubit, !jasp.QuantumState -> tensor<i1>, !jasp.QuantumState
+ * // becomes:
+ * %c = qc.measure %q : !qc.qubit -> i1
+ * %measured = tensor.from_elements %c : tensor<i1>
+ * ```
+ */
+struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::MeasureOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto qcQubit = adaptor.getMeasQ();
+
+    // Create qc.measure (in-place operation, returns only bit)
+    // Preserve register metadata for output recording
+    auto qcMeasureOp = qc::MeasureOp::create(rewriter, op.getLoc(), qcQubit);
+
+    auto measureBit = qcMeasureOp.getResult();
+
+    // Create tensor from the i1 result to match jasp.measure's return type
+    auto tensorResult = tensor::FromElementsOp::create(rewriter, op.getLoc(), op.getType(1), measureBit);
+
+    rewriter.replaceOp(op, {qcQubit, tensorResult.getResult()});
+
+    return success();
+  }
+};
+
+/**
  * @brief Pass implementation for jasp-to-QC conversion
  *
  * @details
@@ -224,8 +263,9 @@ protected:
     target.addLegalDialect<QCDialect>();
 
     // Register operation conversion patterns
-    patterns.add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp>(typeConverter,
-                                                                                                     context);
+    patterns
+        .add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp>(
+            typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
