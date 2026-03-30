@@ -137,6 +137,36 @@ private:
 };
 
 /**
+ * @brief Converts jasp.consume_quantum_kernel op to arith.constant
+ *
+ * @details
+ * We do not lower the functionality of returning a success value
+ * for the kernel execution. A constant value of 1 is returned,
+ * assuming a successful execution.
+ *
+ * Example transformation:
+ * ```mlir
+ * %success = jasp.consume_quantum_kernel %state : !jasp.QuantumState -> tensor<i1>
+ * // becomes (only the last op is replaced):
+ * %success = arith.constant dense<1> : tensor<i1>
+ * ```
+ */
+struct ConvertJaspConsumeQuantumKernelOp final : OpConversionPattern<jasp::ConsumeQuantumKernelOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::ConsumeQuantumKernelOp op, OpAdaptor /*adaptor*/,
+                                ConversionPatternRewriter& rewriter) const override {
+
+    auto type = op.getType();
+    auto trueAttr = rewriter.getBoolAttr(true);
+    auto denseAttr = DenseElementsAttr::get(type, trueAttr);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, type, denseAttr);
+
+    return success();
+  }
+};
+
+/**
  * @brief Pass implementation for jasp-to-QC conversion
  *
  * @details
@@ -160,7 +190,7 @@ protected:
     target.addLegalDialect<QCDialect>();
 
     // Register operation conversion patterns
-    patterns.add<ConvertJaspGetQubitOp>(typeConverter, context);
+    patterns.add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp>(typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
