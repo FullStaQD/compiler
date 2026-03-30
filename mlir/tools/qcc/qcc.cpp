@@ -1,5 +1,4 @@
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -13,9 +12,16 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "qcc/Compiler/Pipeline.h"
 
+namespace cl = llvm::cl;
+
+static cl::OptionCategory QccCategory("QCC options");
+
 int main(int argc, char** argv) {
-  llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional, llvm::cl::desc("Input-file"), llvm::cl::Required);
-  llvm::cl::opt<std::string> outputFilename("o", llvm::cl::desc("Output-file"), llvm::cl::value_desc("filename"));
+  llvm::cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(QccCategory));
+  llvm::cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"),
+                                            cl::cat(QccCategory));
+
+  llvm::cl::HideUnrelatedOptions(QccCategory);
   llvm::cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
   mlir::DialectRegistry registry;
@@ -53,7 +59,7 @@ int main(int argc, char** argv) {
   }
 
   module->print(output->os());
-  output->keep(); // otherwise files gets deleted
+  output->keep(); // otherwise file gets deleted
 
   return 0;
 }
