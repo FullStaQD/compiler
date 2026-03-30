@@ -1,4 +1,4 @@
-// RUN: qcc %s | FileCheck %s
+// RUN: qcc -o - %s | FileCheck %s
 
 // CHECK-LABEL: llvm.func @main()
 // CHECK-SAME: -> i64
