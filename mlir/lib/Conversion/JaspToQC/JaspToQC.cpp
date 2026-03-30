@@ -194,8 +194,8 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
 
     auto qcQubit = adaptor.getGateOperands().front();
 
-    // Replace the output qubit with the same QC reference
-    rewriter.replaceOpWithNewOp<qc::HOp>(op, qcQubit);
+    qc::HOp::create(rewriter, op.getLoc(), qcQubit);
+    rewriter.replaceOp(op, qcQubit);
 
     return success();
   }
@@ -284,9 +284,7 @@ protected:
     RewritePatternSet patterns(context);
     JaspToQCTypeConverter typeConverter(context);
 
-    // Configure conversion target: jasp illegal, QC legal
-    // FIXME: uncomment line
-    // target.addIllegalDialect<JaspDialect>();
+    target.addIllegalDialect<JaspDialect>();
     target.addLegalDialect<QCDialect>();
 
     // Register operation conversion patterns
