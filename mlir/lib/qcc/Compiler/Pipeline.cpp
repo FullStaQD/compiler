@@ -14,11 +14,14 @@ void addCleanupPasses(mlir::PassManager& pm) {
 }
 
 void buildQuantumPipeline(mlir::PassManager& pm) {
-  addCleanupPasses(pm); // QC Canonicalization
+  // Cleanup QC
+  pm.addPass(mlir::createCanonicalizerPass());
 
   // QC → QIR Conversion
   pm.addPass(mlir::createQCToQIR());
-  addCleanupPasses(pm); // QIR Canonicalization
+
+  // Cleanup QIR
+  pm.addPass(mlir::createCanonicalizerPass());
 }
 
 } // namespace qcc
