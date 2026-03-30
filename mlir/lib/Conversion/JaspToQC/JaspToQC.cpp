@@ -240,6 +240,33 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
 };
 
 /**
+ * @brief Converts jasp.delete_qubits to qc.dealloc
+ *
+ * @details
+ * TODO
+ *
+ * Example transformation:
+ * ```mlir
+ * %state1 = jasp.delete_qubits %qubit_array, %state0 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
+ * // becomes:
+ * qc.dealloc %q_0 : !qc.qubit  // for every qubit from the array
+ * ```
+ */
+struct ConvertJaspDeallocOp final : OpConversionPattern<jasp::DeleteQubitsOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::DeleteQubitsOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto array = op.getQubits();
+
+    // TODO: improve
+    rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
+/**
  * @brief Pass implementation for jasp-to-QC conversion
  *
  * @details
@@ -263,9 +290,8 @@ protected:
     target.addLegalDialect<QCDialect>();
 
     // Register operation conversion patterns
-    patterns
-        .add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp>(
-            typeConverter, context);
+    patterns.add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp,
+                 ConvertJaspMeasureOp, ConvertJaspDeallocOp>(typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
