@@ -167,6 +167,40 @@ struct ConvertJaspConsumeQuantumKernelOp final : OpConversionPattern<jasp::Consu
 };
 
 /**
+ * @brief Converts a jasp gate to QC
+ *
+ * @details
+ * TODO
+ *
+ * Example:
+ * ```mlir
+ * %state_out = jasp.quantum_gate "x" (%q), %state_in : (!jasp.Qubit), !jasp.QuantumState -> !jasp.QuantumState
+ * ```
+ * is converted to
+ * ```mlir
+ * qc.x %q : !qc.qubit
+ * ```
+ */
+struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp> {
+  using OpConversionPattern<jasp::QuantumGateOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::QuantumGateOp op, jasp::QuantumGateOp::Adaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+
+    auto gate_name = op.getGateType();
+    if (gate_name != "h")
+      return failure();
+
+    auto qcQubit = adaptor.getGateOperands().front();
+
+    // Replace the output qubit with the same QC reference
+    rewriter.replaceOpWithNewOp<qc::HOp>(op, qcQubit);
+
+    return success();
+  }
+};
+
+/**
  * @brief Pass implementation for jasp-to-QC conversion
  *
  * @details
@@ -190,7 +224,8 @@ protected:
     target.addLegalDialect<QCDialect>();
 
     // Register operation conversion patterns
-    patterns.add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp>(typeConverter, context);
+    patterns.add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp>(typeConverter,
+                                                                                                     context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
