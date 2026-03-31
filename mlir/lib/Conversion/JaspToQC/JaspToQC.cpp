@@ -96,7 +96,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
     auto index = tensor::ExtractOp::create(rewriter, loc, adaptor.getAmount(), ValueRange{});
     auto memrefType = getTypeConverter()->convertType(op.getType(0));
     auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
-    rewriter.replaceOp(op, {alloc.getResult(), nullptr});
+    rewriter.replaceOpWithMultiple(op, {alloc.getResult(), ValueRange()});
     return success();
   }
 };
@@ -274,9 +274,9 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
     auto measureBit = qcMeasureOp.getResult();
 
     // Create tensor from the i1 result to match jasp.measure's return type
-    auto tensorResult = tensor::FromElementsOp::create(rewriter, op.getLoc(), op.getType(1), measureBit);
+    auto tensorResult = tensor::FromElementsOp::create(rewriter, op.getLoc(), op.getType(0), measureBit);
 
-    rewriter.replaceOp(op, {qcQubit, tensorResult.getResult()});
+    rewriter.replaceOpWithMultiple(op, {tensorResult.getResult(), ValueRange()});
 
     return success();
   }
@@ -301,7 +301,8 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
   LogicalResult matchAndRewrite(jasp::DeleteQubitsOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     auto array = adaptor.getQubits();
-    rewriter.replaceOpWithNewOp<memref::DeallocOp>(op, array);
+    memref::DeallocOp::create(rewriter, op.getLoc(), array);
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -325,12 +326,12 @@ protected:
     JaspToQCTypeConverter typeConverter(context);
 
     target.addIllegalDialect<JaspDialect>();
-    target.addLegalDialect<QCDialect>();
+    target.addLegalDialect<QCDialect, memref::MemRefDialect, tensor::TensorDialect, arith::ArithDialect>();
 
     // Register operation conversion patterns
-    patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspCreateQubitsOp, ConvertJaspGetQubitOp,
-                 ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp,
-                 ConvertJaspDeleteQubitsOp>(typeConverter, context);
+    patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspCreateQubitsOp,
+                 ConvertJaspGetQubitOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp, ConvertJaspDeleteQubitsOp>(
+        typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
