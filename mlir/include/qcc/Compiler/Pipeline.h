@@ -3,10 +3,9 @@
 
 namespace qcc {
 
-// Helper function to add standard cleanups, keeping code DRY
-void addCleanupPasses(mlir::PassManager& pm);
-
-// The main entry point to build your specific compilation flow
+/// A compilation pipeline assuming qc dialect as input and providing QIR-MLIR as output.
+///
+/// NOTE: The exact shape of the pipeline is still under construction.
 void buildQuantumPipeline(mlir::PassManager& pm);
 
 } // namespace qcc

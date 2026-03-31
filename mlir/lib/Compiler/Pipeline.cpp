@@ -8,11 +8,6 @@
 
 namespace qcc {
 
-void addCleanupPasses(mlir::PassManager& pm) {
-  pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createRemoveDeadValuesPass());
-}
-
 void buildQuantumPipeline(mlir::PassManager& pm) {
   // Cleanup QC
   pm.addPass(mlir::createCanonicalizerPass());
@@ -22,6 +17,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   // Cleanup QIR
   pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createRemoveDeadValuesPass());
 }
 
 } // namespace qcc
