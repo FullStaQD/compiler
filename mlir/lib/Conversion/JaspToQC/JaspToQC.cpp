@@ -3,6 +3,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -44,46 +45,87 @@ public:
     // Identity conversion for all types by default
     addConversion([](Type type) { return type; });
 
-    // Convert jasp qubit references to QC qubit references
     addConversion([ctx](jasp::QubitType /*type*/) -> Type { return qc::QubitType::get(ctx); });
+    addConversion([ctx](jasp::QubitArrayType /*type*/) -> Type {
+      return MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(ctx));
+    });
   }
 };
 
 /**
- * @brief Converts jasp.get_qubit to qc.alloc
+ * @brief Converts jasp.create_quantum_kernel by deleting it
  *
  * @details
- * Allocates a new qubit initialized to the |0⟩ state. Register metadata
- * (name, size, index) is extracted from a preceding `jasp.create_qubits` operation.
+ * The jasp.QuantumState is used for tracking state in the jasp dialect.
+ * Since QC dialect operations are side-effecting, the initial state creation is dropped.
  *
- * Both the array size and qubit index values must be created by `arith.const` operations.
+ * Note: The IR must be ordered correctly at the start of this pass.
+ */
+struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::CreateQuantumKernelOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::CreateQuantumKernelOp op, OpAdaptor /*adaptor*/,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+/**
+ * @brief Converts jasp.create_qubits to memref.alloc
+ *
+ * @details
+ * The jasp.QuantumState is dropped. The size tensor is extracted to an index
+ * to allocate a memref of qubits.
  *
  * Example transformation:
  * ```mlir
- * %n = arith.constant dense<7> : tensor<i64>
- * %q_arr, %s1 = jasp.create_qubits %n, %s0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
- * %i = arith.constant dense<3> : tensor<i64>
+ * %q_arr, %state1 = jasp.create_qubits %tensor_index, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray,
+ * !jasp.QuantumState
+ * // becomes:
+ * %index = tensor.extract %tensor_index[] : tensor<i64>
+ * %q_arr = memref.alloc(%index) : memref<?x!qc.qubit>
+ * ```
+ */
+struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::CreateQubitsOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    auto index = tensor::ExtractOp::create(rewriter, loc, adaptor.getAmount(), ValueRange{});
+    auto memrefType = getTypeConverter()->convertType(op.getType(0));
+    auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
+    rewriter.replaceOp(op, {alloc.getResult(), nullptr});
+    return success();
+  }
+};
+
+/**
+ * @brief Converts jasp.get_qubit to memref.load
+ *
+ * @details
+ * The conversion is straightforward. Only the index type needs to be
+ * converted.
+ *
+ * Example transformation:
+ * ```mlir
  * %q = jasp.get_qubit %q_arr, %i : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
- * // becomes (only the last op is replaced):
- * %q = qc.alloc("qreg", 7, 3) : !qc.qubit
+ * // becomes:
+ * %j = tensor.extract %i[] : tensor<i64>
+ *  %q = memref.load %q_arr[%j] : memref<?x!qc.qubit>
  * ```
  */
 struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
   using OpConversionPattern::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(jasp::GetQubitOp op, OpAdaptor /*adaptor*/,
+  LogicalResult matchAndRewrite(jasp::GetQubitOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    auto indexTensor = adaptor.getPosition();
 
-    auto registerIndex = getConstantIndex(op.getPosition());
-    if (!registerIndex)
-      return failure();
-
-    auto registerSize = getRegisterSize(op.getQbArray());
-    if (!registerSize)
-      return failure();
-
-    // Create qc.alloc with preserved register metadata
-    rewriter.replaceOpWithNewOp<qc::AllocOp>(op, getQubitArrayName(op.getQbArray()), *registerSize, *registerIndex);
+    auto extractOp = tensor::ExtractOp::create(rewriter, loc, indexTensor, ValueRange{});
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.getQbArray(), ValueRange{extractOp});
 
     return success();
   }
@@ -189,6 +231,7 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
                                 ConversionPatternRewriter& rewriter) const override {
 
     auto gate_name = op.getGateType();
+    // TODO: Implement gates
     if (gate_name != "h")
       return failure();
 
@@ -249,19 +292,16 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
  * ```mlir
  * %state1 = jasp.delete_qubits %qubit_array, %state0 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
  * // becomes:
- * qc.dealloc %q_0 : !qc.qubit  // for every qubit from the array
+ * memref.dealloc %qubit_array : memref<?x!qc.qubit>
  * ```
  */
-struct ConvertJaspDeallocOp final : OpConversionPattern<jasp::DeleteQubitsOp> {
+struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult matchAndRewrite(jasp::DeleteQubitsOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto array = op.getQubits();
-
-    // TODO: improve
-    rewriter.eraseOp(op);
-
+    auto array = adaptor.getQubits();
+    rewriter.replaceOpWithNewOp<memref::DeallocOp>(op, array);
     return success();
   }
 };
@@ -288,8 +328,9 @@ protected:
     target.addLegalDialect<QCDialect>();
 
     // Register operation conversion patterns
-    patterns.add<ConvertJaspGetQubitOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp,
-                 ConvertJaspMeasureOp, ConvertJaspDeallocOp>(typeConverter, context);
+    patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspCreateQubitsOp, ConvertJaspGetQubitOp,
+                 ConvertJaspConsumeQuantumKernelOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp,
+                 ConvertJaspDeleteQubitsOp>(typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes

@@ -12,6 +12,7 @@ def JaspToQC : Pass<"jasp-to-qc"> {
   let dependentDialects = [
     "jasp::JaspDialect",
     "mlir::qc::QCDialect",
-    "mlir::tensor::TensorDialect"
+    "mlir::tensor::TensorDialect",
+    "mlir::memref::MemRefDialect"
   ];
 }

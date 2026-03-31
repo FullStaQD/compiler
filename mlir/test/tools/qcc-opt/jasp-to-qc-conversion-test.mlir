@@ -5,31 +5,30 @@ func.func @test() -> tensor<i1> {
     // Quantum State management leaves no trace in QC IR.
 
     %num_qubits = arith.constant dense<1> : tensor<i64>
+    // CHECK: [[num_qubits_tensor:%.+]] = arith.constant dense<1> : tensor<i64>
     %qubit_array, %state1 = jasp.create_qubits %num_qubits, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
-    // For now, we require the number of qubits to be a constant.
-    // From these lines, we obtain the information that
-    //  - There is a qubit array %qubit_array, which we need to give a name in qc.
-    //  - The qubit array has one qubit.
-    // Alternatively, we could convert the array allocation to the allocation
-    // of all member qubits in QC.
+    // memref.alloc needs a size of index type, not of tensor type.
+    // CHECK: [[num_qubits:%.+]] = tensor.extract [[num_qubits_tensor]][] : tensor<i64>
+    // CHECK: [[qubit_array:%.+]] = memref.alloc([[num_qubits]]) : memref<?x!qc.qubit>
 
     %qubit_index = arith.constant dense<0> : tensor<i64>
+    // CHECK: [[qubit_index_tensor:%.+]] = arith.constant dense<0> : tensor<i64>
     %qubit_reference = jasp.get_qubit %qubit_array, %qubit_index : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
-    // The extraction of the qubit reference from the array corresponds to the
-    // actual allocation in QC.
-    // CHECK: [[qubit_reference:%.+]] = qc.alloc("qreg_[[register_hash:.+]]", 1, 0) : !qc.qubit
+    // memref.load needs an index of index type, not of tensor type.
+    // CHECK: [[qubit_index:%.+]] = tensor.extract [[qubit_index_tensor]][] : tensor<i64>
+    // CHECK: [[qubit_reference:%.+]] = memref.load [[qubit_array]][ [[qubit_index]] ] : memref<?x!qc.qubit>
 
     %state2 = jasp.quantum_gate "h" (%qubit_reference), %state1 : (!jasp.Qubit), !jasp.QuantumState -> !jasp.QuantumState
     // CHECK: qc.h [[qubit_reference]] : !qc.qubit
 
     %random_bit, %state3 = jasp.measure %qubit_reference, %state2 : !jasp.Qubit, !jasp.QuantumState -> tensor<i1>, !jasp.QuantumState
+    // CHECK: [[random_bit:%.+]] = qc.measure [[qubit_reference]] : !qc.qubit
     // qc.measure returns i1 values, which need to be converted to tensor<i1>
     // to connect to the remaining code.
-    // CHECK: [[random_bit:%.+]] = qc.measure [[qubit_reference]] : !qc.qubit
     // CHECK: [[random_bit_tensor:%.+]] = tensor.from_elements [[random_bit]] : tensor<i1>
 
     %state4 = jasp.delete_qubits %qubit_array, %state3 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
-    // CHECK: qc.dealloc [[qubit_reference]] : !qc.qubit
+    // CHECK: memref.dealloc [[qubit_array]] : memref<?x!qc.qubit>
 
     %success = jasp.consume_quantum_kernel %state4 : !jasp.QuantumState -> tensor<i1>
     // We do not lower the functionality of returning a success value
