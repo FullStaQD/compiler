@@ -93,7 +93,8 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
   LogicalResult matchAndRewrite(jasp::CreateQubitsOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     auto loc = op.getLoc();
-    auto index = tensor::ExtractOp::create(rewriter, loc, adaptor.getAmount(), ValueRange{});
+    auto extracted = tensor::ExtractOp::create(rewriter, loc, adaptor.getAmount(), ValueRange{});
+    auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extracted);
     auto memrefType = getTypeConverter()->convertType(op.getType(0));
     auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
     rewriter.replaceOpWithMultiple(op, {alloc.getResult(), ValueRange()});
@@ -125,7 +126,8 @@ struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
     auto indexTensor = adaptor.getPosition();
 
     auto extractOp = tensor::ExtractOp::create(rewriter, loc, indexTensor, ValueRange{});
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.getQbArray(), ValueRange{extractOp});
+    auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extractOp);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.getQbArray(), ValueRange{index});
 
     return success();
   }
@@ -203,7 +205,7 @@ struct ConvertJaspConsumeQuantumKernelOp final : OpConversionPattern<jasp::Consu
     auto type = op.getType();
     auto trueAttr = rewriter.getBoolAttr(true);
     auto denseAttr = DenseElementsAttr::get(type, trueAttr);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, type, denseAttr);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, type, cast<TypedAttr>(denseAttr));
 
     return success();
   }
