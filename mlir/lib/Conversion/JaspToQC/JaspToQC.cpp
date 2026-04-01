@@ -35,9 +35,9 @@ using namespace mlir::qc;
  *
  * @details
  * Handles type conversion between the jasp and QC dialects.
- * The jasp qubit type is mapped to the QC qubit type.
- * Other types like jasp.QubitArray and jasp.QuantumState have
- * no correspondence in QC, and are not converted.
+ *  - The jasp qubit type is mapped to the QC qubit type.
+ *  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
+ *  - !jasp.QuantumState is destroyed.
  */
 class JaspToQCTypeConverter final : public TypeConverter {
 public:
@@ -59,7 +59,7 @@ public:
  * The jasp.QuantumState is used for tracking state in the jasp dialect.
  * Since QC dialect operations are side-effecting, the initial state creation is dropped.
  *
- * Note: The IR must be ordered correctly at the start of this pass.
+ * Note: For this to work, the IR must be ordered correctly at the start of this pass.
  */
 struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::CreateQuantumKernelOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -83,7 +83,8 @@ struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::Create
  * %q_arr, %state1 = jasp.create_qubits %tensor_index, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray,
  * !jasp.QuantumState
  * // becomes:
- * %index = tensor.extract %tensor_index[] : tensor<i64>
+ * %index_i64 = tensor.extract %tensor_index[] : tensor<i64>
+ * %index = arith.index_cast %index_i64 : i64 to index
  * %q_arr = memref.alloc(%index) : memref<?x!qc.qubit>
  * ```
  */
@@ -113,8 +114,9 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
  * ```mlir
  * %q = jasp.get_qubit %q_arr, %i : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
  * // becomes:
- * %j = tensor.extract %i[] : tensor<i64>
- *  %q = memref.load %q_arr[%j] : memref<?x!qc.qubit>
+ * %i_i64 = tensor.extract %i[] : tensor<i64>
+ * %i_index = arith.index_cast %i_i64 : i64 to index
+ *  %q = memref.load %q_arr[%i_index] : memref<?x!qc.qubit>
  * ```
  */
 struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
@@ -130,54 +132,6 @@ struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
     rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.getQbArray(), ValueRange{index});
 
     return success();
-  }
-
-private:
-  /**
-   * @brief Extracts a constant integer attribute from a value.
-   *
-   * @details
-   * Looks for a defining `arith.constant` operation and attempts to extract
-   * a single integer value from its attribute. Returns nullopt if the value
-   * is not a constant or not a single-element dense integer attribute.
-   */
-  static std::optional<mlir::IntegerAttr> getConstantIndex(Value value) {
-    auto constantOp = value.getDefiningOp<mlir::arith::ConstantOp>();
-    if (!constantOp)
-      return std::nullopt;
-
-    auto denseAttr = dyn_cast<mlir::DenseIntElementsAttr>(constantOp.getValue());
-    if (!denseAttr || denseAttr.getNumElements() != 1)
-      return std::nullopt;
-
-    return denseAttr.getValues<mlir::IntegerAttr>()[0];
-  }
-
-  /**
-   * @brief Extracts the register size from the defining jasp.create_qubits operation.
-   *
-   * @details
-   * Traces the qubit array back to its creation point to determine the total
-   * number of qubits allocated in that register.
-   */
-  static std::optional<mlir::IntegerAttr> getRegisterSize(Value qubitArray) {
-    auto createOp = qubitArray.getDefiningOp<jasp::CreateQubitsOp>();
-    if (!createOp)
-      return std::nullopt;
-
-    return getConstantIndex(createOp.getAmount());
-  }
-
-  /**
-   * @brief Generates a stable name for a qubit register.
-   *
-   * @details
-   * Creates a unique string identifier based on the opaque pointer of the
-   * qubit array value to ensure consistent naming of the register in QC.
-   */
-  mlir::StringAttr getQubitArrayName(Value qubitArray) const {
-    size_t hash = llvm::hash_value(qubitArray.getAsOpaquePointer());
-    return mlir::StringAttr::get(getContext(), "qreg_" + llvm::utohexstr(hash));
   }
 };
 
@@ -285,11 +239,9 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
 };
 
 /**
- * @brief Converts jasp.delete_qubits to qc.dealloc
+ * @brief Converts jasp.delete_qubits to memref.dealloc
  *
  * @details
- * TODO
- *
  * Example transformation:
  * ```mlir
  * %state1 = jasp.delete_qubits %qubit_array, %state0 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
@@ -313,7 +265,10 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
  * @brief Pass implementation for jasp-to-QC conversion
  *
  * @details
- * TODO
+ * This pass converts the Jasp dialect to the QC dialect. It handles the
+ * transformation of quantum state management from a functional-style
+ * (QuantumState passing) to a side-effecting model. It also lowers qubit
+ * array management to memref allocations and deallocations.
  */
 struct JaspToQC final : impl::JaspToQCBase<JaspToQC> {
   using JaspToQCBase::JaspToQCBase;
