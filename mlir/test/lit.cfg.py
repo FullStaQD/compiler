@@ -65,11 +65,13 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
 tool_dirs = [
     os.path.join(config.project_binary_dir, "mlir", "tools", "qcc-opt"),
+    os.path.join(config.project_binary_dir, "mlir", "tools", "qcc"),
     config.project_tools_dir,
     config.llvm_tools_dir
 ]
 tools = [
-    "qcc-opt"
+    "qcc-opt",
+    "qcc"
 ]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)

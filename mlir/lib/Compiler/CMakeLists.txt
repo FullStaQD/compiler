@@ -1,0 +1,8 @@
+add_mlir_library(
+  QCCPipeline
+  Pipeline.cpp
+  LINK_LIBS
+  MLIRPass
+  MLIRTransforms
+  MLIRTransformUtils
+  MLIRQCToQIR)
