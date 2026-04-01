@@ -24,7 +24,7 @@ decision-makers:
 
 Chosen option: "{title of option 1}", because {justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force {force} | … | comes out best (see below)}.
 
-### Consequences
+## Consequences
 
 - Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
 - Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
