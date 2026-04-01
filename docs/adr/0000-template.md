@@ -30,8 +30,7 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 - Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
 - … <!-- numbers of consequences can vary -->
 
-<!-- This is an optional element. Feel free to remove. -->
-
 ## More Information
+<!-- This "More Information" section is optional. Feel free to remove it. -->
 
 {You might want to provide additional evidence/confidence for the decision outcome here and/or document the team agreement on the decision and/or define when/how this decision the decision should be realized and if/when it should be re-visited. Links to other decisions and resources might appear here as well.}
