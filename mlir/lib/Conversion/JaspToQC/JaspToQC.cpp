@@ -53,7 +53,7 @@ public:
   }
 };
 
-// TODO: add operation support: parity, barrier, slice
+// TODO: add operation support: parity, barrier, slice, fuse, get_size, reset
 
 /**
  * @brief Converts jasp.create_quantum_kernel by deleting it
