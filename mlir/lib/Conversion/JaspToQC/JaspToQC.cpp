@@ -1,7 +1,6 @@
 
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
-#include "llvm/ADT/Hashing.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
@@ -39,7 +38,7 @@ using namespace mlir::qc;
  * Handles type conversion between the jasp and QC dialects.
  *  - The jasp qubit type is mapped to the QC qubit type.
  *  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
- *  - !jasp.QuantumState is destroyed.
+ *  - TODO: !jasp.QuantumState is destroyed.
  */
 class JaspToQCTypeConverter final : public TypeConverter {
 public:
@@ -371,6 +370,7 @@ protected:
 
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
+    // TODO: Find solution that works for 1-to-0 conversion of jasp:QuantumStateType
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns, typeConverter);
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return typeConverter.isSignatureLegal(op.getFunctionType()) && typeConverter.isLegal(&op.getBody());
