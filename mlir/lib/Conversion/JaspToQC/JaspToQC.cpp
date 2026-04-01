@@ -20,10 +20,12 @@
 #include <mlir/Support/LogicalResult.h>
 #include <mlir/Transforms/DialectConversion.h>
 
+#include <cassert>
+#include <cstddef>
 #include <utility>
 
-using namespace jasp;
 namespace qcc {
+using namespace jasp;
 using namespace mlir;
 using namespace mlir::qc;
 
@@ -169,33 +171,87 @@ struct ConvertJaspConsumeQuantumKernelOp final : OpConversionPattern<jasp::Consu
  * @brief Converts a jasp gate to QC
  *
  * @details
- * TODO
+ * Converts generic jasp.quantum_gate operations into specific QC dialect
+ * operations based on the gate name string.
+ *
+ * This pattern handles the extraction of parameters from tensors, the
+ * mapping of target qubits, and the conversion of controlled gates into
+ * `qc.ctrl` operations containing the base gate in their region.
  *
  * Example:
  * ```mlir
- * %state_out = jasp.quantum_gate "x" (%q), %state_in : (!jasp.Qubit), !jasp.QuantumState -> !jasp.QuantumState
+ * %state_out = jasp.quantum_gate "h" (%q), %state_in : (!jasp.Qubit), !jasp.QuantumState -> !jasp.QuantumState
  * ```
  * is converted to
  * ```mlir
- * qc.x %q : !qc.qubit
+ * qc.h %q : !qc.qubit
  * ```
  */
 struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp> {
   using OpConversionPattern<jasp::QuantumGateOp>::OpConversionPattern;
 
+/**
+ * @brief Macro to attempt converting a jasp gate to a specific QC operation
+ *
+ * @param NAME The string identifier of the gate in jasp
+ * @param OPTYPE The MLIR operation type in the QC dialect
+ * @param N_CONTROLS Number of control qubits
+ * @param N_TARGETS Number of target qubits
+ * @param N_PARAMS Number of floating point parameters
+ */
+#define TRY_CONVERT_GATE(NAME, OPTYPE, N_CONTROLS, N_TARGETS, N_PARAMS)                                                \
+  if (gateName == NAME) {                                                                                              \
+    return convertGate<OPTYPE>(op, adaptor, rewriter, std::make_index_sequence<N_CONTROLS>{},                          \
+                               std::make_index_sequence<N_TARGETS>{}, std::make_index_sequence<N_PARAMS>{});           \
+  }
+
   LogicalResult matchAndRewrite(jasp::QuantumGateOp op, jasp::QuantumGateOp::Adaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
 
-    auto gate_name = op.getGateType();
-    // TODO: Implement gates
-    if (gate_name != "h")
-      return failure();
+    auto gateName = op.getGateType();
 
-    auto qcQubit = adaptor.getGateOperands().front();
+    TRY_CONVERT_GATE("h", qc::HOp, 0, 1, 0);
+    TRY_CONVERT_GATE("rx", qc::RXOp, 0, 1, 1);
+    TRY_CONVERT_GATE("cx", qc::XOp, 1, 1, 0);
+    TRY_CONVERT_GATE("rxx", qc::RXXOp, 0, 2, 1);
 
-    qc::HOp::create(rewriter, op.getLoc(), qcQubit);
-    rewriter.replaceOp(op, qcQubit);
+    return failure();
+  }
 
+#undef TRY_CONVERT_GATE
+
+private:
+  inline Value extractParam(jasp::QuantumGateOp op, Value paramTensor, ConversionPatternRewriter& rewriter) const {
+    return tensor::ExtractOp::create(rewriter, op.getLoc(), paramTensor, ValueRange{}).getResult();
+  }
+
+  template <typename QCOp, std::size_t... controlOperandIndices, std::size_t... targetOperandIndices,
+            std::size_t... paramOperandIndices>
+  LogicalResult convertGate(jasp::QuantumGateOp op, jasp::QuantumGateOp::Adaptor adaptor,
+                            ConversionPatternRewriter& rewriter, std::index_sequence<controlOperandIndices...>,
+                            std::index_sequence<targetOperandIndices...>,
+                            std::index_sequence<paramOperandIndices...>) const {
+    auto operands = adaptor.getGateOperands();
+    const auto n_controls = sizeof...(controlOperandIndices);
+    const auto n_targets = sizeof...(targetOperandIndices);
+    const auto n_params = sizeof...(paramOperandIndices);
+
+    const auto targetIndexOffset = n_controls;
+    const auto paramIndexOffset = targetIndexOffset + n_targets;
+
+    assert(operands.size() == n_controls + n_targets + n_params && "Invalid number of gate operands");
+
+    if constexpr (n_controls == 0) {
+      QCOp::create(rewriter, op.getLoc(), operands[targetOperandIndices]...,
+                   extractParam(op, operands[paramOperandIndices + paramIndexOffset], rewriter)...);
+    } else {
+      qc::CtrlOp::create(rewriter, op.getLoc(), operands.take_front(n_controls), [&]() {
+        QCOp::create(rewriter, op.getLoc(), operands[targetOperandIndices + targetIndexOffset]...,
+                     extractParam(op, operands[paramOperandIndices + paramIndexOffset], rewriter)...);
+      });
+    }
+
+    rewriter.eraseOp(op);
     return success();
   }
 };
