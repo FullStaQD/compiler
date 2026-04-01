@@ -54,6 +54,8 @@ public:
   }
 };
 
+// TODO: add operation support: parity, barrier, slice
+
 /**
  * @brief Converts jasp.create_quantum_kernel by deleting it
  *
@@ -210,10 +212,31 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
 
     auto gateName = op.getGateType();
 
+    TRY_CONVERT_GATE("id", qc::IdOp, 0, 1, 0);
+    TRY_CONVERT_GATE("gphase", qc::GPhaseOp, 0, 0, 1);
+    TRY_CONVERT_GATE("x", qc::XOp, 0, 1, 0);
+    TRY_CONVERT_GATE("y", qc::YOp, 0, 1, 0);
+    TRY_CONVERT_GATE("z", qc::ZOp, 0, 1, 0);
     TRY_CONVERT_GATE("h", qc::HOp, 0, 1, 0);
-    TRY_CONVERT_GATE("rx", qc::RXOp, 0, 1, 1);
     TRY_CONVERT_GATE("cx", qc::XOp, 1, 1, 0);
+    TRY_CONVERT_GATE("cy", qc::YOp, 1, 1, 0);
+    TRY_CONVERT_GATE("cz", qc::ZOp, 1, 1, 0);
+    TRY_CONVERT_GATE("p", qc::POp, 0, 1, 1);
+    TRY_CONVERT_GATE("cp", qc::POp, 1, 1, 1);
+    TRY_CONVERT_GATE("rx", qc::RXOp, 0, 1, 1);
+    TRY_CONVERT_GATE("ry", qc::RYOp, 0, 1, 1);
+    TRY_CONVERT_GATE("rz", qc::RZOp, 0, 1, 1);
+    TRY_CONVERT_GATE("crz", qc::RZOp, 1, 1, 1);
+    TRY_CONVERT_GATE("s", qc::SOp, 0, 1, 0);
+    TRY_CONVERT_GATE("t", qc::TOp, 0, 1, 0);
+    TRY_CONVERT_GATE("sx", qc::SXOp, 0, 1, 0);
+    TRY_CONVERT_GATE("swap", qc::SWAPOp, 0, 2, 0);
     TRY_CONVERT_GATE("rxx", qc::RXXOp, 0, 2, 1);
+    TRY_CONVERT_GATE("rzz", qc::RZZOp, 0, 2, 1);
+    TRY_CONVERT_GATE("xxyy", qc::XXPlusYYOp, 0, 2, 2); // TODO: Double check if the angles are ordered correctly
+    TRY_CONVERT_GATE("u3", qc::UOp, 0, 1, 3);
+
+    // TODO: add multi-controlled gates
 
     return failure();
   }
