@@ -13,4 +13,4 @@ add_mlir_conversion_library(
   MLIRTransforms
   MLIRFuncTransforms)
 
-mqt_mlir_target_use_project_options(QCCJaspoQC)
+mqt_mlir_target_use_project_options(QCCJaspToQC)
