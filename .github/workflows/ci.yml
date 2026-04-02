@@ -94,7 +94,7 @@ jobs:
     with:
       clang-version: 22
       build-project: true
-      files-changed-only: false
+      files-changed-only: true
       cpp-linter-extra-args: "-std=c++20"
       setup-mlir: true
       llvm-version: 22.1.0
