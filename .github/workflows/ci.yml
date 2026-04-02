@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+permissions:
+  contents: read # Needed to fetch code
+
 jobs:
   change-detection:
     name: 🔍 Change
@@ -95,6 +98,9 @@ jobs:
       cpp-linter-extra-args: "-std=c++20"
       setup-mlir: true
       llvm-version: 22.1.0
+    permissions:
+      contents: read # Needed to fetch code
+      pull-requests: write # Needed to post PR comments
 
   # this job does nothing and is only used for branch protection
   required-checks-pass:
