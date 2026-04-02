@@ -14,15 +14,14 @@
 
 namespace cl = llvm::cl;
 
-static cl::OptionCategory QccCategory("QCC options");
+static cl::OptionCategory qccCategory("QCC options");
 
 int main(int argc, char** argv) {
-  llvm::cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(QccCategory));
-  llvm::cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"),
-                                            cl::cat(QccCategory));
+  cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
+  cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::cat(qccCategory));
 
-  llvm::cl::HideUnrelatedOptions(QccCategory);
-  llvm::cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
+  cl::HideUnrelatedOptions(qccCategory);
+  cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
   mlir::DialectRegistry registry;
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::qc::QCDialect>();
@@ -43,14 +42,16 @@ int main(int argc, char** argv) {
   mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
 
   mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
-  if (!module)
+  if (!module) {
     return 1;
+  }
 
   mlir::PassManager pm(&context);
   qcc::buildQuantumPipeline(pm);
 
-  if (mlir::failed(pm.run(*module)))
+  if (mlir::failed(pm.run(*module))) {
     return 1;
+  }
 
   auto output = mlir::openOutputFile(outputFilename, &errorMessage);
   if (!output) {
