@@ -267,6 +267,8 @@ private:
 /// Example transformation:
 /// ```mlir
 /// %measured, %state1 = jasp.measure %q, %state0 : !jasp.Qubit, !jasp.QuantumState -> tensor<i1>, !jasp.QuantumState
+/// ```
+/// becomes:
 /// ```mlir
 /// %c = qc.measure %q : !qc.qubit -> i1
 /// %measured = tensor.from_elements %c : tensor<i1>
@@ -298,6 +300,8 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
 /// Example transformation:
 /// ```mlir
 /// %state1 = jasp.delete_qubits %qubit_array, %state0 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
+/// ```
+/// becomes:
 /// ```mlir
 /// memref.dealloc %qubit_array : memref<?x!qc.qubit>
 /// ```
