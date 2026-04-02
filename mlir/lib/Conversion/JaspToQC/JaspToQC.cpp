@@ -232,7 +232,7 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
     TRY_CONVERT_GATE("swap", qc::SWAPOp, 0, 2, 0);
     TRY_CONVERT_GATE("rxx", qc::RXXOp, 0, 2, 1);
     TRY_CONVERT_GATE("rzz", qc::RZZOp, 0, 2, 1);
-    TRY_CONVERT_GATE("xxyy", qc::XXPlusYYOp, 0, 2, 2); // TODO: Double check if the angles are ordered correctly
+    TRY_CONVERT_GATE("xxyy", qc::XXPlusYYOp, 0, 2, 2);
     TRY_CONVERT_GATE("u3", qc::UOp, 0, 1, 3);
 
     // TODO: add multi-controlled gates
