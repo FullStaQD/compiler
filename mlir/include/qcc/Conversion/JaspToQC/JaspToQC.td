@@ -8,7 +8,6 @@ def JaspToQC : Pass<"jasp-to-qc"> {
       operations in the QC dialect.
    }];
 
-  // Define dependent dialects
   let dependentDialects = [
     "mlir::qc::QCDialect",
     "mlir::tensor::TensorDialect",
