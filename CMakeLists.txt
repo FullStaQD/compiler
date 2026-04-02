@@ -30,5 +30,6 @@ include(mlir/cmake/LateExternalDependencies.cmake)
 
 add_subdirectory(mlir/include)
 add_subdirectory(mlir/lib)
+enable_testing()
 add_subdirectory(mlir/test)
 add_subdirectory(mlir/tools)

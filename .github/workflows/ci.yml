@@ -24,14 +24,64 @@ jobs:
       fail-fast: false
       matrix:
         runs-on: [ubuntu-24.04, ubuntu-24.04-arm]
+        compiler: [gcc]
         config: [Release]
         include:
           - runs-on: ubuntu-24.04
+            compiler: gcc
             config: Debug
-    uses: ./.github/workflows/reusable-mlir-tests-ubuntu.yml
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-ubuntu.yml@afe75175d32177a7291bbb7bd11b3276f60fc810 # v1.17.15
     with:
       runs-on: ${{ matrix.runs-on }}
+      compiler: ${{ matrix.compiler }}
       config: ${{ matrix.config }}
+      setup-mlir: true
+      llvm-version: 22.1.0
+
+  cpp-tests-macos:
+    name: 🇨‌ Test 🍎
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [macos-26, macos-26-intel]
+        compiler: [clang]
+        config: [Release]
+        include:
+          - runs-on: macos-26
+            compiler: clang
+            config: Debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-macos.yml@afe75175d32177a7291bbb7bd11b3276f60fc810 # v1.17.15
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      compiler: ${{ matrix.compiler }}
+      config: ${{ matrix.config }}
+      cmake-args: -DMQT_CORE_WITH_GMP=ON
+      setup-mlir: true
+      llvm-version: 22.1.0
+
+  cpp-tests-windows:
+    name: 🇨‌ Test 🏁
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [windows-2025, windows-11-arm]
+        compiler: [msvc]
+        config: [Release]
+        include:
+          - runs-on: windows-2025
+            compiler: msvc
+            config: Debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-windows.yml@afe75175d32177a7291bbb7bd11b3276f60fc810 # v1.17.15
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      compiler: ${{ matrix.compiler }}
+      config: ${{ matrix.config }}
+      setup-mlir: true
+      llvm-version: 22.1.0
 
   cpp-linter:
     name: 🇨‌ Lint
@@ -53,6 +103,8 @@ jobs:
     needs:
       - change-detection
       - cpp-tests-ubuntu
+      - cpp-tests-macos
+      - cpp-tests-windows
       - cpp-linter
     runs-on: ubuntu-slim
     steps:
@@ -61,8 +113,8 @@ jobs:
         with:
           allowed-skips: >-
             ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests)
-              && '' || 'cpp-tests-ubuntu,'
+              fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+              && '' || 'cpp-tests-ubuntu,cpp-tests-macos,cpp-tests-windows,'
             }}
             ${{
               fromJSON(needs.change-detection.outputs.run-cpp-tests)
