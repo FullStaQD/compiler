@@ -62,7 +62,7 @@ public:
  * The jasp.QuantumState is used for tracking state in the jasp dialect.
  * Since QC dialect operations are side-effecting, the initial state creation is dropped.
  *
- * Note: For this to work, the IR must be ordered correctly at the start of this pass.
+ * NOTE: For this to work, the IR must be ordered correctly at the start of this pass.
  */
 struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::CreateQuantumKernelOp> {
   using OpConversionPattern::OpConversionPattern;
