@@ -1,6 +1,7 @@
 # -*- Python -*-
 
-import os
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, final
 
 import lit.formats  # pyright: ignore[reportMissingTypeStubs]
@@ -14,17 +15,18 @@ if TYPE_CHECKING:
         name: str = ""
         test_format = lit.formats.ShTest()
         suffixes: list[str] = []
-        test_source_root: str = ""
-        test_exec_root: str = ""
+        test_source_root: Path = ""
+        test_exec_root: Path = ""
         project_binary_dir: str = ""
         project_source_dir: str = ""
-        project_tools_dir: str = ""
-        project_scripts_dir: str = ""
+        project_tools_dir: Path = ""
         llvm_tools_dir: str = ""
         llvm_shlib_ext: str = ""
+        cmake_build_type: str = ""
         environment: dict[str, str] = {}
         substitutions: list[tuple[str, str]] = []
         excludes: list[str] = []
+
 
     config = ConfigType()
 
@@ -39,10 +41,7 @@ config.test_format = lit.formats.ShTest(execute_external=False)
 config.suffixes = [".mlir"]
 
 # test_source_root: The root path where tests are located.
-config.test_source_root = os.path.dirname(__file__)
-
-# test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.project_binary_dir, "test")
+config.test_source_root = Path(__file__).parent
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
@@ -56,22 +55,31 @@ llvm_config.use_default_substitutions()
 config.excludes = []
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.project_binary_dir, "test")
-config.project_tools_dir = os.path.join(config.project_binary_dir, "bin")
+config.test_exec_root = Path(config.project_binary_dir) / "test"
+config.project_tools_dir = Path(config.project_binary_dir) / "bin"
 
-# Tweak the PATH to include the tools and scripts dir.
+# Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
-# llvm_config.with_environment("PATH", config.project_scripts_dir, append_path=True)
 
-tool_dirs = [
-    os.path.join(config.project_binary_dir, "mlir", "tools", "qcc-opt"),
-    os.path.join(config.project_binary_dir, "mlir", "tools", "qcc"),
-    config.project_tools_dir,
-    config.llvm_tools_dir
-]
-tools = [
-    "qcc-opt",
-    "qcc"
-]
+# Successively check directories whether they contain the qcc and qcc-opt tools
+exe_suffix = ".exe" if sys.platform == "win32" else ""
+base_tool_dir = config.project_tools_dir
 
-llvm_config.add_tool_substitutions(tools, tool_dirs)
+candidate_dirs = [base_tool_dir]
+if config.cmake_build_type:
+    candidate_dirs.append(base_tool_dir / config.cmake_build_type)
+for cfg in ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"]:
+    cfg_dir = base_tool_dir / cfg
+    if cfg_dir not in candidate_dirs:
+        candidate_dirs.append(cfg_dir)
+
+found = False
+for candidate_dir in candidate_dirs:
+    if (candidate_dir / f"qcc{exe_suffix}").exists() and (candidate_dir / f"qcc-opt{exe_suffix}").exists():
+        llvm_config.add_tool_substitutions(["qcc", "qcc-opt"], [str(candidate_dir)])
+        found = True
+        break
+
+if not found:
+    msg = f"Could not find qcc and qcc-opt anywhere under {base_tool_dir}."
+    raise RuntimeError(msg)
