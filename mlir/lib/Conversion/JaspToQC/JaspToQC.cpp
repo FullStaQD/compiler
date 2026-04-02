@@ -99,7 +99,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
     auto loc = op.getLoc();
     auto extracted = tensor::ExtractOp::create(rewriter, loc, adaptor.getAmount(), ValueRange{});
     auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extracted);
-    auto memrefType = getTypeConverter()->convertType(op.getType(0));
+    auto memrefType = MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(getContext()));
     auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
     rewriter.replaceOpWithMultiple(op, {alloc.getResult(), ValueRange()});
     return success();
