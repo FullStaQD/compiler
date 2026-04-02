@@ -22,7 +22,7 @@ jobs:
   cpp-tests-ubuntu:
     name: 🇨‌ Test 🐧
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     strategy:
       fail-fast: false
       matrix:
@@ -44,7 +44,7 @@ jobs:
   cpp-tests-macos:
     name: 🇨‌ Test 🍎
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     strategy:
       fail-fast: false
       matrix:
@@ -67,7 +67,7 @@ jobs:
   cpp-tests-windows:
     name: 🇨‌ Test 🏁
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     strategy:
       fail-fast: false
       matrix:
@@ -119,7 +119,7 @@ jobs:
         with:
           allowed-skips: >-
             ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+              fromJSON(needs.change-detection.outputs.run-cpp-tests)
               && '' || 'cpp-tests-ubuntu,cpp-tests-macos,cpp-tests-windows,'
             }}
             ${{
