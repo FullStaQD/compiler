@@ -7,6 +7,8 @@
 
 #include <llvm/Support/raw_ostream.h>
 
+using namespace mlir;
+
 namespace qcc {
 
 #define GEN_PASS_DEF_QCTOQIRADAPTIVE
@@ -17,28 +19,28 @@ struct QCToQIRAdaptive final : impl::QCToQIRAdaptiveBase<QCToQIRAdaptive> {
 
 protected:
   void runOnOperation() override {
-    mlir::func::FuncOp funcOp = getOperation();
-    mlir::OpBuilder builder(funcOp->getContext());
+    func::FuncOp funcOp = getOperation();
+    OpBuilder builder(funcOp->getContext());
 
     // FIXME: finish implementation
 
     funcOp.eraseBody();
 
-    mlir::Block* entryBlock = funcOp.addEntryBlock();
-    mlir::Block* exitBlock = funcOp.addBlock();
+    Block* entryBlock = funcOp.addEntryBlock();
+    Block* exitBlock = funcOp.addBlock();
 
     builder.setInsertionPointToEnd(entryBlock);
-    mlir::LLVM::BrOp::create(builder, funcOp->getLoc(), exitBlock);
+    LLVM::BrOp::create(builder, funcOp->getLoc(), exitBlock);
 
     builder.setInsertionPointToEnd(exitBlock);
     if (funcOp.getNumResults() > 0) {
       // FIXME: make this robust
-      mlir::Type retType = funcOp.getResultTypes()[0];
-      mlir::Value zeroVal = mlir::LLVM::ZeroOp::create(builder, funcOp.getLoc(), retType);
-      mlir::func::ReturnOp::create(builder, funcOp.getLoc(), zeroVal);
+      Type retType = funcOp.getResultTypes()[0];
+      Value zeroVal = LLVM::ZeroOp::create(builder, funcOp.getLoc(), retType);
+      func::ReturnOp::create(builder, funcOp.getLoc(), zeroVal);
 
     } else {
-      mlir::func::ReturnOp::create(builder, funcOp.getLoc());
+      func::ReturnOp::create(builder, funcOp.getLoc());
     }
   }
 };
