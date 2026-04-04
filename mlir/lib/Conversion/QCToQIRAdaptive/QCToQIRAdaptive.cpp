@@ -28,17 +28,17 @@ protected:
     mlir::Block* exitBlock = funcOp.addBlock();
 
     builder.setInsertionPointToEnd(entryBlock);
-    builder.create<mlir::LLVM::BrOp>(funcOp.getLoc(), mlir::ValueRange{},
-                                     exitBlock); // FIXME: builder.create is deprecated
+    mlir::LLVM::BrOp::create(builder, funcOp->getLoc(), exitBlock);
 
     builder.setInsertionPointToEnd(exitBlock);
     if (funcOp.getNumResults() > 0) {
       // FIXME: make this robust
       mlir::Type retType = funcOp.getResultTypes()[0];
-      mlir::Value zeroVal = builder.create<mlir::LLVM::ZeroOp>(funcOp.getLoc(), retType);
-      builder.create<mlir::func::ReturnOp>(funcOp.getLoc(), zeroVal);
+      mlir::Value zeroVal = mlir::LLVM::ZeroOp::create(builder, funcOp.getLoc(), retType);
+      mlir::func::ReturnOp::create(builder, funcOp.getLoc(), zeroVal);
+
     } else {
-      builder.create<mlir::func::ReturnOp>(funcOp.getLoc());
+      mlir::func::ReturnOp::create(builder, funcOp.getLoc());
     }
   }
 };

@@ -1,6 +1,6 @@
 // RUN: qcc-opt %s -qc-to-qir-adaptive | FileCheck %s
 
-func.func @test() {
+func.func @test() -> i64 {
     // FIXME: add better and more tests
 
     %0 = qc.alloc : !qc.qubit
@@ -8,7 +8,8 @@ func.func @test() {
     %m0 = qc.measure %0 : !qc.qubit -> i1
     // recording
 
-    return
+    %exit_code = arith.constant 0 : i64
+    return %exit_code : i64
 }
 
 func.func @other_func() { return }
