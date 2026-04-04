@@ -1,6 +1,11 @@
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h"
 
 #include <llvm/Support/raw_ostream.h>
@@ -17,9 +22,22 @@ struct QCToQIRAdaptiveCleanup : impl::QCToQIRAdaptiveCleanupBase<QCToQIRAdaptive
 
 protected:
   void runOnOperation() override {
-    llvm::errs() << "!!! cleanup !!!\n";
+    // FIXME: finish impl
 
     ModuleOp moduleOp = getOperation();
+    MLIRContext* context = moduleOp.getContext();
+
+    LLVMConversionTarget target(*context);
+    target.addLegalOp<ModuleOp>();
+
+    LLVMTypeConverter typeConverter(context);
+    RewritePatternSet patterns(context);
+
+    arith::populateArithToLLVMConversionPatterns(typeConverter, patterns); // FIXME: maybe not needed here
+    populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+
+    if (failed(applyFullConversion(moduleOp, target, std::move(patterns))))
+      signalPassFailure();
   }
 };
 

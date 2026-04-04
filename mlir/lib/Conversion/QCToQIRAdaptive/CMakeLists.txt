@@ -9,7 +9,10 @@ add_mlir_conversion_library(
   LINK_LIBS
   MLIRQCDialect
   MLIRArithDialect
+  MLIRArithToLLVM
   MLIRFuncDialect
+  MLIRFuncToLLVM
   MLIRLLVMDialect
+  MLIRLLVMCommonConversion
   MLIRTransforms
   MLIRFuncTransforms)
