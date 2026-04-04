@@ -10,5 +10,6 @@ add_mlir_conversion_library(
   MLIRQCDialect
   MLIRArithDialect
   MLIRFuncDialect
+  MLIRLLVMDialect
   MLIRTransforms
   MLIRFuncTransforms)

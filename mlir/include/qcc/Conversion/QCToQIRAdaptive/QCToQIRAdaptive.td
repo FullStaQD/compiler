@@ -1,6 +1,6 @@
 include "mlir/Pass/PassBase.td"
 
-def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive"> {
+def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::func::FuncOp"> {
   let summary = "Convert qc dialect QIR adaptive profile (LLVM-IR dialect).";
 
   let description = [{
@@ -8,6 +8,7 @@ def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive"> {
    }];
 
   let dependentDialects = [
-    //"mlir::LLVM::LLVMDialect"
+    // FIXME: which ones do I need?
+    "mlir::LLVM::LLVMDialect"
   ];
 }
