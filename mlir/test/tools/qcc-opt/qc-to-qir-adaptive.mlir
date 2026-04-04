@@ -1,4 +1,5 @@
-// RUN: qcc-opt %s -qc-to-qir-adaptive | FileCheck %s
+// RUN: qcc-opt %s -qc-to-qir-adaptive | FileCheck %s --check-prefix=CHECK_FUNC
+// RUN: qcc-opt %s -pass-pipeline="builtin.module(func.func(qc-to-qir-adaptive),qc-to-qir-adaptive-cleanup)" | FileCheck %s --check-prefix=CHECK_FULL
 
 func.func @test() -> i64 {
     // FIXME: add better and more tests
@@ -14,4 +15,6 @@ func.func @test() -> i64 {
 
 func.func @other_func() { return }
 
-// CHECK-LABEL: @test
+// CHECK_FUNC-LABEL: @test
+
+// CHECK_FULL-LABEL: @test

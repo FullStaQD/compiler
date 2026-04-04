@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
                   mlir::scf::SCFDialect, jasp::JaspDialect, mlir::qc::QCDialect>();
   qcc::registerJaspToQC();
   qcc::registerQCToQIRAdaptive();
+  qcc::registerQCToQIRAdaptiveCleanup(); // FIXME: do we really want to register them individually?
   mlir::stablehlo::registerAllDialects(registry);
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "qcc optimizer", registry));
 }
