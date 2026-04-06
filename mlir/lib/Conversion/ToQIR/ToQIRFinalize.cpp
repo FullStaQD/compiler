@@ -46,11 +46,11 @@ struct PrepareFuncAttrs : public OpRewritePattern<func::FuncOp> {
 
 namespace qcc {
 
-#define GEN_PASS_DEF_TOQIRMODULE
+#define GEN_PASS_DEF_TOQIRFINALIZE
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct ToQIRModule : impl::ToQIRModuleBase<ToQIRModule> {
-  using ToQIRModuleBase::ToQIRModuleBase;
+struct ToQIRFinalize : impl::ToQIRFinalizeBase<ToQIRFinalize> {
+  using ToQIRFinalizeBase::ToQIRFinalizeBase;
 
 protected:
   void runOnOperation() override {

@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
   qcc::registerJaspToQC();
   qcc::registerQCToQIR();
   qcc::registerStdToQIR();
-  qcc::registerToQIRModule(); // FIXME: do we really want to register them individually?
+  qcc::registerToQIRFinalize(); // FIXME: do we really want to register them individually?
   mlir::stablehlo::registerAllDialects(registry);
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "qcc optimizer", registry));
 }
