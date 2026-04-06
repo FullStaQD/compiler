@@ -7,6 +7,7 @@
 
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
+#include <mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h>
 #include <mlir/Conversion/LLVMCommon/ConversionTarget.h>
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Support/LLVM.h>
@@ -52,6 +53,7 @@ protected:
     RewritePatternSet patterns(context);
 
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
+    cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
       signalPassFailure();
