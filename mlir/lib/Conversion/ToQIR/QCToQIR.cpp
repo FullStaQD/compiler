@@ -1,11 +1,14 @@
 #include "llvm/IR/Type.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/QC/IR/QCDialect.h"
+#include "mlir/Dialect/QC/IR/QCOps.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Conversion/ToQIR/constants.h"
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/LogicalResult.h>
+#include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/Types.h>
@@ -15,7 +18,32 @@
 
 using namespace mlir;
 
-namespace {} // namespace
+namespace {
+
+struct QCToQIRTypeConverter final : LLVMTypeConverter {
+  explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
+    addConversion([ctx](qc::QubitType) { return LLVM::LLVMPointerType::get(ctx); });
+  }
+};
+
+/// FIXME: implement this in a better way (robust for all gates)
+struct XGateLowering : public OpConversionPattern<qc::XOp> {
+  using OpConversionPattern<qc::XOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(qc::XOp op, OpAdaptor adaptor, ConversionPatternRewriter& rewriter) const override {
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    auto xFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_X);
+    if (!xFnDecl)
+      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_X;
+
+    auto callOp = LLVM::CallOp::create(rewriter, op.getLoc(), xFnDecl, adaptor.getOperands());
+    rewriter.replaceOp(op, callOp);
+    return success();
+  }
+};
+
+} // namespace
 
 namespace qcc {
 
@@ -30,9 +58,21 @@ protected:
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     ModuleOp moduleOp = funcOp->getParentOfType<ModuleOp>();
-    auto context = funcOp.getContext();
+    auto ctx = funcOp.getContext();
 
+    /// FIXME: only on entry_point functions!
     if (failed(insertRtInit()))
+      return signalPassFailure();
+
+    ConversionTarget target(*ctx);
+    target.addLegalDialect<LLVM::LLVMDialect>();
+    // target.addIllegalDialect<QCDialect>(); // FIXME:
+
+    QCToQIRTypeConverter typeConverter(ctx);
+    RewritePatternSet patterns(ctx);
+    patterns.add<XGateLowering>(typeConverter, ctx);
+
+    if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
       return signalPassFailure();
   }
 
