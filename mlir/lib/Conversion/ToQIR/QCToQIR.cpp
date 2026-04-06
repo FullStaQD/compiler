@@ -34,7 +34,7 @@ struct XGateLowering : public OpConversionPattern<qc::XOp> {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     auto xFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_X);
-    if (!xFnDecl)
+    if (!xFnDecl) // Leave op alone in this case but report error.
       return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_X;
 
     auto callOp = LLVM::CallOp::create(rewriter, op.getLoc(), xFnDecl, adaptor.getOperands());
@@ -67,6 +67,7 @@ protected:
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
     // target.addIllegalDialect<QCDialect>(); // FIXME:
+    target.addIllegalOp<qc::XOp>();
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
