@@ -1,3 +1,4 @@
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Type.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -6,7 +7,9 @@
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Conversion/ToQIR/constants.h"
 
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Support/Casting.h>
 #include <llvm/Support/LogicalResult.h>
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
@@ -20,24 +23,62 @@ using namespace mlir;
 
 namespace {
 
+/// Map any of the (unitary) gates to their QIR QIS function declaration.
+StringRef mapQCGateToQIS(Operation* op) {
+  return llvm::TypeSwitch<Operation*, StringRef>(op)
+      .Case<qc::XOp>([](auto) { return qcc::QIR_QIS_X; })
+      .Case<qc::HOp>([](auto) { return qcc::QIR_QIS_H; })
+      .Default([](auto) { return ""; });
+}
+
 struct QCToQIRTypeConverter final : LLVMTypeConverter {
   explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
     addConversion([ctx](qc::QubitType) { return LLVM::LLVMPointerType::get(ctx); });
   }
 };
 
-/// FIXME: implement this in a better way (robust for all gates)
-struct XGateLowering : public OpConversionPattern<qc::XOp> {
-  using OpConversionPattern<qc::XOp>::OpConversionPattern;
+struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
+  using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(qc::XOp op, OpAdaptor adaptor, ConversionPatternRewriter& rewriter) const override {
+  LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
-    auto xFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_X);
-    if (!xFnDecl) // Leave op alone in this case but report error.
-      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_X;
+    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_MZ);
+    if (!fnDecl)
+      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_MZ;
 
-    auto callOp = LLVM::CallOp::create(rewriter, op.getLoc(), xFnDecl, adaptor.getOperands());
+    auto callOp = LLVM::CallOp::create(rewriter, op.getLoc(), fnDecl, adaptor.getOperands());
+    rewriter.replaceOp(op, callOp);
+    return success();
+  }
+};
+
+/// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
+struct UnitaryLowering : public ConversionPattern {
+  UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
+      : ConversionPattern(converter, MatchAnyOpTypeTag(), 1, ctx) {}
+
+  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+                                ConversionPatternRewriter& rewriter) const override {
+    if (op->getDialect()->getNamespace() != "qc") // FIXME: not hardcoding
+      return failure();
+
+    // FIXME: add a map to QIR QIS
+    if (!llvm::isa<qc::XOp>(op))
+      return failure();
+
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    // NOTE: if the function declaration is not found we report and error and
+    // leave it to the pass to observe that some ops could not be converted (qc
+    // dialect is illegal).
+    auto qis_name = mapQCGateToQIS(op);
+    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qis_name);
+    if (!fnDecl)
+      return op->emitError() << "QIR QIS declaration not found: " << qis_name;
+
+    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, operands);
     rewriter.replaceOp(op, callOp);
     return success();
   }
@@ -66,12 +107,14 @@ protected:
 
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
-    // target.addIllegalDialect<QCDialect>(); // FIXME:
+    // target.addIllegalDialect<qc::QCDialect>(); // FIXME:
     target.addIllegalOp<qc::XOp>();
+    target.addIllegalOp<qc::HOp>();
+    target.addIllegalOp<qc::MeasureOp>();
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<XGateLowering>(typeConverter, ctx);
+    patterns.add<MeasureLowering, UnitaryLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
       return signalPassFailure();
