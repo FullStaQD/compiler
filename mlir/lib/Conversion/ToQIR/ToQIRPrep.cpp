@@ -21,9 +21,10 @@ protected:
 
     // Runtime functions:
     createFnDecl(qcc::QIR_RT_INIT, 1);
+    createRtReadResultDecl();
 
     // QIS:
-    createFnDecl(qcc::QIR_QIS_MZ, 2, true);
+    createFnDecl(qcc::QIR_QIS_MZ, 2, true); // FIXME: second arg is actually writeonly
     createFnDecl(qcc::QIR_QIS_H, 1);
     createFnDecl(qcc::QIR_QIS_X, 1);
   }
@@ -46,6 +47,20 @@ private:
     if (irreversible) {
       fnDecl->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
     }
+  }
+
+  void createRtReadResultDecl() {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto i1Type = IntegerType::get(ctx, 1);
+    auto fnType = LLVM::LLVMFunctionType::get(i1Type, {ptrType});
+
+    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::QIR_RT_READ_RESULT, fnType);
+    fnDecl.setArgAttr(0, "llvm.readonly", builder.getUnitAttr());
   }
 };
 

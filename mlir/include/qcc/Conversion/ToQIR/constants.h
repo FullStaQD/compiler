@@ -11,6 +11,9 @@ namespace qcc {
 /// Must be called right at the start of an entry-point.
 static constexpr llvm::StringLiteral QIR_RT_INIT = "__quantum__rt__initialize";
 
+/// Convert a measurement result to a i1.
+static constexpr llvm::StringLiteral QIR_RT_READ_RESULT = "__quantum__rt__read_result";
+
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)
 //===----------------------------------------------------------------------===//

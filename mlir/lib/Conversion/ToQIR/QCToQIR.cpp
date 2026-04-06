@@ -37,6 +37,7 @@ struct QCToQIRTypeConverter final : LLVMTypeConverter {
   }
 };
 
+/// FIXME: we need to read the measurement result too!
 struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
 
@@ -48,7 +49,10 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
     if (!fnDecl)
       return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_MZ;
 
+    // FIXME: measurement op takes qubit as arg, measure fn takes qubit and result as arg.
     auto callOp = LLVM::CallOp::create(rewriter, op.getLoc(), fnDecl, adaptor.getOperands());
+    // FIXME: add read_result
+
     rewriter.replaceOp(op, callOp);
     return success();
   }
@@ -61,11 +65,7 @@ struct UnitaryLowering : public ConversionPattern {
 
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const override {
-    if (op->getDialect()->getNamespace() != "qc") // FIXME: not hardcoding
-      return failure();
-
-    // FIXME: add a map to QIR QIS
-    if (!llvm::isa<qc::XOp>(op))
+    if (op->getDialect()->getNamespace() != "qc") // FIXME: do not hardcode the name
       return failure();
 
     auto moduleOp = op->getParentOfType<ModuleOp>();
@@ -108,13 +108,13 @@ protected:
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
     // target.addIllegalDialect<qc::QCDialect>(); // FIXME:
-    target.addIllegalOp<qc::XOp>();
-    target.addIllegalOp<qc::HOp>();
-    target.addIllegalOp<qc::MeasureOp>();
+    // target.addIllegalOp<qc::XOp>();
+    // target.addIllegalOp<qc::HOp>();
+    // target.addIllegalOp<qc::MeasureOp>();
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<MeasureLowering, UnitaryLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
       return signalPassFailure();
