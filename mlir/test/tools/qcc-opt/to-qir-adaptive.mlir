@@ -1,5 +1,6 @@
-// RUN: qcc-opt %s -std-to-qir | FileCheck %s --check-prefix=CHECK_FUNC
-// RUN: qcc-opt %s -pass-pipeline="builtin.module(func.func(std-to-qir),to-qir-module)" | FileCheck %s --check-prefix=CHECK_FULL
+// RUN: qcc-opt %s -std-to-qir | FileCheck %s --check-prefix=CHECK_STD
+// RUN: qcc-opt %s -qc-to-qir | FileCheck %s --check-prefix=CHECK_QC
+// RUN: qcc-opt %s -pass-pipeline="builtin.module(func.func(std-to-qir,qc-to-qir),to-qir-module)" | FileCheck %s --check-prefix=CHECK_FULL
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     // FIXME: add better and more tests
@@ -22,6 +23,8 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 
 func.func @other_func() { return }
 
-// CHECK_FUNC-LABEL: @test
+// CHECK_STD-LABEL: @test
+
+// CHECK_QC-LABEL: @test
 
 // CHECK_FULL-LABEL: @test

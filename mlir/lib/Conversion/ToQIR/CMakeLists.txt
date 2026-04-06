@@ -1,7 +1,7 @@
 file(GLOB CONVERSION_SOURCES *.cpp)
 
 add_mlir_conversion_library(
-  QCCQCToQIRAdaptive
+  QCCToQIR
   ${CONVERSION_SOURCES}
   DEPENDS
   # FIXME: which ones do I need in the end?

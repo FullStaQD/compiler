@@ -10,6 +10,6 @@ target_link_libraries(
           MLIRTensorDialect
           QCCJaspDialect
           QCCJaspToQC
-          QCCQCToQIRAdaptive
+          QCCToQIR
           StablehloRegister
           MLIRQCDialect)

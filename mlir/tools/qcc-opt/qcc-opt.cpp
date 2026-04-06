@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
                   mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, jasp::JaspDialect, mlir::qc::QCDialect>();
   qcc::registerJaspToQC();
+  qcc::registerQCToQIR();
   qcc::registerStdToQIR();
   qcc::registerToQIRModule(); // FIXME: do we really want to register them individually?
   mlir::stablehlo::registerAllDialects(registry);

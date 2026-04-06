@@ -25,3 +25,16 @@ def ToQIRModule : Pass<"to-qir-module", "mlir::ModuleOp"> {
     "mlir::LLVM::LLVMDialect"
   ];
 }
+
+def QCToQIR : Pass<"qc-to-qir", "mlir::func::FuncOp"> {
+  let summary = "FIXME: add summary";
+
+  let description = [{
+      FIXME: add description
+   }];
+
+  let dependentDialects = [
+    // FIXME: which ones do I need?
+    "mlir::LLVM::LLVMDialect"
+  ];
+}
