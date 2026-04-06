@@ -49,7 +49,7 @@ namespace qcc {
 #define GEN_PASS_DEF_TOQIRFINALIZE
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct ToQIRFinalize : impl::ToQIRFinalizeBase<ToQIRFinalize> {
+struct ToQIRFinalize final : public impl::ToQIRFinalizeBase<ToQIRFinalize> {
   using ToQIRFinalizeBase::ToQIRFinalizeBase;
 
 protected:

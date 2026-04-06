@@ -1,6 +1,6 @@
 include "mlir/Pass/PassBase.td"
 
-def StdToQIR : Pass<"std-to-qir", "mlir::func::FuncOp"> {
+def ToQIRPrep : Pass<"to-qir-prep", "mlir::ModuleOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{
@@ -14,6 +14,19 @@ def StdToQIR : Pass<"std-to-qir", "mlir::func::FuncOp"> {
 }
 
 def ToQIRFinalize : Pass<"to-qir-finalize", "mlir::ModuleOp"> {
+  let summary = "FIXME: add summary";
+
+  let description = [{
+      FIXME: add description
+   }];
+
+  let dependentDialects = [
+    // FIXME: which ones do I need?
+    "mlir::LLVM::LLVMDialect"
+  ];
+}
+
+def StdToQIR : Pass<"std-to-qir", "mlir::func::FuncOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{
