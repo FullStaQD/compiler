@@ -19,38 +19,25 @@ protected:
     ModuleOp moduleOp = getOperation();
     auto context = moduleOp.getContext();
 
-    createQisPtrPtr(qcc::QIR_QIS_MZ, true);
-    createQisPtr(qcc::QIR_QIS_X, false);
-    createQisPtr(qcc::QIR_QIS_H, false);
+    createQisFn(qcc::QIR_QIS_MZ, 2, true);
+
+    createQisFn(qcc::QIR_QIS_H, 1);
+    createQisFn(qcc::QIR_QIS_X, 1);
   }
 
 private:
-  void createQisPtr(StringRef fnName, bool irreversible) {
+  void createQisFn(StringRef fnName, int numPtrs, bool irreversible = false) {
     ModuleOp moduleOp = getOperation();
-    auto context = moduleOp.getContext();
+    auto* context = moduleOp.getContext();
     OpBuilder builder(context);
     builder.setInsertionPointToEnd(moduleOp.getBody());
 
-    const auto ptrType = LLVM::LLVMPointerType::get(context);
-    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context), {ptrType});
+    // Prepare signature: (ptr, ptr, ...) -> void
+    auto ptrType = LLVM::LLVMPointerType::get(context);
+    SmallVector<Type, 2> argTypes(numPtrs, ptrType);
+    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context), argTypes);
 
-    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp->getLoc(), fnName, fnType);
-
-    if (irreversible) {
-      fnDecl->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
-    }
-  }
-
-  void createQisPtrPtr(StringRef fnName, bool irreversible) {
-    ModuleOp moduleOp = getOperation();
-    auto context = moduleOp.getContext();
-    OpBuilder builder(context);
-    builder.setInsertionPointToEnd(moduleOp.getBody());
-
-    const auto ptrType = LLVM::LLVMPointerType::get(context);
-    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context), {ptrType, ptrType});
-
-    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp->getLoc(), fnName, fnType);
+    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
 
     if (irreversible) {
       fnDecl->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
