@@ -19,14 +19,18 @@ protected:
     ModuleOp moduleOp = getOperation();
     auto context = moduleOp.getContext();
 
-    createQisFn(qcc::QIR_QIS_MZ, 2, true);
+    // Runtime functions:
+    createFnDecl(qcc::QIR_RT_INIT, 1);
 
-    createQisFn(qcc::QIR_QIS_H, 1);
-    createQisFn(qcc::QIR_QIS_X, 1);
+    // QIS:
+    createFnDecl(qcc::QIR_QIS_MZ, 2, true);
+    createFnDecl(qcc::QIR_QIS_H, 1);
+    createFnDecl(qcc::QIR_QIS_X, 1);
   }
 
 private:
-  void createQisFn(StringRef fnName, int numPtrs, bool irreversible = false) {
+  /// FIXME: docstring
+  void createFnDecl(StringRef fnName, int numPtrs, bool irreversible = false) {
     ModuleOp moduleOp = getOperation();
     auto* context = moduleOp.getContext();
     OpBuilder builder(context);

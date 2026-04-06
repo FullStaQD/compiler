@@ -5,7 +5,14 @@
 namespace qcc {
 
 //===----------------------------------------------------------------------===//
-// QIS
+// QIR runtime functions
+//===----------------------------------------------------------------------===//
+
+/// Must be called right at the start of an entry-point.
+static constexpr llvm::StringLiteral QIR_RT_INIT = "__quantum__rt__initialize";
+
+//===----------------------------------------------------------------------===//
+// QIR quantum instruction set (QIS)
 //===----------------------------------------------------------------------===//
 
 // TODO: This is a hardcoded QIS, we need to query it from the device in the future.
