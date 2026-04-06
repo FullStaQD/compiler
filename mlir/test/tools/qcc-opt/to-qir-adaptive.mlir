@@ -1,5 +1,5 @@
-// RUN: qcc-opt %s -qc-to-qir-adaptive | FileCheck %s --check-prefix=CHECK_FUNC
-// RUN: qcc-opt %s -pass-pipeline="builtin.module(func.func(qc-to-qir-adaptive),qc-to-qir-adaptive-cleanup)" | FileCheck %s --check-prefix=CHECK_FULL
+// RUN: qcc-opt %s -std-to-qir | FileCheck %s --check-prefix=CHECK_FUNC
+// RUN: qcc-opt %s -pass-pipeline="builtin.module(func.func(std-to-qir),to-qir-module)" | FileCheck %s --check-prefix=CHECK_FULL
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     // FIXME: add better and more tests

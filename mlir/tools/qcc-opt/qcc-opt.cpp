@@ -8,7 +8,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 #include "stablehlo/dialect/Register.h"
 
@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
                   mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, jasp::JaspDialect, mlir::qc::QCDialect>();
   qcc::registerJaspToQC();
-  qcc::registerQCToQIRAdaptive();
-  qcc::registerQCToQIRAdaptiveCleanup(); // FIXME: do we really want to register them individually?
+  qcc::registerStdToQIR();
+  qcc::registerToQIRModule(); // FIXME: do we really want to register them individually?
   mlir::stablehlo::registerAllDialects(registry);
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "qcc optimizer", registry));
 }

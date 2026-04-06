@@ -1,2 +1,2 @@
 add_subdirectory(JaspToQC)
-add_subdirectory(QCToQIRAdaptive)
+add_subdirectory(ToQIR)

@@ -5,7 +5,7 @@ add_mlir_conversion_library(
   ${CONVERSION_SOURCES}
   DEPENDS
   # FIXME: which ones do I need in the end?
-  QCCQCToQIRAdaptiveIncGen
+  QCCToQIRIncGen
   LINK_LIBS
   MLIRQCDialect
   MLIRArithDialect

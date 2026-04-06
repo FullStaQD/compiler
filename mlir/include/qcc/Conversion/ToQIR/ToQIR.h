@@ -5,9 +5,9 @@
 namespace qcc {
 
 #define GEN_PASS_DECL
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h.inc"
+#include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
 #define GEN_PASS_REGISTRATION
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h.inc"
+#include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
 } // namespace qcc

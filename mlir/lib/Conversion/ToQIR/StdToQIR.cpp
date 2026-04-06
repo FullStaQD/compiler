@@ -1,9 +1,8 @@
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h"
-
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
@@ -25,11 +24,11 @@ static constexpr llvm::StringLiteral QCC_ENTRY_POINT_ATTR_NAME = "qcc.entry_poin
 
 namespace qcc {
 
-#define GEN_PASS_DEF_QCTOQIRADAPTIVE
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h.inc"
+#define GEN_PASS_DEF_STDTOQIR
+#include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct QCToQIRAdaptive final : impl::QCToQIRAdaptiveBase<QCToQIRAdaptive> {
-  using QCToQIRAdaptiveBase::QCToQIRAdaptiveBase;
+struct StdToQIR final : impl::StdToQIRBase<StdToQIR> {
+  using StdToQIRBase::StdToQIRBase;
 
 protected:
   // FIXME: finish implementation

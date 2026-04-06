@@ -1,6 +1,6 @@
 include "mlir/Pass/PassBase.td"
 
-def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::func::FuncOp"> {
+def StdToQIR : Pass<"std-to-qir", "mlir::func::FuncOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{
@@ -13,7 +13,7 @@ def QCToQIRAdaptive : Pass<"qc-to-qir-adaptive", "mlir::func::FuncOp"> {
   ];
 }
 
-def QCToQIRAdaptiveCleanup : Pass<"qc-to-qir-adaptive-cleanup", "mlir::ModuleOp"> {
+def ToQIRModule : Pass<"to-qir-module", "mlir::ModuleOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{

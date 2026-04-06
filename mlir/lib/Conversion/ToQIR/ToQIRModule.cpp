@@ -6,7 +6,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include <llvm/Support/raw_ostream.h>
 
@@ -14,11 +14,11 @@ using namespace mlir;
 
 namespace qcc {
 
-#define GEN_PASS_DEF_QCTOQIRADAPTIVECLEANUP
-#include "qcc/Conversion/QCToQIRAdaptive/QCToQIRAdaptive.h.inc"
+#define GEN_PASS_DEF_TOQIRMODULE
+#include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct QCToQIRAdaptiveCleanup : impl::QCToQIRAdaptiveCleanupBase<QCToQIRAdaptiveCleanup> {
-  using QCToQIRAdaptiveCleanupBase::QCToQIRAdaptiveCleanupBase;
+struct ToQIRModule : impl::ToQIRModuleBase<ToQIRModule> {
+  using ToQIRModuleBase::ToQIRModuleBase;
 
 protected:
   void runOnOperation() override {
