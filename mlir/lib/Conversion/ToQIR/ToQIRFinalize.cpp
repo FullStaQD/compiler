@@ -57,22 +57,7 @@ protected:
     // FIXME: finish impl
 
     ModuleOp moduleOp = getOperation();
-    MLIRContext* context = moduleOp.getContext();
-
-    // FIXME: polish this.
-    {
-      OpBuilder builder(moduleOp->getContext());
-      builder.setInsertionPointToEnd(moduleOp.getBody());
-
-      auto fnName = qcc::QIR_QIS_MZ;
-      auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context), {});
-
-      auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp->getLoc(), fnName, fnType);
-
-      if (fnName == qcc::QIR_QIS_MZ) {
-        fnDecl->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
-      }
-    }
+    auto context = moduleOp.getContext();
 
     // Prepare func attrs.
     {

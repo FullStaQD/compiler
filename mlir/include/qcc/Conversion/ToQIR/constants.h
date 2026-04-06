@@ -13,4 +13,7 @@ namespace qcc {
 /// Z-Basis measurement (irreversible).
 static constexpr llvm::StringLiteral QIR_QIS_MZ = "__quantum__qis__mz__body";
 
+static constexpr llvm::StringLiteral QIR_QIS_H = "__quantum__qis__h__body";
+static constexpr llvm::StringLiteral QIR_QIS_X = "__quantum__qis__x__body";
+
 } // namespace qcc

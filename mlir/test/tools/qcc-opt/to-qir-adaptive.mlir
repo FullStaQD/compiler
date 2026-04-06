@@ -28,3 +28,4 @@ func.func @other_func() { return }
 // CHECK_QC-LABEL: @test
 
 // CHECK_FULL-LABEL: @test
+// CHECK_FULL: __quantum__qis__mz__body
