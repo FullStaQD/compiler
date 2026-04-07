@@ -86,6 +86,7 @@ jobs:
       setup-mlir: true
       llvm-version: 22.1.0
 
+  # This job runs clang-tidy and posts the results as a PR comment
   cpp-linter:
     name: 🇨‌ Lint
     needs: change-detection
@@ -102,7 +103,7 @@ jobs:
       contents: read # Needed to fetch code
       pull-requests: write # Needed to post PR comments
 
-  # this job does nothing and is only used for branch protection
+  # This job does nothing and is only used for branch protection
   required-checks-pass:
     name: 🚦 Check
     if: always()
