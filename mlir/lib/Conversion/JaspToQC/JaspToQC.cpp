@@ -36,7 +36,7 @@ using namespace mlir::qc;
 /// Handles type conversion between the jasp and QC dialects.
 ///  - The jasp qubit type is mapped to the QC qubit type.
 ///  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
-///  - TODO: !jasp.QuantumState is destroyed.
+///  - !jasp.QuantumState is destroyed.
 class JaspToQCTypeConverter final : public TypeConverter {
 public:
   explicit JaspToQCTypeConverter(MLIRContext* ctx) {
@@ -46,6 +46,10 @@ public:
     addConversion([ctx](jasp::QubitType /*type*/) -> Type { return qc::QubitType::get(ctx); });
     addConversion([ctx](jasp::QubitArrayType /*type*/) -> Type {
       return MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(ctx));
+    });
+    addConversion([](jasp::QuantumStateType /*type*/, llvm::SmallVectorImpl<mlir::Type>& results) {
+      // Returning success() indicates a successful 1-to-0 conversion.
+      return mlir::success();
     });
   }
 };
@@ -63,7 +67,7 @@ struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::Create
 
   LogicalResult matchAndRewrite(jasp::CreateQuantumKernelOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, ValueRange());
     return success();
   }
 };
@@ -94,7 +98,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
     auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extracted);
     auto memrefType = MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(getContext()));
     auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
-    rewriter.replaceOpWithMultiple(op, {alloc.getResult(), ValueRange()});
+    rewriter.replaceOp(op, {alloc.getResult()});
     return success();
   }
 };
@@ -253,7 +257,7 @@ private:
       });
     }
 
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, ValueRange());
     return success();
   }
 };
@@ -289,7 +293,7 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
     // Create tensor from the i1 result to match jasp.measure's return type
     auto tensorResult = tensor::FromElementsOp::create(rewriter, op.getLoc(), op.getType(0), measureBit);
 
-    rewriter.replaceOpWithMultiple(op, {tensorResult.getResult(), ValueRange()});
+    rewriter.replaceOp(op, {tensorResult.getResult()});
 
     return success();
   }
@@ -312,7 +316,7 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
                                 ConversionPatternRewriter& rewriter) const override {
     auto array = adaptor.getQubits();
     memref::DeallocOp::create(rewriter, op.getLoc(), array);
-    rewriter.eraseOp(op);
+    rewriter.replaceOp(op, ValueRange());
     return success();
   }
 };
@@ -336,7 +340,8 @@ protected:
     JaspToQCTypeConverter typeConverter(context);
 
     target.addIllegalDialect<JaspDialect>();
-    target.addLegalDialect<QCDialect, memref::MemRefDialect, tensor::TensorDialect, arith::ArithDialect>();
+    target.addLegalDialect<QCDialect, memref::MemRefDialect, tensor::TensorDialect, arith::ArithDialect,
+                           func::FuncDialect>();
 
     // Register operation conversion patterns
     patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspCreateQubitsOp,
@@ -346,10 +351,9 @@ protected:
     // Conversion of jasp types in func.func signatures
     // Note: This currently has limitations with signature changes
     // TODO: Find solution that works for 1-to-0 conversion of jasp:QuantumStateType
-    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getFunctionType()) && typeConverter.isLegal(&op.getBody());
-    });
+    target.addDynamicallyLegalOp<func::FuncOp>(
+        [&](func::FuncOp op) { return typeConverter.isSignatureLegal(op.getFunctionType()); });
+    populateAnyFunctionOpInterfaceTypeConversionPattern(patterns, typeConverter);
 
     // Conversion of jasp types in func.return
     populateReturnOpTypeConversionPattern(patterns, typeConverter);

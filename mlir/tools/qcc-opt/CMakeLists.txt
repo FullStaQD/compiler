@@ -11,4 +11,5 @@ target_link_libraries(
           QCCJaspDialect
           QCCJaspToQC
           StablehloRegister
+          StablehloLinalgTransforms
           MLIRQCDialect)
