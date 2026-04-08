@@ -11,6 +11,7 @@
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Func/Transforms/FuncConversions.h>
+#include <mlir/Dialect/SCF/Transforms/Patterns.h>
 #include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/IR/BuiltinTypeInterfaces.h>
 #include <mlir/IR/MLIRContext.h>
@@ -390,6 +391,8 @@ protected:
 
     // Conversion of jasp types in control-flow ops (e.g., cf.br, cf.cond_br)
     populateBranchOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
+
+    scf::populateSCFStructuralTypeConversionsAndLegality(stateDestroyer, patterns, target);
 
     // Apply the conversion
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
