@@ -9,10 +9,10 @@ namespace qcc {
 //===----------------------------------------------------------------------===//
 
 /// Must be called right at the start of an entry-point.
-static constexpr llvm::StringLiteral QIR_RT_INIT = "__quantum__rt__initialize";
+static constexpr llvm::StringLiteral qirRtInit = "__quantum__rt__initialize";
 
 /// Convert a measurement result to a i1.
-static constexpr llvm::StringLiteral QIR_RT_READ_RESULT = "__quantum__rt__read_result";
+static constexpr llvm::StringLiteral qirRtReadResult = "__quantum__rt__read_result";
 
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)
@@ -21,9 +21,11 @@ static constexpr llvm::StringLiteral QIR_RT_READ_RESULT = "__quantum__rt__read_r
 // TODO: This is a hardcoded QIS, we need to query it from the device in the future.
 
 /// Z-Basis measurement (irreversible).
-static constexpr llvm::StringLiteral QIR_QIS_MZ = "__quantum__qis__mz__body";
+static constexpr llvm::StringLiteral qirQisMZ = "__quantum__qis__mz__body";
 
-static constexpr llvm::StringLiteral QIR_QIS_H = "__quantum__qis__h__body";
-static constexpr llvm::StringLiteral QIR_QIS_X = "__quantum__qis__x__body";
+static constexpr llvm::StringLiteral qirQisH = "__quantum__qis__h__body";
+static constexpr llvm::StringLiteral qirQisX = "__quantum__qis__x__body";
+
+static constexpr llvm::StringLiteral qirQisCX = "__quantum__qis__cx__body";
 
 } // namespace qcc

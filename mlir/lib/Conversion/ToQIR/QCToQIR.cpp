@@ -31,8 +31,8 @@ namespace {
 /// Map any of the (unitary) gates to their QIR QIS function declaration.
 StringRef mapQCGateToQIS(Operation* op) {
   return llvm::TypeSwitch<Operation*, StringRef>(op)
-      .Case<qc::XOp>([](auto) { return qcc::QIR_QIS_X; })
-      .Case<qc::HOp>([](auto) { return qcc::QIR_QIS_H; })
+      .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
+      .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
       .Default([](auto) { return ""; });
 }
 
@@ -74,15 +74,15 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
-    auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_MZ);
-    auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_RT_READ_RESULT);
+    auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirQisMZ);
+    auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtReadResult);
 
     if (!mzFnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_MZ;
+      return op->emitError() << "QIR QIS declaration not found: " << qcc::qirQisMZ;
     }
 
     if (!readFnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_RT_READ_RESULT;
+      return op->emitError() << "QIR QIS declaration not found: " << qcc::qirRtReadResult;
     }
 
     // NOTE: Qubit and result pointer share the same index.
@@ -138,7 +138,6 @@ struct QCToQIR final : impl::QCToQIRBase<QCToQIR> {
   using QCToQIRBase::QCToQIRBase;
 
 protected:
-  /// FIXME: implement
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     auto moduleOp = funcOp->getParentOfType<ModuleOp>();
@@ -181,10 +180,10 @@ private:
     auto moduleOp = funcOp->getParentOfType<ModuleOp>();
     auto* context = funcOp.getContext();
 
-    auto initFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_RT_INIT);
+    auto initFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtInit);
 
     if (!initFnDecl) {
-      return moduleOp.emitError() << "missing required declaration of QIR runtime function: " << qcc::QIR_RT_INIT;
+      return moduleOp.emitError() << "missing required declaration of QIR runtime function: " << qcc::qirRtInit;
     }
 
     auto loc = funcOp.getLoc();

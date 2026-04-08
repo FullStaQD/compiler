@@ -17,16 +17,16 @@ struct ToQIRPrep final : public impl::ToQIRPrepBase<ToQIRPrep> {
 protected:
   void runOnOperation() override {
     ModuleOp moduleOp = getOperation();
-    auto context = moduleOp.getContext();
+    auto* context = moduleOp.getContext();
 
     // Runtime functions:
-    createFnDecl(qcc::QIR_RT_INIT, 1);
+    createFnDecl(qcc::qirRtInit, 1);
     createRtReadResultDecl();
 
     // QIS:
-    createFnDecl(qcc::QIR_QIS_MZ, 2, true); // FIXME: second arg is actually writeonly
-    createFnDecl(qcc::QIR_QIS_H, 1);
-    createFnDecl(qcc::QIR_QIS_X, 1);
+    createFnDecl(qcc::qirQisMZ, 2, true); // FIXME: second arg is actually writeonly
+    createFnDecl(qcc::qirQisH, 1);
+    createFnDecl(qcc::qirQisX, 1);
   }
 
 private:
@@ -59,7 +59,7 @@ private:
     auto i1Type = IntegerType::get(ctx, 1);
     auto fnType = LLVM::LLVMFunctionType::get(i1Type, {ptrType});
 
-    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::QIR_RT_READ_RESULT, fnType);
+    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtReadResult, fnType);
     fnDecl.setArgAttr(0, "llvm.readonly", builder.getUnitAttr());
   }
 };
