@@ -1,16 +1,17 @@
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/ToolOutputFile.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/QC/IR/QCDialect.h"
-#include "mlir/IR/Diagnostics.h"
-#include "mlir/InitAllDialects.h"
-#include "mlir/Parser/Parser.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Support/FileUtilities.h"
-#include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "qcc/Compiler/Pipeline.h"
+
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/ToolOutputFile.h>
+#include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/Dialect/QC/IR/QCDialect.h>
+#include <mlir/IR/Diagnostics.h>
+#include <mlir/InitAllDialects.h>
+#include <mlir/Parser/Parser.h>
+#include <mlir/Pass/PassManager.h>
+#include <mlir/Support/FileUtilities.h>
+#include <mlir/Tools/mlir-opt/MlirOptMain.h>
 
 namespace cl = llvm::cl;
 

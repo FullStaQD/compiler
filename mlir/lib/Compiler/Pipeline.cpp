@@ -1,10 +1,9 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
-#include "mlir/Conversion/QCToQIR/QCToQIR.h"
-#include "mlir/Transforms/Passes.h"
-
 #include <llvm/Support/raw_ostream.h>
+#include <mlir/Conversion/QCToQIR/QCToQIR.h>
+#include <mlir/Transforms/Passes.h>
 
 namespace qcc {
 
