@@ -35,40 +35,13 @@ StringRef mapQCGateToQIS(Operation* op) {
       .Default([](auto) { return ""; });
 }
 
-struct QCToQIRTypeConverter final : LLVMTypeConverter {
-  explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
-    addConversion([ctx](qc::QubitType) { return LLVM::LLVMPointerType::get(ctx); });
-  }
-};
-
-/// FIXME: we need to read the measurement result too!
-struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
-  using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto moduleOp = op->getParentOfType<ModuleOp>();
-
-    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_MZ);
-    if (!fnDecl)
-      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_MZ;
-
-    // FIXME: measurement op takes qubit as arg, measure fn takes qubit and result as arg.
-    auto callOp = LLVM::CallOp::create(rewriter, op.getLoc(), fnDecl, adaptor.getOperands());
-    // FIXME: add read_result
-
-    rewriter.replaceOp(op, callOp);
-    return success();
-  }
-};
-
 /// FIXME: docstring
 SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
   SmallVector<Value> ptrValues;
   ptrValues.reserve(qubitValues.size());
 
   for (auto qubitValue : qubitValues) {
-    auto defOp = qubitValue.getDefiningOp();
+    auto* defOp = qubitValue.getDefiningOp();
     assert(defOp && isa<qc::AllocOp>(defOp) && "The pass assumes that all qubits come from allocations.");
     auto alloc = cast<qc::AllocOp>(defOp);
     assert(alloc.getRegisterIndex().has_value() &&
@@ -87,6 +60,43 @@ SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
   return ptrValues;
 }
 
+struct QCToQIRTypeConverter final : LLVMTypeConverter {
+  explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
+    addConversion([ctx](qc::QubitType) { return LLVM::LLVMPointerType::get(ctx); });
+  }
+};
+
+/// FIXME: we need to read the measurement result too!
+struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
+  using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_QIS_MZ);
+    auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_RT_READ_RESULT);
+
+    if (!mzFnDecl) {
+      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_QIS_MZ;
+    }
+
+    if (!readFnDecl) {
+      return op->emitError() << "QIR QIS declaration not found: " << qcc::QIR_RT_READ_RESULT;
+    }
+
+    // NOTE: Qubit and result pointer share the same index.
+    auto qubit = op.getQubit();
+    auto ptrs = qubitsToPtrs(rewriter, {qubit, qubit});
+
+    auto callMZOp = LLVM::CallOp::create(rewriter, op.getLoc(), mzFnDecl, ptrs);
+    auto callReadOp = LLVM::CallOp::create(rewriter, op.getLoc(), readFnDecl, {ptrs[1]});
+
+    rewriter.replaceOp(op, callReadOp);
+    return success();
+  }
+};
+
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
@@ -94,22 +104,25 @@ struct UnitaryLowering : public ConversionPattern {
 
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const override {
-    if (op->getDialect()->getNamespace() != "qc") // FIXME: do not hardcode the name
+    if (op->getDialect()->getNamespace() != "qc") { // FIXME: do not hardcode the name
       return failure();
+    }
 
     // FIXME: not great, if there is a trait "unitary" use that one instead!
-    if (llvm::isa<qc::AllocOp>(op) || llvm::isa<qc::MeasureOp>(op))
+    if (llvm::isa<qc::AllocOp>(op) || llvm::isa<qc::MeasureOp>(op)) {
       return failure();
+    }
 
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     // NOTE: if the function declaration is not found we report and error and
     // leave it to the pass to observe that some ops could not be converted (qc
     // dialect is illegal).
-    auto qis_name = mapQCGateToQIS(op);
-    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qis_name);
-    if (!fnDecl)
-      return op->emitError() << "QIR QIS declaration not found: " << qis_name;
+    auto qisName = mapQCGateToQIS(op);
+    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
+    if (!fnDecl) {
+      return op->emitError() << "QIR QIS declaration not found: " << qisName;
+    }
 
     auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
 
@@ -133,20 +146,23 @@ protected:
   /// FIXME: implement
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
-    ModuleOp moduleOp = funcOp->getParentOfType<ModuleOp>();
-    auto ctx = funcOp.getContext();
+    auto moduleOp = funcOp->getParentOfType<ModuleOp>();
+    auto* ctx = funcOp.getContext();
 
     // TODO: For simplicity we assume that only entry_point functions have
     // quantum operations. Before we extend support we have to figure out how to
     // do qubit mapping across function calls.
-    if (!funcOp->hasAttr("qcc.entry_point"))
+    if (!funcOp->hasAttr("qcc.entry_point")) {
       return;
+    }
 
-    if (failed(setRequiredNumQubits()))
+    if (failed(setRequiredNumQubits())) {
       return signalPassFailure();
+    }
 
-    if (failed(insertRtInit()))
+    if (failed(insertRtInit())) {
       return signalPassFailure();
+    }
 
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
@@ -157,22 +173,26 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering>(typeConverter, ctx);
 
-    if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
+    if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
+    }
+
+    removeQubitAllocsAndDeallocs();
   }
 
 private:
   LogicalResult insertRtInit() {
     func::FuncOp funcOp = getOperation();
-    ModuleOp moduleOp = funcOp->getParentOfType<ModuleOp>();
-    auto context = funcOp.getContext();
+    auto moduleOp = funcOp->getParentOfType<ModuleOp>();
+    auto* context = funcOp.getContext();
 
     auto initFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::QIR_RT_INIT);
 
-    if (!initFnDecl)
+    if (!initFnDecl) {
       return moduleOp.emitError() << "missing required declaration of QIR runtime function: " << qcc::QIR_RT_INIT;
+    }
 
     auto loc = funcOp.getLoc();
     OpBuilder builder(context);
@@ -196,8 +216,9 @@ private:
       auto maybeIndex = allocOp.getRegisterIndex();
       auto maybeSize = allocOp.getRegisterSize();
 
-      if (!maybeIndex.has_value())
+      if (!maybeIndex.has_value()) {
         return allocOp.emitError("allocation missing register index");
+      }
 
       if (!maybeSize.has_value()) {
         return allocOp.emitError("allocation missing register size");
@@ -215,12 +236,28 @@ private:
       return WalkResult::advance();
     });
 
-    if (result.wasInterrupted())
+    if (result.wasInterrupted()) {
       return llvm::failure();
+    }
 
     // FIXME: set required_num_qubits.
 
     return llvm::success();
+  }
+
+  // FIXME: dealloc must happen earlier
+  void removeQubitAllocsAndDeallocs() {
+    SmallVector<Operation*> toErase;
+
+    getOperation()->walk([&](Operation* op) {
+      if (isa<qc::AllocOp, qc::DeallocOp>(op)) {
+        toErase.push_back(op);
+      }
+    });
+
+    for (Operation* op : toErase) {
+      op->erase();
+    }
   }
 };
 
