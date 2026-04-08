@@ -7,9 +7,9 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
-        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm"
+        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
+        "LLVM_EXTERNAL_LIT": "/usr/local/bin/lit"
       }
     },
     {
@@ -17,15 +17,40 @@
       "inherits": "base",
       "displayName": "dev config",
       "cacheVariables": {
-        "LLVM_EXTERNAL_LIT": "$(which lit)"
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "LLVM_ENABLE_ASSERTIONS": "ON"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "debug config",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LLVM_ENABLE_ASSERTIONS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "release config",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ],
   "buildPresets": [
     {
       "name": "dev",
-      "displayName": "dev build",
       "configurePreset": "dev"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
     }
   ]
 }
