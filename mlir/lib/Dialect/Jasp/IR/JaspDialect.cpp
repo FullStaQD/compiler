@@ -1,6 +1,7 @@
-#include "llvm/ADT/TypeSwitch.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
+
+#include <llvm/ADT/TypeSwitch.h>
+#include <mlir/IR/DialectImplementation.h>
 
 using namespace mlir;
 using namespace jasp;

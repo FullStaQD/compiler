@@ -1,4 +1,3 @@
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
@@ -10,7 +9,16 @@
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
-#include "stablehlo/dialect/Register.h"
+
+#include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/Dialect/QC/IR/QCDialect.h>
+#include <mlir/Dialect/SCF/IR/SCF.h>
+#include <mlir/Dialect/Tensor/IR/Tensor.h>
+#include <mlir/IR/DialectRegistry.h>
+#include <mlir/IR/MLIRContext.h>
+#include <mlir/Tools/mlir-opt/MlirOptMain.h>
+#include <stablehlo/dialect/Register.h>
 
 int main(int argc, char** argv) {
   mlir::DialectRegistry registry;
