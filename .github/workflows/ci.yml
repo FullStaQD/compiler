@@ -1,0 +1,130 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # Needed to fetch code
+
+jobs:
+  change-detection:
+    name: 🔍 Change
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-change-detection.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+
+  cpp-tests-ubuntu:
+    name: 🇨‌ Test 🐧
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-24.04, ubuntu-24.04-arm]
+        compiler: [gcc]
+        config: [Release]
+        include:
+          - runs-on: ubuntu-24.04
+            compiler: gcc
+            config: Debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-ubuntu.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      compiler: ${{ matrix.compiler }}
+      config: ${{ matrix.config }}
+      setup-mlir: true
+      llvm-version: 22.1.0
+
+  cpp-tests-macos:
+    name: 🇨‌ Test 🍎
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [macos-26, macos-26-intel]
+        compiler: [clang]
+        config: [Release]
+        include:
+          - runs-on: macos-26
+            compiler: clang
+            config: Debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-macos.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      compiler: ${{ matrix.compiler }}
+      config: ${{ matrix.config }}
+      cmake-args: -DMQT_CORE_WITH_GMP=ON
+      setup-mlir: true
+      llvm-version: 22.1.0
+
+  cpp-tests-windows:
+    name: 🇨‌ Test 🏁
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [windows-2025, windows-11-arm]
+        compiler: [msvc]
+        config: [Release]
+        include:
+          - runs-on: windows-2025
+            compiler: msvc
+            config: Debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-windows.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+    with:
+      runs-on: ${{ matrix.runs-on }}
+      compiler: ${{ matrix.compiler }}
+      config: ${{ matrix.config }}
+      setup-mlir: true
+      llvm-version: 22.1.0
+
+  # This job runs clang-tidy and posts the results as a PR comment
+  cpp-linter:
+    name: 🇨‌ Lint
+    needs: change-detection
+    if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-linter.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+    with:
+      clang-version: 22
+      build-project: true
+      files-changed-only: true
+      cpp-linter-extra-args: "-std=c++20"
+      setup-mlir: true
+      llvm-version: 22.1.0
+    permissions:
+      contents: read # Needed to fetch code
+      pull-requests: write # Needed to post PR comments
+
+  # This job does nothing and is only used for branch protection
+  required-checks-pass:
+    name: 🚦 Check
+    if: always()
+    needs:
+      - change-detection
+      - cpp-tests-ubuntu
+      - cpp-tests-macos
+      - cpp-tests-windows
+      - cpp-linter
+    runs-on: ubuntu-slim
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # v1.2.2
+        with:
+          allowed-skips: >-
+            ${{
+              fromJSON(needs.change-detection.outputs.run-cpp-tests)
+              && '' || 'cpp-tests-ubuntu,cpp-tests-macos,cpp-tests-windows,'
+            }}
+            ${{
+              fromJSON(needs.change-detection.outputs.run-cpp-tests)
+              && '' || 'cpp-coverage,'
+            }}
+          jobs: ${{ toJSON(needs) }}
