@@ -3,6 +3,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
+#include "mlir/Dialect/QC/IR/QCInterfaces.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Conversion/ToQIR/constants.h"
@@ -42,11 +43,11 @@ SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
 
   for (auto qubitValue : qubitValues) {
     auto* defOp = qubitValue.getDefiningOp();
-    assert(defOp && isa<qc::AllocOp>(defOp) && "The pass assumes that all qubits come from allocations.");
-    auto alloc = cast<qc::AllocOp>(defOp);
-    assert(alloc.getRegisterIndex().has_value() &&
-           "Early in the pass we made sure that qc.alloc has a register index.");
-    int64_t index = alloc.getRegisterIndex().value();
+    assert(defOp && isa<qc::StaticOp>(defOp) &&
+           "The pass assumes that all qubits come from static allocations (in particular no function args).");
+    auto alloc = cast<qc::StaticOp>(defOp);
+
+    int64_t index = alloc.getIndex();
 
     auto i64Type = builder.getI64Type();
     auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
@@ -66,11 +67,10 @@ struct QCToQIRTypeConverter final : LLVMTypeConverter {
   }
 };
 
-/// FIXME: we need to read the measurement result too!
 struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor adaptor,
+  LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
@@ -102,14 +102,9 @@ struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
       : ConversionPattern(converter, MatchAnyOpTypeTag(), 1, ctx) {}
 
-  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
+  LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> /*operands*/,
                                 ConversionPatternRewriter& rewriter) const override {
-    if (op->getDialect()->getNamespace() != "qc") { // FIXME: do not hardcode the name
-      return failure();
-    }
-
-    // FIXME: not great, if there is a trait "unitary" use that one instead!
-    if (llvm::isa<qc::AllocOp>(op) || llvm::isa<qc::MeasureOp>(op)) {
+    if (!isa<qc::QCDialect>(op->getDialect()) || !isa<qc::UnitaryOpInterface>(op)) {
       return failure();
     }
 
@@ -166,10 +161,8 @@ protected:
 
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
-    // target.addIllegalDialect<qc::QCDialect>(); // FIXME:
-    // target.addIllegalOp<qc::XOp>();
-    // target.addIllegalOp<qc::HOp>();
-    // target.addIllegalOp<qc::MeasureOp>();
+    target.addIllegalDialect<qc::QCDialect>();
+    target.addLegalOp<qc::StaticOp>(); // take care of slightly later.
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
@@ -179,7 +172,7 @@ protected:
       return signalPassFailure();
     }
 
-    removeQubitAllocsAndDeallocs();
+    removeQCStaticOps();
   }
 
 private:
@@ -245,12 +238,11 @@ private:
     return llvm::success();
   }
 
-  // FIXME: dealloc must happen earlier
-  void removeQubitAllocsAndDeallocs() {
+  void removeQCStaticOps() {
     SmallVector<Operation*> toErase;
 
     getOperation()->walk([&](Operation* op) {
-      if (isa<qc::AllocOp, qc::DeallocOp>(op)) {
+      if (isa<qc::StaticOp>(op)) {
         toErase.push_back(op);
       }
     });
