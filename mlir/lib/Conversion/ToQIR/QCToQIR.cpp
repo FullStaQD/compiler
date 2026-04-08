@@ -15,9 +15,13 @@
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/Types.h>
+#include <mlir/IR/Value.h>
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Pass/Pass.h>
+#include <mlir/Support/WalkResult.h>
 #include <mlir/Transforms/DialectConversion.h>
+
+#include <cstdint>
 
 using namespace mlir;
 
@@ -58,6 +62,31 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   }
 };
 
+/// FIXME: docstring
+SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
+  SmallVector<Value> ptrValues;
+  ptrValues.reserve(qubitValues.size());
+
+  for (auto qubitValue : qubitValues) {
+    auto defOp = qubitValue.getDefiningOp();
+    assert(defOp && isa<qc::AllocOp>(defOp) && "The pass assumes that all qubits come from allocations.");
+    auto alloc = cast<qc::AllocOp>(defOp);
+    assert(alloc.getRegisterIndex().has_value() &&
+           "Early in the pass we made sure that qc.alloc has a register index.");
+    int64_t index = alloc.getRegisterIndex().value();
+
+    auto i64Type = builder.getI64Type();
+    auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
+
+    auto constantOp = LLVM::ConstantOp::create(builder, defOp->getLoc(), i64Type, builder.getI64IntegerAttr(index));
+    auto ptrOp = LLVM::IntToPtrOp::create(builder, defOp->getLoc(), ptrType, {constantOp});
+
+    ptrValues.push_back(ptrOp);
+  }
+
+  return ptrValues;
+}
+
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
@@ -66,6 +95,10 @@ struct UnitaryLowering : public ConversionPattern {
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter& rewriter) const override {
     if (op->getDialect()->getNamespace() != "qc") // FIXME: do not hardcode the name
+      return failure();
+
+    // FIXME: not great, if there is a trait "unitary" use that one instead!
+    if (llvm::isa<qc::AllocOp>(op) || llvm::isa<qc::MeasureOp>(op))
       return failure();
 
     auto moduleOp = op->getParentOfType<ModuleOp>();
@@ -78,7 +111,9 @@ struct UnitaryLowering : public ConversionPattern {
     if (!fnDecl)
       return op->emitError() << "QIR QIS declaration not found: " << qis_name;
 
-    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, operands);
+    auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
+
+    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, ptrs);
     rewriter.replaceOp(op, callOp);
     return success();
   }
@@ -101,7 +136,15 @@ protected:
     ModuleOp moduleOp = funcOp->getParentOfType<ModuleOp>();
     auto ctx = funcOp.getContext();
 
-    /// FIXME: only on entry_point functions!
+    // TODO: For simplicity we assume that only entry_point functions have
+    // quantum operations. Before we extend support we have to figure out how to
+    // do qubit mapping across function calls.
+    if (!funcOp->hasAttr("qcc.entry_point"))
+      return;
+
+    if (failed(setRequiredNumQubits()))
+      return signalPassFailure();
+
     if (failed(insertRtInit()))
       return signalPassFailure();
 
@@ -138,6 +181,44 @@ private:
     auto ptrType = LLVM::LLVMPointerType::get(context);
     auto nullPtr = LLVM::ZeroOp::create(builder, loc, ptrType);
     LLVM::CallOp::create(builder, loc, initFnDecl, ValueRange{nullPtr});
+
+    return llvm::success();
+  }
+
+  /// Determine the number of qubits from the size attribute of the alloc
+  /// operations. Returns failure iff they disagree. In case of success the
+  /// corresponding attribute is written to the current op (function).
+  LogicalResult setRequiredNumQubits() {
+    func::FuncOp funcOp = getOperation();
+    uint64_t numQubits = 0;
+
+    WalkResult result = funcOp->walk([&](qc::AllocOp allocOp) -> WalkResult {
+      auto maybeIndex = allocOp.getRegisterIndex();
+      auto maybeSize = allocOp.getRegisterSize();
+
+      if (!maybeIndex.has_value())
+        return allocOp.emitError("allocation missing register index");
+
+      if (!maybeSize.has_value()) {
+        return allocOp.emitError("allocation missing register size");
+      }
+
+      uint64_t currentSize = maybeSize.value();
+
+      if (numQubits == 0) {
+        numQubits = currentSize;
+      } else if (numQubits != currentSize) {
+        return allocOp.emitError() << "conflicting register size: expected " << numQubits << " but found "
+                                   << currentSize;
+      }
+
+      return WalkResult::advance();
+    });
+
+    if (result.wasInterrupted())
+      return llvm::failure();
+
+    // FIXME: set required_num_qubits.
 
     return llvm::success();
   }

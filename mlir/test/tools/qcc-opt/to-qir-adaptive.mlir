@@ -5,7 +5,7 @@
 func.func @test() -> i64 attributes { qcc.entry_point } {
     // FIXME: add better and more tests
 
-    %0 = qc.alloc : !qc.qubit
+    %0 = qc.alloc("q", 1, 0) : !qc.qubit
     qc.h %0 : !qc.qubit
     %m0 = qc.measure %0 : !qc.qubit -> i1
 
