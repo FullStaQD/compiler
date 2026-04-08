@@ -23,11 +23,8 @@ Checks: |
   google-*,
   -google-readability-todo,
   -google-build-using-namespace,
-  llvm-namespace-comment,
-  llvm-prefer-isa-or-dyn-cast-in-conditionals,
-  llvm-prefer-register-over-unsigned,
-  llvm-prefer-static-over-anonymous-namespace,
-  llvm-twine-local,
+  llvm-*
+  -llvm-header-guard
   misc-*,
   -misc-no-recursion,
   -misc-non-private-member-variables-in-classes,
