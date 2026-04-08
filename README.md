@@ -52,6 +52,8 @@ If you are using a devcontainer, configure the project like so:
 
 ```shell
  cmake --preset dev
+ # You can also override variables, here an example for the case if the lit tool (testing) is not found:
+ cmake --preset dev -DLLVM_EXTERNAL_LIT=$(which lit)
 ```
 
 This uses [cmake presets](https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html).
