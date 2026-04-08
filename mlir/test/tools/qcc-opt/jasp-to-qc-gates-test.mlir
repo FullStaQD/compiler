@@ -39,7 +39,7 @@ module @jasp_module {
 }
 
 // CHECK-LABEL:   @main
-// CHECK-SAME:      !jasp.QuantumState
+// CHECK-NOT:       !jasp.QuantumState
 // CHECK-SAME:      [[Q0:%.+]]: !qc.qubit,
 // CHECK-SAME:      [[Q1:%.+]]: !qc.qubit
 // CHECK:           qc.x [[Q0]] : !qc.qubit

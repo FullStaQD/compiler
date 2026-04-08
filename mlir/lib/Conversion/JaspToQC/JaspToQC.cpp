@@ -8,8 +8,10 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
+#include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Func/Transforms/FuncConversions.h>
+#include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/IR/BuiltinTypeInterfaces.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/OperationSupport.h>
@@ -31,12 +33,17 @@ using namespace mlir::qc;
 #define GEN_PASS_DEF_JASPTOQC
 #include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
 
-/// Type converter for jasp-to-QC conversion
+/// Type converter for jasp-to-QC conversion, to be used
+/// for op-conversions.
 ///
 /// Handles type conversion between the jasp and QC dialects.
 ///  - The jasp qubit type is mapped to the QC qubit type.
 ///  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
-///  - !jasp.QuantumState is destroyed.
+///  - !jasp.QuantumState is left intact.
+///    TODO: This is a hack. If we delete the QuantumState
+///    type here, conversion fails before any pattern is applied.
+///    But if we leave it out, function signatures will not be
+///    updated. Therefore, we need two separate type converters.
 class JaspToQCTypeConverter final : public TypeConverter {
 public:
   explicit JaspToQCTypeConverter(MLIRContext* ctx) {
@@ -47,9 +54,26 @@ public:
     addConversion([ctx](jasp::QubitArrayType /*type*/) -> Type {
       return MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(ctx));
     });
-    addConversion([](jasp::QuantumStateType /*type*/, llvm::SmallVectorImpl<mlir::Type>& results) {
-      // Returning success() indicates a successful 1-to-0 conversion.
-      return mlir::success();
+  }
+};
+
+/// Type converter for jasp-to-QC conversion, to be
+/// used in function signature conversions.
+///
+/// Handles type conversion between the jasp and QC dialects.
+///  - The jasp qubit type is mapped to the QC qubit type.
+///  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
+///  - !jasp.QuantumState is destroyed.
+class QuantumStateEliminator final : public TypeConverter {
+public:
+  explicit QuantumStateEliminator(MLIRContext* ctx) {
+    // Identity conversion for all types by default
+    addConversion([](Type type) { return type; });
+    addConversion([](jasp::QuantumStateType /*type*/, SmallVectorImpl<Type>&) { return success(); });
+
+    addConversion([ctx](jasp::QubitType /*type*/) -> Type { return qc::QubitType::get(ctx); });
+    addConversion([ctx](jasp::QubitArrayType /*type*/) -> Type {
+      return MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(ctx));
     });
   }
 };
@@ -67,7 +91,7 @@ struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::Create
 
   LogicalResult matchAndRewrite(jasp::CreateQuantumKernelOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOp(op, ValueRange());
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -98,7 +122,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
     auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extracted);
     auto memrefType = MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(getContext()));
     auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
-    rewriter.replaceOp(op, {alloc.getResult()});
+    rewriter.replaceOpWithMultiple(op, {alloc.getResult(), ValueRange()});
     return success();
   }
 };
@@ -257,7 +281,7 @@ private:
       });
     }
 
-    rewriter.replaceOp(op, ValueRange());
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -293,7 +317,7 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
     // Create tensor from the i1 result to match jasp.measure's return type
     auto tensorResult = tensor::FromElementsOp::create(rewriter, op.getLoc(), op.getType(0), measureBit);
 
-    rewriter.replaceOp(op, {tensorResult.getResult()});
+    rewriter.replaceOpWithMultiple(op, {tensorResult.getResult(), ValueRange()});
 
     return success();
   }
@@ -316,7 +340,7 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
                                 ConversionPatternRewriter& rewriter) const override {
     auto array = adaptor.getQubits();
     memref::DeallocOp::create(rewriter, op.getLoc(), array);
-    rewriter.replaceOp(op, ValueRange());
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -338,6 +362,7 @@ protected:
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
     JaspToQCTypeConverter typeConverter(context);
+    QuantumStateEliminator stateDestroyer(context);
 
     target.addIllegalDialect<JaspDialect>();
     target.addLegalDialect<QCDialect, memref::MemRefDialect, tensor::TensorDialect, arith::ArithDialect,
@@ -349,22 +374,22 @@ protected:
         typeConverter, context);
 
     // Conversion of jasp types in func.func signatures
-    // Note: This currently has limitations with signature changes
-    // TODO: Find solution that works for 1-to-0 conversion of jasp:QuantumStateType
-    target.addDynamicallyLegalOp<func::FuncOp>(
-        [&](func::FuncOp op) { return typeConverter.isSignatureLegal(op.getFunctionType()); });
-    populateAnyFunctionOpInterfaceTypeConversionPattern(patterns, typeConverter);
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+      auto islegal = stateDestroyer.isSignatureLegal(op.getFunctionType());
+      return islegal;
+    });
+    populateAnyFunctionOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
 
     // Conversion of jasp types in func.return
-    populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::ReturnOp>([&](const func::ReturnOp op) { return typeConverter.isLegal(op); });
+    populateReturnOpTypeConversionPattern(patterns, stateDestroyer);
+    target.addDynamicallyLegalOp<func::ReturnOp>([&](const func::ReturnOp op) { return stateDestroyer.isLegal(op); });
 
     // Conversion of jasp types in func.call
-    populateCallOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::CallOp>([&](const func::CallOp op) { return typeConverter.isLegal(op); });
+    populateCallOpTypeConversionPattern(patterns, stateDestroyer);
+    target.addDynamicallyLegalOp<func::CallOp>([&](const func::CallOp op) { return stateDestroyer.isLegal(op); });
 
     // Conversion of jasp types in control-flow ops (e.g., cf.br, cf.cond_br)
-    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
+    populateBranchOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
 
     // Apply the conversion
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
