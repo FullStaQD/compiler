@@ -23,9 +23,13 @@ static constexpr llvm::StringLiteral qirRtReadResult = "__quantum__rt__read_resu
 /// Z-Basis measurement (irreversible).
 static constexpr llvm::StringLiteral qirQisMZ = "__quantum__qis__mz__body";
 
+/// Single target hadamard gate.
 static constexpr llvm::StringLiteral qirQisH = "__quantum__qis__h__body";
+
+/// Single target X gate.
 static constexpr llvm::StringLiteral qirQisX = "__quantum__qis__x__body";
 
+/// CX gate controlled on first qubit/ptr.
 static constexpr llvm::StringLiteral qirQisCX = "__quantum__qis__cx__body";
 
 } // namespace qcc

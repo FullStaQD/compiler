@@ -18,9 +18,7 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
       cf.br ^bb_exit
     ^bb_exit:
 
-
-
-    // recording
+    // FIXME: recording
 
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64

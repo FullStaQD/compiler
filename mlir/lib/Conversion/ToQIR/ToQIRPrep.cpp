@@ -27,6 +27,8 @@ protected:
     createFnDecl(qcc::qirQisMZ, 2, true); // FIXME: second arg is actually writeonly
     createFnDecl(qcc::qirQisH, 1);
     createFnDecl(qcc::qirQisX, 1);
+
+    createFnDecl(qcc::qirQisCX, 2);
   }
 
 private:

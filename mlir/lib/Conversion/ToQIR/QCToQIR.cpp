@@ -12,6 +12,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/LogicalResult.h>
+#include <llvm/Support/raw_ostream.h>
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/IR/Builders.h>
@@ -28,11 +29,18 @@ using namespace mlir;
 
 namespace {
 
-/// Map any of the (unitary) gates to their QIR QIS function declaration.
+/// Map any of the (unitary) gate-ops to their QIR QIS function declaration.
 StringRef mapQCGateToQIS(Operation* op) {
   return llvm::TypeSwitch<Operation*, StringRef>(op)
       .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
       .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
+      .Default([](auto) { return ""; });
+}
+
+/// Map any of the (unitary) gate-ops to the controlled version of their QIS function (if it exists).
+StringRef mapQCGateToQISControlled(Operation* op) {
+  return llvm::TypeSwitch<Operation*, StringRef>(op)
+      .Case<qc::XOp>([](auto) { return qcc::qirQisCX; })
       .Default([](auto) { return ""; });
 }
 
@@ -89,7 +97,7 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
     auto qubit = op.getQubit();
     auto ptrs = qubitsToPtrs(rewriter, {qubit, qubit});
 
-    auto callMZOp = LLVM::CallOp::create(rewriter, op.getLoc(), mzFnDecl, ptrs);
+    LLVM::CallOp::create(rewriter, op.getLoc(), mzFnDecl, ptrs);
     auto callReadOp = LLVM::CallOp::create(rewriter, op.getLoc(), readFnDecl, {ptrs[1]});
 
     rewriter.replaceOp(op, callReadOp);
@@ -110,20 +118,66 @@ struct UnitaryLowering : public ConversionPattern {
 
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
+    // FIXME: improve wording
     // NOTE: if the function declaration is not found we report and error and
     // leave it to the pass to observe that some ops could not be converted (qc
     // dialect is illegal).
-    auto qisName = mapQCGateToQIS(op);
-    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
-    if (!fnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: " << qisName;
+
+    // FIXME: use subroutines.
+    if (isa<qc::CtrlOp>(op)) {
+      auto ctrlOp = cast<qc::CtrlOp>(op);
+
+      if (ctrlOp.getNumControls() != 1) {
+        return ctrlOp->emitError() << "Expected exactly one control qubit. Found " << ctrlOp.getNumControls() << ".";
+      }
+
+      auto* body = ctrlOp.getBody();
+      Operation* innerOp = nullptr;
+
+      for (auto& inner : body->without_terminator()) {
+        if (innerOp != nullptr) {
+          return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found more than one.";
+        }
+
+        innerOp = &inner;
+      }
+
+      if (innerOp == nullptr) {
+        return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found none.";
+      }
+
+      auto qisName = mapQCGateToQISControlled(innerOp);
+      auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
+      if (!fnDecl) {
+        return op->emitError() << "QIR QIS declaration (controlled version) not found: " << qisName;
+      }
+
+      auto allPtrs = qubitsToPtrs(rewriter, ctrlOp.getControl(0));
+      auto targetPtrs = qubitsToPtrs(rewriter, innerOp->getOperands());
+      allPtrs.append(targetPtrs);
+
+      auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
+      rewriter.eraseOp(op);
+
+      return success();
     }
 
-    auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
+    if (!isa<qc::CtrlOp>(op->getParentOp())) {
+      auto qisName = mapQCGateToQIS(op);
+      llvm::errs() << "qisName: " << qisName << "\n";
+      auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
+      if (!fnDecl) {
+        return op->emitError() << "QIR QIS declaration not found: " << qisName;
+      }
 
-    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, ptrs);
-    rewriter.replaceOp(op, callOp);
-    return success();
+      auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
+
+      auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, ptrs);
+      rewriter.replaceOp(op, callOp);
+      return success();
+    }
+
+    return failure();
   }
 };
 
