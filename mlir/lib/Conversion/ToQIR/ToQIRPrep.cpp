@@ -27,8 +27,9 @@ protected:
     createFnDecl(qcc::qirQisMZ, 2, true); // FIXME: second arg is actually writeonly
     createFnDecl(qcc::qirQisH, 1);
     createFnDecl(qcc::qirQisX, 1);
-
     createFnDecl(qcc::qirQisCX, 2);
+
+    addQIRModuleFlags();
   }
 
 private:
@@ -63,6 +64,42 @@ private:
 
     auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtReadResult, fnType);
     fnDecl.setArgAttr(0, "llvm.readonly", builder.getUnitAttr());
+  }
+
+  /// FIXME: docstring
+  void addQIRModuleFlags() {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+
+    auto createFlag = [&](int32_t behavior, StringRef name, Attribute value) {
+      return builder.getArrayAttr({builder.getI32IntegerAttr(behavior), builder.getStringAttr(name), value});
+    };
+
+    SmallVector<Attribute> flags;
+
+    // QIR Version
+    flags.push_back(createFlag(1, "qir_major_version", builder.getI32IntegerAttr(2)));
+    // flags.push_back(createFlag(7, "qir_minor_version", builder.getI32IntegerAttr(0)));
+
+    // // Memory Management
+    // flags.push_back(createFlag(1, "dynamic_qubit_management", builder.getBoolAttr(false)));
+    // flags.push_back(createFlag(1, "dynamic_result_management", builder.getBoolAttr(false)));
+
+    // // Capabilities
+    // // FIXME: int_computations value is a metadata list: !{!"i32"}
+    // flags.push_back(createFlag(5, "int_computations", builder.getArrayAttr({builder.getStringAttr("i32")})));
+
+    // flags.push_back(createFlag(1, "ir_functions", builder.getBoolAttr(true)));
+
+    // // FIXME: Branching (Note the i2 for backwards_branching)
+    // flags.push_back(createFlag(1, "backwards_branching", builder.getIntegerAttr(builder.getIntegerType(2), 0)));
+
+    // flags.push_back(createFlag(1, "multiple_target_branching", builder.getBoolAttr(false)));
+    // flags.push_back(createFlag(1, "multiple_return_points", builder.getBoolAttr(false)));
+
+    // Set the attribute on the ModuleOp
+    moduleOp->setAttr("llvm.module_flags", builder.getArrayAttr(flags));
   }
 };
 
