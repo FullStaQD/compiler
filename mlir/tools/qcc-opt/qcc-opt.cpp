@@ -1,3 +1,4 @@
+#include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
@@ -10,6 +11,7 @@
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
+#include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/LLVMIR/LLVMDialect.h>
@@ -26,11 +28,19 @@ int main(int argc, char** argv) {
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
                   mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, mlir::LLVM::LLVMDialect, jasp::JaspDialect,
                   mlir::qc::QCDialect>();
+  // Builtin passes:
+  mlir::registerArithToLLVMConversionPass();
+  mlir::registerConvertControlFlowToLLVMPass();
+
+  // 3rd party passes
+  mlir::stablehlo::registerAllDialects(registry);
+
+  // Our passes
   qcc::registerJaspToQC();
   qcc::registerQCToQIR();
   qcc::registerStdToLLVM();
   qcc::registerToQIRPrep();
   qcc::registerToQIRFinalize(); // FIXME: do we really want to register them individually?
-  mlir::stablehlo::registerAllDialects(registry);
+
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "qcc optimizer", registry));
 }

@@ -1,9 +1,10 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
-#include <llvm/Support/raw_ostream.h>
+#include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Pass/PassManager.h>
 #include <mlir/Transforms/Passes.h>
@@ -18,9 +19,10 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(qcc::createToQIRPrep());
 
   mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();
+  fpm.addPass(mlir::createArithToLLVMConversionPass());
   fpm.addPass(qcc::createQCToQIR());
-  fpm.addPass(qcc::createStdToLLVM());
 
+  pm.addPass(mlir::createConvertControlFlowToLLVMPass());
   pm.addPass(qcc::createToQIRFinalize());
 
   // Cleanup QIR
