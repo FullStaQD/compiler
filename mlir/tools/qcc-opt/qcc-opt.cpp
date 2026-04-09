@@ -12,6 +12,7 @@
 
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/Dialect/LLVMIR/LLVMDialect.h>
 #include <mlir/Dialect/QC/IR/QCDialect.h>
 #include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/Dialect/Tensor/IR/Tensor.h>
@@ -23,7 +24,8 @@
 int main(int argc, char** argv) {
   mlir::DialectRegistry registry;
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
-                  mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, jasp::JaspDialect, mlir::qc::QCDialect>();
+                  mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, mlir::LLVM::LLVMDialect, jasp::JaspDialect,
+                  mlir::qc::QCDialect>();
   qcc::registerJaspToQC();
   qcc::registerQCToQIR();
   qcc::registerStdToQIR();
