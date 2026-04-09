@@ -116,68 +116,78 @@ struct UnitaryLowering : public ConversionPattern {
       return failure();
     }
 
-    auto moduleOp = op->getParentOfType<ModuleOp>();
-
     // FIXME: improve wording
     // NOTE: if the function declaration is not found we report and error and
     // leave it to the pass to observe that some ops could not be converted (qc
     // dialect is illegal).
 
-    // FIXME: use subroutines.
     if (isa<qc::CtrlOp>(op)) {
-      auto ctrlOp = cast<qc::CtrlOp>(op);
-
-      if (ctrlOp.getNumControls() != 1) {
-        return ctrlOp->emitError() << "Expected exactly one control qubit. Found " << ctrlOp.getNumControls() << ".";
-      }
-
-      auto* body = ctrlOp.getBody();
-      Operation* innerOp = nullptr;
-
-      for (auto& inner : body->without_terminator()) {
-        if (innerOp != nullptr) {
-          return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found more than one.";
-        }
-
-        innerOp = &inner;
-      }
-
-      if (innerOp == nullptr) {
-        return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found none.";
-      }
-
-      auto qisName = mapQCGateToQISControlled(innerOp);
-      auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
-      if (!fnDecl) {
-        return op->emitError() << "QIR QIS declaration (controlled version) not found: " << qisName;
-      }
-
-      auto allPtrs = qubitsToPtrs(rewriter, ctrlOp.getControl(0));
-      auto targetPtrs = qubitsToPtrs(rewriter, innerOp->getOperands());
-      allPtrs.append(targetPtrs);
-
-      auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
-      rewriter.eraseOp(op);
-
-      return success();
+      return rewriteControlledGate(op, rewriter);
     }
 
     if (!isa<qc::CtrlOp>(op->getParentOp())) {
-      auto qisName = mapQCGateToQIS(op);
-      llvm::errs() << "qisName: " << qisName << "\n";
-      auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
-      if (!fnDecl) {
-        return op->emitError() << "QIR QIS declaration not found: " << qisName;
-      }
-
-      auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
-
-      auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, ptrs);
-      rewriter.replaceOp(op, callOp);
-      return success();
+      return rewriteNonControlledGate(op, rewriter);
     }
 
     return failure();
+  }
+
+private:
+  static LogicalResult rewriteNonControlledGate(Operation* op, ConversionPatternRewriter& rewriter) {
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    auto qisName = mapQCGateToQIS(op);
+    llvm::errs() << "qisName: " << qisName << "\n";
+    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
+    if (!fnDecl) {
+      return op->emitError() << "QIR QIS declaration not found: " << qisName;
+    }
+
+    auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
+
+    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, ptrs);
+    rewriter.eraseOp(op);
+
+    return success();
+  }
+
+  static LogicalResult rewriteControlledGate(Operation* op, ConversionPatternRewriter& rewriter) {
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+    auto ctrlOp = cast<qc::CtrlOp>(op);
+
+    if (ctrlOp.getNumControls() != 1) {
+      return ctrlOp->emitError() << "Expected exactly one control qubit. Found " << ctrlOp.getNumControls() << ".";
+    }
+
+    auto* body = ctrlOp.getBody();
+    Operation* innerOp = nullptr;
+
+    for (auto& inner : body->without_terminator()) {
+      if (innerOp != nullptr) {
+        return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found more than one.";
+      }
+
+      innerOp = &inner;
+    }
+
+    if (innerOp == nullptr) {
+      return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found none.";
+    }
+
+    auto qisName = mapQCGateToQISControlled(innerOp);
+    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
+    if (!fnDecl) {
+      return op->emitError() << "QIR QIS declaration (controlled version) not found: " << qisName;
+    }
+
+    auto allPtrs = qubitsToPtrs(rewriter, ctrlOp.getControl(0));
+    auto targetPtrs = qubitsToPtrs(rewriter, innerOp->getOperands());
+    allPtrs.append(targetPtrs);
+
+    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
+    rewriter.eraseOp(op);
+
+    return success();
   }
 };
 
