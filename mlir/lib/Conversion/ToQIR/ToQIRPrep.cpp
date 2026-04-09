@@ -4,6 +4,9 @@
 #include "qcc/Conversion/ToQIR/Constants.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
+#include <llvm/Support/raw_ostream.h>
+#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
+
 using namespace mlir;
 
 namespace qcc {
@@ -68,38 +71,26 @@ private:
 
   /// FIXME: docstring
   void addQIRModuleFlags() {
-    ModuleOp moduleOp = getOperation();
-    auto* ctx = moduleOp.getContext();
+    ModuleOp module = getOperation();
+    auto* ctx = module.getContext();
     OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(module.getBody());
+    auto loc = module.getLoc();
 
-    auto createFlag = [&](int32_t behavior, StringRef name, Attribute value) {
-      return builder.getArrayAttr({builder.getI32IntegerAttr(behavior), builder.getStringAttr(name), value});
+    auto createFlag = [&](LLVM::ModFlagBehavior behavior, StringRef name, int32_t val) {
+      return LLVM::ModuleFlagAttr::get(ctx, behavior, builder.getStringAttr(name), builder.getI32IntegerAttr(val));
     };
 
-    SmallVector<Attribute> flags;
+    SmallVector<Attribute> flags = {createFlag(LLVM::ModFlagBehavior::Error, "qir_major_version", 2),
+                                    createFlag(LLVM::ModFlagBehavior::Max, "qir_minor_version", 0),
+                                    createFlag(LLVM::ModFlagBehavior::Error, "dynamic_qubit_management", 0),
+                                    createFlag(LLVM::ModFlagBehavior::Error, "dynamic_result_management", 0),
+                                    createFlag(LLVM::ModFlagBehavior::Error, "ir_functions", 0),
+                                    createFlag(LLVM::ModFlagBehavior::Error, "backwards_branching", 0),
+                                    createFlag(LLVM::ModFlagBehavior::Error, "multiple_target_branching", 0),
+                                    createFlag(LLVM::ModFlagBehavior::Error, "multiple_return_points", 0)};
 
-    // QIR Version
-    flags.push_back(createFlag(1, "qir_major_version", builder.getI32IntegerAttr(2)));
-    // flags.push_back(createFlag(7, "qir_minor_version", builder.getI32IntegerAttr(0)));
-
-    // // Memory Management
-    // flags.push_back(createFlag(1, "dynamic_qubit_management", builder.getBoolAttr(false)));
-    // flags.push_back(createFlag(1, "dynamic_result_management", builder.getBoolAttr(false)));
-
-    // // Capabilities
-    // // FIXME: int_computations value is a metadata list: !{!"i32"}
-    // flags.push_back(createFlag(5, "int_computations", builder.getArrayAttr({builder.getStringAttr("i32")})));
-
-    // flags.push_back(createFlag(1, "ir_functions", builder.getBoolAttr(true)));
-
-    // // FIXME: Branching (Note the i2 for backwards_branching)
-    // flags.push_back(createFlag(1, "backwards_branching", builder.getIntegerAttr(builder.getIntegerType(2), 0)));
-
-    // flags.push_back(createFlag(1, "multiple_target_branching", builder.getBoolAttr(false)));
-    // flags.push_back(createFlag(1, "multiple_return_points", builder.getBoolAttr(false)));
-
-    // Set the attribute on the ModuleOp
-    moduleOp->setAttr("llvm.module_flags", builder.getArrayAttr(flags));
+    LLVM::ModuleFlagsOp::create(builder, loc, builder.getArrayAttr(flags));
   }
 };
 
