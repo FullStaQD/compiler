@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
                   mlir::qc::QCDialect>();
   qcc::registerJaspToQC();
   qcc::registerQCToQIR();
-  qcc::registerStdToQIR();
+  qcc::registerStdToLLVM();
   qcc::registerToQIRPrep();
   qcc::registerToQIRFinalize(); // FIXME: do we really want to register them individually?
   mlir::stablehlo::registerAllDialects(registry);

@@ -19,7 +19,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();
   fpm.addPass(qcc::createQCToQIR());
-  fpm.addPass(qcc::createStdToQIR());
+  fpm.addPass(qcc::createStdToLLVM());
 
   pm.addPass(qcc::createToQIRFinalize());
 

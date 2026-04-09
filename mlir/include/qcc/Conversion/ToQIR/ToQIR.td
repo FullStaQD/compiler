@@ -32,7 +32,7 @@ def ToQIRFinalize : Pass<"to-qir-finalize", "mlir::ModuleOp"> {
   ];
 }
 
-def StdToQIR : Pass<"std-to-qir", "mlir::func::FuncOp"> {
+def StdToLLVM : Pass<"std-to-llvm", "mlir::func::FuncOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{

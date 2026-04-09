@@ -19,18 +19,18 @@ namespace {} // namespace
 
 namespace qcc {
 
-#define GEN_PASS_DEF_STDTOQIR
+#define GEN_PASS_DEF_STDTOLLVM
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct StdToQIR final : impl::StdToQIRBase<StdToQIR> {
-  using StdToQIRBase::StdToQIRBase;
+struct StdToLLVM final : impl::StdToLLVMBase<StdToLLVM> {
+  using StdToLLVMBase::StdToLLVMBase;
 
 protected:
   // FIXME: finish implementation
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
 
-    auto context = funcOp->getContext();
+    auto* context = funcOp->getContext();
     LLVMConversionTarget target(*context);
     target.addLegalOp<ModuleOp>(); // FIXME: check which are needed
     target.addLegalOp<func::FuncOp>();
@@ -43,8 +43,9 @@ protected:
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
-    if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
+    if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       signalPassFailure();
+    }
   }
 };
 
