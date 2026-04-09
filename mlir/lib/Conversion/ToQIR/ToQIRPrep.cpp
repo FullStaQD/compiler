@@ -69,7 +69,11 @@ private:
     fnDecl.setArgAttr(0, "llvm.readonly", builder.getUnitAttr());
   }
 
-  /// FIXME: docstring
+  /// Create the module flags which specify the capabilities which the backend needs to support.
+  ///
+  /// Of course we in turn also have to ensure that our output does not go beyond those capabilities.
+  ///
+  /// TODO: Currently we hardcode the capabilities. In the future we have to query those (e.g. QDMI).
   void addQIRModuleFlags() {
     ModuleOp module = getOperation();
     auto* ctx = module.getContext();
@@ -78,17 +82,23 @@ private:
     auto loc = module.getLoc();
 
     auto createFlag = [&](LLVM::ModFlagBehavior behavior, StringRef name, int32_t val) {
+      // LLVM seems to normalize to i32 values. Even if we would use e.g. a i1
+      // attribute for the boolean flags `mlir-translate` would still force it
+      // to i32. Hence we stick to i32 always here.
       return LLVM::ModuleFlagAttr::get(ctx, behavior, builder.getStringAttr(name), builder.getI32IntegerAttr(val));
     };
 
-    SmallVector<Attribute> flags = {createFlag(LLVM::ModFlagBehavior::Error, "qir_major_version", 2),
-                                    createFlag(LLVM::ModFlagBehavior::Max, "qir_minor_version", 0),
-                                    createFlag(LLVM::ModFlagBehavior::Error, "dynamic_qubit_management", 0),
-                                    createFlag(LLVM::ModFlagBehavior::Error, "dynamic_result_management", 0),
-                                    createFlag(LLVM::ModFlagBehavior::Error, "ir_functions", 0),
-                                    createFlag(LLVM::ModFlagBehavior::Error, "backwards_branching", 0),
-                                    createFlag(LLVM::ModFlagBehavior::Error, "multiple_target_branching", 0),
-                                    createFlag(LLVM::ModFlagBehavior::Error, "multiple_return_points", 0)};
+    // NOTE: Missing flags are implicitly set to "false".
+    SmallVector<Attribute> flags = {
+        createFlag(LLVM::ModFlagBehavior::Error, "qir_major_version", 2),
+        createFlag(LLVM::ModFlagBehavior::Max, "qir_minor_version", 0),
+        createFlag(LLVM::ModFlagBehavior::Error, "dynamic_qubit_management", 0),
+        createFlag(LLVM::ModFlagBehavior::Error, "dynamic_result_management", 0),
+        createFlag(LLVM::ModFlagBehavior::Error, "ir_functions", 1),
+        // backwards_branching: 0: no, 1: only "unrollable" loops, 2: conditionally terminating loops
+        createFlag(LLVM::ModFlagBehavior::Error, "backwards_branching", 1),
+        createFlag(LLVM::ModFlagBehavior::Error, "multiple_target_branching", 0),
+        createFlag(LLVM::ModFlagBehavior::Error, "multiple_return_points", 0)};
 
     LLVM::ModuleFlagsOp::create(builder, loc, builder.getArrayAttr(flags));
   }
