@@ -8,8 +8,8 @@
 #include "mlir/Dialect/QC/IR/QCDialect.h" // FIXME: remove
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "qcc/Conversion/ToQIR/Constants.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
-#include "qcc/Conversion/ToQIR/constants.h"
 
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/IR/PatternMatch.h>
