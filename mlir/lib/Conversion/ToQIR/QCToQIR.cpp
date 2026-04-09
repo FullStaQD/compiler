@@ -116,11 +116,6 @@ struct UnitaryLowering : public ConversionPattern {
       return failure();
     }
 
-    // FIXME: improve wording
-    // NOTE: if the function declaration is not found we report and error and
-    // leave it to the pass to observe that some ops could not be converted (qc
-    // dialect is illegal).
-
     if (isa<qc::CtrlOp>(op)) {
       return rewriteControlledGate(op, rewriter);
     }
@@ -133,11 +128,11 @@ struct UnitaryLowering : public ConversionPattern {
   }
 
 private:
+  /// For simple gates like `qc.h %0 : !qc.qubit` which are not inside ctrlOp.
   static LogicalResult rewriteNonControlledGate(Operation* op, ConversionPatternRewriter& rewriter) {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     auto qisName = mapQCGateToQIS(op);
-    llvm::errs() << "qisName: " << qisName << "\n";
     auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
     if (!fnDecl) {
       return op->emitError() << "QIR QIS declaration not found: " << qisName;
@@ -151,6 +146,7 @@ private:
     return success();
   }
 
+  /// For controlled gates like `qc.ctrl(%0) { qc.x %1 : !qc.qubit } : !qc.qubit`. Multiple control is not supported.
   static LogicalResult rewriteControlledGate(Operation* op, ConversionPatternRewriter& rewriter) {
     auto moduleOp = op->getParentOfType<ModuleOp>();
     auto ctrlOp = cast<qc::CtrlOp>(op);
