@@ -49,7 +49,7 @@ using namespace mlir::qc;
 ///    type here, conversion fails before any pattern is applied.
 ///    But if we leave it out, function signatures will not be
 ///    updated. Therefore, we need two separate type converters.
-class JaspToQCTypeConverter final : public TypeConverter {
+class JaspToQCTypeConverter : public TypeConverter {
 public:
   explicit JaspToQCTypeConverter(MLIRContext* ctx) {
     // Identity conversion for all types by default
@@ -101,48 +101,10 @@ public:
 ///  - The jasp qubit type is mapped to the QC qubit type.
 ///  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
 ///  - !jasp.QuantumState is destroyed.
-class QuantumStateEliminator final : public TypeConverter {
+class QuantumStateEliminator final : public JaspToQCTypeConverter {
 public:
-  explicit QuantumStateEliminator(MLIRContext* ctx) {
-    // Identity conversion for all types by default
-    addConversion([](Type type) { return type; });
+  explicit QuantumStateEliminator(MLIRContext* ctx) : JaspToQCTypeConverter(ctx) {
     addConversion([](jasp::QuantumStateType /*type*/, SmallVectorImpl<Type>&) { return success(); });
-
-    addConversion([ctx](jasp::QubitType /*type*/) -> Type { return qc::QubitType::get(ctx); });
-    addConversion([ctx](jasp::QubitArrayType /*type*/) -> Type {
-      return MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(ctx));
-    });
-    addConversion([](mlir::RankedTensorType type) -> mlir::Type {
-      if (type.getRank() == 0) {
-        return type.getElementType(); // This extracts the i64 or f64
-      }
-      return type; // Leave multi-dimensional tensors alone
-    });
-
-    // Target Materialization: Source Type (tensor<T>) -> Target Type (T)
-    // This is called when an unconverted operation's result needs to be used by a converted operation.
-    addTargetMaterialization([](mlir::OpBuilder& builder, mlir::IntegerType type, mlir::ValueRange inputs,
-                                mlir::Location loc) -> mlir::Value {
-      if (inputs.size() != 1 || !llvm::isa<mlir::TensorType>(inputs[0].getType())) {
-        return nullptr;
-      }
-
-      // Materialize: tensor -> scalar
-      // For a 0D tensor, we extract with empty indices.
-      return mlir::tensor::ExtractOp::create(builder, loc, inputs[0], mlir::ValueRange{});
-    });
-
-    // Source Materialization: Target Type (i64) -> Source Type (tensor<i64>)
-    // This is called when a converted operation's result needs to be used by an unconverted operation.
-    addSourceMaterialization([](mlir::OpBuilder& builder, mlir::RankedTensorType type, mlir::ValueRange inputs,
-                                mlir::Location loc) -> mlir::Value {
-      if (inputs.size() != 1 || !inputs[0].getType().isIntOrIndexOrFloat()) {
-        return nullptr;
-      }
-
-      // Materialize: scalar -> tensor
-      return mlir::tensor::FromElementsOp::create(builder, loc, type, inputs[0]);
-    });
   }
 };
 
