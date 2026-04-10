@@ -54,7 +54,20 @@ StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
   return "";
 }
 
-/// FIXME: docstring
+/// For each of the qubit values it assumes that it was created by a static op, like this:
+///
+/// ```mlir
+/// %0 = qc.static 42 : !qc.qubit
+/// ```
+///
+/// it then adds the following for each qubit at the current insertion point (and leaves the `qc.static` as is):
+///
+/// ```mlir
+/// %1 = llvm.mlir.constant(42 : i64) : i64
+/// %2 = llvm.inttoptr %1 : i64 to !llvm.ptr
+/// ```
+///
+/// Finally it returns the list of all created `ptr` values (`%2` in the above example is one of these ptr).
 SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
   SmallVector<Value> ptrValues;
   ptrValues.reserve(qubitValues.size());
@@ -65,7 +78,7 @@ SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
            "The pass assumes that all qubits come from static allocations (in particular no function args).");
     auto alloc = cast<qc::StaticOp>(defOp);
 
-    int64_t index = alloc.getIndex();
+    auto index = static_cast<int64_t>(alloc.getIndex());
 
     auto i64Type = builder.getI64Type();
     auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
