@@ -49,6 +49,9 @@ using namespace mlir::qc;
 ///    type here, conversion fails before any pattern is applied.
 ///    But if we leave it out, function signatures will not be
 ///    updated. Therefore, we need two separate type converters.
+///
+/// In addition, prevalent rank-zero-tensors `tensor<i64>` and `tensor<f64>`
+/// are converted to plain values wherever possible.
 class JaspToQCTypeConverter : public TypeConverter {
 public:
   explicit JaspToQCTypeConverter(MLIRContext* ctx) {
@@ -75,8 +78,6 @@ public:
         return nullptr;
       }
 
-      // Materialize: tensor -> scalar
-      // For a 0D tensor, we extract with empty indices.
       return mlir::tensor::ExtractOp::create(builder, loc, inputs[0], mlir::ValueRange{});
     });
 
@@ -88,7 +89,6 @@ public:
         return nullptr;
       }
 
-      // Materialize: scalar -> tensor
       return mlir::tensor::FromElementsOp::create(builder, loc, type, inputs[0]);
     });
   }
@@ -133,14 +133,13 @@ struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::Create
 ///
 /// Example transformation:
 /// ```mlir
-/// %q_arr, %state1 = jasp.create_qubits %tensor_index, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray,
+/// %q_arr, %state1 = jasp.create_qubits %index, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray,
 /// !jasp.QuantumState
 /// ```
 /// becomes:
 /// ```mlir
-/// %index_i64 = tensor.extract %tensor_index[] : tensor<i64>
-/// %index = arith.index_cast %index_i64 : i64 to index
-/// %q_arr = memref.alloc(%index) : memref<?x!qc.qubit>
+/// %index_1 = arith.index_cast %index : i64 to index
+/// %q_arr = memref.alloc(%index_1) : memref<?x!qc.qubit>
 /// ```
 struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -167,8 +166,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
 /// ```
 /// becomes:
 /// ```mlir
-/// %i_i64 = tensor.extract %i[] : tensor<i64>
-/// %i_index = arith.index_cast %i_i64 : i64 to index
+/// %i_index = arith.index_cast %i : i64 to index
 ///  %q = memref.load %q_arr[%i_index] : memref<?x!qc.qubit>
 /// ```
 struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
@@ -320,8 +318,7 @@ private:
 /// ```
 /// becomes:
 /// ```mlir
-/// %c = qc.measure %q : !qc.qubit -> i1
-/// %measured = tensor.from_elements %c : tensor<i1>
+/// %measured = qc.measure %q : !qc.qubit -> i1
 /// ```
 struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -335,8 +332,6 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
     auto qcMeasureOp = qc::MeasureOp::create(rewriter, op.getLoc(), qcQubit);
 
     auto measureBit = qcMeasureOp.getResult();
-
-    // Create tensor from the i1 result to match jasp.measure's return type
 
     rewriter.replaceOpWithMultiple(op, {measureBit, ValueRange()});
 
@@ -366,7 +361,8 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
   }
 };
 
-/// TODO:
+/// Convert Rank-Zero Tensors to their wrapped types in `linalg.generic` operations.
+/// Only operands are affected.
 struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::GenericOp> {
   using OpConversionPattern::OpConversionPattern;
 
