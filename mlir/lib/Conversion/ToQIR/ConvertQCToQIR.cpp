@@ -29,19 +29,29 @@ using namespace mlir;
 
 namespace {
 
-/// Map any of the (unitary) gate-ops to their QIR QIS function declaration.
-StringRef mapQCGateToQIS(Operation* op) {
-  return llvm::TypeSwitch<Operation*, StringRef>(op)
-      .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
-      .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
-      .Default([](auto) { return ""; });
-}
+/// Map any of the (unitary) gate-ops to their QIR QIS function declaration if possible.
+///
+/// Returns an empty string upon failure. Succeeds iff the gate is among the supported native gate set.
+///
+/// TODO: The native gate set is currently hardcoded.
+StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
+  if (unitaryOp.getNumControls() == 0) {
+    return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
+        .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
+        .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
+        .Default([](auto) { return ""; });
+  }
 
-/// Map any of the (unitary) gate-ops to the controlled version of their QIS function (if it exists).
-StringRef mapQCGateToQISControlled(Operation* op) {
-  return llvm::TypeSwitch<Operation*, StringRef>(op)
-      .Case<qc::XOp>([](auto) { return qcc::qirQisCX; })
-      .Default([](auto) { return ""; });
+  if (unitaryOp.getNumControls() == 1) {
+    auto ctrlOp = cast<qc::CtrlOp>(unitaryOp);
+    auto bodyOp = ctrlOp.getBodyUnitary();
+
+    return llvm::TypeSwitch<Operation*, StringRef>(bodyOp)
+        .Case<qc::XOp>([](auto) { return qcc::qirQisCX; })
+        .Default([](auto) { return ""; });
+  }
+
+  return "";
 }
 
 /// FIXME: docstring
@@ -112,75 +122,24 @@ struct UnitaryLowering : public ConversionPattern {
 
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> /*operands*/,
                                 ConversionPatternRewriter& rewriter) const override {
-    if (!isa<qc::QCDialect>(op->getDialect()) || !isa<qc::UnitaryOpInterface>(op)) {
+    auto unitaryOp = dyn_cast<qc::UnitaryOpInterface>(op);
+    if (!unitaryOp || !isa<qc::QCDialect>(op->getDialect())) {
       return failure();
     }
 
-    if (isa<qc::CtrlOp>(op)) {
-      return rewriteControlledGate(op, rewriter);
-    }
-
-    if (!isa<qc::CtrlOp>(op->getParentOp())) {
-      return rewriteNonControlledGate(op, rewriter);
-    }
-
-    return failure();
-  }
-
-private:
-  /// For simple gates like `qc.h %0 : !qc.qubit` which are not inside ctrlOp.
-  static LogicalResult rewriteNonControlledGate(Operation* op, ConversionPatternRewriter& rewriter) {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
-    auto qisName = mapQCGateToQIS(op);
+    auto qisName = mapUnitaryToQIS(unitaryOp);
     auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
     if (!fnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: " << qisName;
+      return op->emitError() << "QIR QIS declaration not found: '" << qisName << "'";
     }
 
-    auto ptrs = qubitsToPtrs(rewriter, op->getOperands());
-
-    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, ptrs);
-    rewriter.eraseOp(op);
-
-    return success();
-  }
-
-  /// For controlled gates like `qc.ctrl(%0) { qc.x %1 : !qc.qubit } : !qc.qubit`. Multiple control is not supported.
-  static LogicalResult rewriteControlledGate(Operation* op, ConversionPatternRewriter& rewriter) {
-    auto moduleOp = op->getParentOfType<ModuleOp>();
-    auto ctrlOp = cast<qc::CtrlOp>(op);
-
-    if (ctrlOp.getNumControls() != 1) {
-      return ctrlOp->emitError() << "Expected exactly one control qubit. Found " << ctrlOp.getNumControls() << ".";
-    }
-
-    auto* body = ctrlOp.getBody();
-    Operation* innerOp = nullptr;
-
-    for (auto& inner : body->without_terminator()) {
-      if (innerOp != nullptr) {
-        return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found more than one.";
-      }
-
-      innerOp = &inner;
-    }
-
-    if (innerOp == nullptr) {
-      return op->emitError() << "Expected exactly one qc op inside ctrlOp. Found none.";
-    }
-
-    auto qisName = mapQCGateToQISControlled(innerOp);
-    auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
-    if (!fnDecl) {
-      return op->emitError() << "QIR QIS declaration (controlled version) not found: " << qisName;
-    }
-
-    auto allPtrs = qubitsToPtrs(rewriter, ctrlOp.getControl(0));
-    auto targetPtrs = qubitsToPtrs(rewriter, innerOp->getOperands());
+    auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
+    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
     allPtrs.append(targetPtrs);
 
-    auto callOp = LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
+    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
     rewriter.eraseOp(op);
 
     return success();

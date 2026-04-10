@@ -41,6 +41,8 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64
+    // CHECK:           %[[EXIT_CODE:.*]] = arith.constant 0 : i64
+    // CHECK:           return %[[EXIT_CODE]] : i64
 }
 
 // The pass assumes that these decls already exist.
