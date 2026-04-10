@@ -25,6 +25,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(mlir::createConvertControlFlowToLLVMPass());
   pm.addPass(qcc::createToQIRFinalize());
 
+  // FIXME: consider CSE too.
   // Cleanup QIR
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createRemoveDeadValuesPass());

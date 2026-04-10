@@ -21,6 +21,7 @@
 #include <mlir/IR/DialectRegistry.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/Tools/mlir-opt/MlirOptMain.h>
+#include <mlir/Transforms/Passes.h>
 #include <stablehlo/dialect/Register.h>
 
 int main(int argc, char** argv) {
@@ -28,12 +29,14 @@ int main(int argc, char** argv) {
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
                   mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, mlir::LLVM::LLVMDialect, jasp::JaspDialect,
                   mlir::qc::QCDialect>();
+  // 3rd party dialects
+  mlir::stablehlo::registerAllDialects(registry);
+
   // Builtin passes:
+  mlir::registerCanonicalizerPass();
+  mlir::registerCSEPass();
   mlir::registerArithToLLVMConversionPass();
   mlir::registerConvertControlFlowToLLVMPass();
-
-  // 3rd party passes
-  mlir::stablehlo::registerAllDialects(registry);
 
   // Our passes
   qcc::registerJaspToQC();
