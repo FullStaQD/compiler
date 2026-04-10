@@ -191,11 +191,11 @@ private:
 
 namespace qcc {
 
-#define GEN_PASS_DEF_QCTOQIR
+#define GEN_PASS_DEF_CONVERTQCTOQIR
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct QCToQIR final : impl::QCToQIRBase<QCToQIR> {
-  using QCToQIRBase::QCToQIRBase;
+struct ConvertQCToQIR final : impl::ConvertQCToQIRBase<ConvertQCToQIR> {
+  using ConvertQCToQIRBase::ConvertQCToQIRBase;
 
 protected:
   void runOnOperation() override {

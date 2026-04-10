@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
   // Our passes
   qcc::registerJaspToQC();
-  qcc::registerQCToQIR();
+  qcc::registerConvertQCToQIR();
   qcc::registerStdToLLVM();
   qcc::registerToQIRPrep();
   qcc::registerToQIRFinalize(); // FIXME: do we really want to register them individually?

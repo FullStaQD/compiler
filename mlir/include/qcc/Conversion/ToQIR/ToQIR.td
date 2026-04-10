@@ -45,7 +45,7 @@ def StdToLLVM : Pass<"std-to-llvm", "mlir::func::FuncOp"> {
   ];
 }
 
-def QCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
+def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{
