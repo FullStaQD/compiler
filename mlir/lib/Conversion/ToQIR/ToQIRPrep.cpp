@@ -24,6 +24,7 @@ protected:
 
     // Runtime functions:
     createVoidFnDecl(qcc::qirRtInit, 1);
+    createVoidFnDecl(qcc::qirRtResultRecordOutput, 2);
     createRtReadResultDecl();
 
     // QIS:

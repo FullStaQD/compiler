@@ -243,6 +243,7 @@ private:
     return numQubits;
   }
 
+  /// Attach all the relevant QIR attributes (like `required_num_qubits`) to the function.
   LogicalResult setEntryPointAttrs() {
     func::FuncOp funcOp = getOperation();
     OpBuilder builder(funcOp.getContext());
@@ -263,47 +264,6 @@ private:
     funcOp->setAttr("passthrough", builder.getArrayAttr(passthrough));
 
     return success();
-  }
-
-  // FIXME: remove
-  /// Determine the number of qubits from the size attribute of the alloc
-  /// operations. Returns failure iff they disagree. In case of success the
-  /// corresponding attribute is written to the current op (`func.func`).
-  LogicalResult setRequiredNumQubits() {
-    func::FuncOp funcOp = getOperation();
-    uint64_t numQubits = 0;
-
-    WalkResult result = funcOp->walk([&](qc::AllocOp allocOp) -> WalkResult {
-      auto maybeIndex = allocOp.getRegisterIndex();
-      auto maybeSize = allocOp.getRegisterSize();
-
-      if (!maybeIndex.has_value()) {
-        return allocOp.emitError("allocation missing register index");
-      }
-
-      if (!maybeSize.has_value()) {
-        return allocOp.emitError("allocation missing register size");
-      }
-
-      uint64_t currentSize = maybeSize.value();
-
-      if (numQubits == 0) {
-        numQubits = currentSize;
-      } else if (numQubits != currentSize) {
-        return allocOp.emitError() << "conflicting register size: expected " << numQubits << " but found "
-                                   << currentSize;
-      }
-
-      return WalkResult::advance();
-    });
-
-    if (result.wasInterrupted()) {
-      return llvm::failure();
-    }
-
-    // FIXME: set required_num_qubits.
-
-    return llvm::success();
   }
 
   void removeQCStaticOps() {
