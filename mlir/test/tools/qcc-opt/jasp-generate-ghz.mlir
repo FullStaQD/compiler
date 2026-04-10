@@ -1,7 +1,7 @@
 // RUN: qcc-opt %s | FileCheck %s
 
 module @jasp_module {
-  func.func private @main(%arg0: tensor<i64>, %arg1: !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState) {
+  func.func @main(%arg0: tensor<i64>, %arg1: !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState) {
     %result, %qst_out = jasp.create_qubits %arg0, %arg1 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
     %c = stablehlo.constant dense<0> : tensor<i64>
     %0 = jasp.get_qubit %result, %c : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit

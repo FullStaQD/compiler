@@ -7,9 +7,20 @@ target_link_libraries(
           MLIRFuncDialect
           MLIRArithDialect
           MLIRSCFDialect
+          MLIRControlFlowDialect
+          MLIRFuncInlinerExtension
           MLIRTensorDialect
+          MLIRBufferizationDialect
+          MLIRTosaDialect
+          MLIRTosaToSCF
+          MLIRSCFToControlFlow
+          MLIRMemRefTransforms
+          MLIRTosaToArith
+          MLIRLinalgToStandard
+          MLIRBufferizationTransforms
           QCCJaspDialect
           QCCJaspToQC
           StablehloRegister
           StablehloLinalgTransforms
+          StablehloTOSATransforms
           MLIRQCDialect)
