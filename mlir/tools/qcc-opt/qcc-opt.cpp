@@ -16,8 +16,6 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
-#include "stablehlo/conversions/linalg/transforms/Passes.h"
-#include "stablehlo/dialect/Register.h"
 
 #include <mlir/Conversion/Passes.h>
 #include <mlir/Conversion/VectorToSCF/VectorToSCF.h>
@@ -37,11 +35,9 @@ int main(int argc, char** argv) {
   registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
                   mlir::bufferization::BufferizationDialect, mlir::linalg::LinalgDialect, mlir::scf::SCFDialect,
                   jasp::JaspDialect, mlir::qc::QCDialect>();
-  mlir::stablehlo::registerAllDialects(registry);
 
   // Pass registration
   qcc::registerJaspToQC();
-  mlir::stablehlo::registerStablehloLegalizeToLinalgPass();
   mlir::registerConvertLinalgToLoopsPass();
   mlir::bufferization::registerEmptyTensorToAllocTensorPass();
   mlir::bufferization::registerOneShotBufferizePass();

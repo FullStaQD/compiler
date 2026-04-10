@@ -9,14 +9,19 @@ target_link_libraries(
           MLIRArithDialect
           MLIRSCFDialect
           MLIRTensorDialect
+          MLIRLinalgDialect
+          MLIRMemRefDialect
           MLIRBufferizationDialect
           QCCJaspDialect
-          StablehloRegister
           # Passes
-          StablehloLinalgTransforms
           MLIRMemRefTransforms
+          MLIRArithTransforms
+          MLIRFuncTransforms
+          MLIRLinalgTransforms
+          MLIRTensorTransforms
           MLIRBufferizationTransforms
           QCCJaspToQC
-          # Extensions
+          # Extensions/Interfaces
           MLIRFuncInlinerExtension
+          MLIRTransformUtils
           MLIRQCDialect)

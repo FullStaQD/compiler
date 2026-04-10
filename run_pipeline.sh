@@ -1,7 +1,6 @@
  /workspaces/compiler/build/julian-dev/bin/qcc-opt --pass-pipeline=" \
    builtin.module( \
     inline, \
-    stablehlo-legalize-to-linalg, \
     jasp-to-qc, \
     func.func(canonicalize), \
     func.func(cse), \
