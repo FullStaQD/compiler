@@ -20,6 +20,7 @@
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/OperationSupport.h>
 #include <mlir/IR/PatternMatch.h>
+#include <mlir/IR/Types.h>
 #include <mlir/IR/ValueRange.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
@@ -72,14 +73,14 @@ public:
 
     // Target Materialization: Source Type (tensor<T>) -> Target Type (T)
     // This is called when an unconverted operation's result needs to be used by a converted operation.
-    addTargetMaterialization([](mlir::OpBuilder& builder, mlir::IntegerType type, mlir::ValueRange inputs,
-                                mlir::Location loc) -> mlir::Value {
-      if (inputs.size() != 1 || !llvm::isa<mlir::TensorType>(inputs[0].getType())) {
-        return nullptr;
-      }
+    addTargetMaterialization(
+        [](mlir::OpBuilder& builder, mlir::Type type, mlir::ValueRange inputs, mlir::Location loc) -> mlir::Value {
+          if (inputs.size() != 1 || !llvm::isa<mlir::TensorType>(inputs[0].getType())) {
+            return nullptr;
+          }
 
-      return mlir::tensor::ExtractOp::create(builder, loc, inputs[0], mlir::ValueRange{});
-    });
+          return mlir::tensor::ExtractOp::create(builder, loc, inputs[0], mlir::ValueRange{});
+        });
 
     // Source Materialization: Target Type (i64) -> Source Type (tensor<i64>)
     // This is called when a converted operation's result needs to be used by an unconverted operation.
