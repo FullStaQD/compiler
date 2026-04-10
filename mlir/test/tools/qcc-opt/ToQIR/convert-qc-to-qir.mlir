@@ -6,8 +6,8 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK-SAME:          "entry_point",
     // CHECK-SAME:          ["output_labeling_schema", "schema_id"],
     // CHECK-SAME:          ["qir_profiles", "adaptive_profile"],
-    // CHECK-SAME:          ["required_num_qubits", "2"],
-    // CHECK-SAME:          ["required_num_results", "2"]
+    // CHECK-SAME:          ["required_num_qubits", "8"],
+    // CHECK-SAME:          ["required_num_results", "8"]
     // CHECK-SAME:        ],
     // CHECK-SAME:        qcc.entry_point
     // CHECK-SAME:      } {
@@ -49,6 +49,8 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // FIXME: treat results explicitly! The pass must be fixed! Probably dedicated test.
     // FIXME: record results.
 
+    // aux.record_qir_measurement_result %m5
+
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64
     // CHECK:           %[[EXIT_CODE:.*]] = arith.constant 0 : i64
@@ -57,6 +59,7 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 
 // The pass assumes that these decls already exist.
 llvm.func @__quantum__rt__initialize(!llvm.ptr)
+llvm.func @__quantum__rt__result_record_output(!llvm.ptr, !llvm.ptr)
 llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
 llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
 llvm.func @__quantum__qis__h__body(!llvm.ptr)

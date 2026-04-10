@@ -236,10 +236,13 @@ private:
     return llvm::success();
   }
 
-  template <class Op> int count() {
+  uint64_t getRequiredNumQubits() {
     func::FuncOp funcOp = getOperation();
-    int numQubits = 0;
-    funcOp->walk([&](Op) -> void { numQubits += 1; });
+    uint64_t numQubits = 0;
+    funcOp->walk([&](qc::StaticOp op) -> void {
+      auto index = op.getIndex();
+      numQubits = std::max(numQubits, index + 1);
+    });
     return numQubits;
   }
 
@@ -248,8 +251,8 @@ private:
     func::FuncOp funcOp = getOperation();
     OpBuilder builder(funcOp.getContext());
 
-    auto requiredNumQubits = count<qc::StaticOp>();
-    auto requiredNumResults = count<qc::MeasureOp>(); // FIXME: wrong!
+    auto requiredNumQubits = getRequiredNumQubits();
+    auto requiredNumResults = requiredNumQubits; // TODO: holds only for HiSEP-Q!
 
     auto getKV = [&](StringRef key, StringRef value) {
       return builder.getArrayAttr({builder.getStringAttr(key), builder.getStringAttr(value)});
