@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s -qc-to-qir | FileCheck %s
+// RUN: qcc-opt %s -convert-qc-to-qir | FileCheck %s
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     %0 = qc.static 1 : !qc.qubit

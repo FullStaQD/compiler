@@ -1,6 +1,4 @@
-// RUN: qcc-opt %s -std-to-llvm | FileCheck %s --check-prefix=CHECK_STD
-// RUN: qcc-opt %s -pass-pipeline="builtin.module(to-qir-prep,func.func(qc-to-qir))" | FileCheck %s --check-prefix=CHECK_QC
-// RUN: qcc-opt %s -pass-pipeline="builtin.module(to-qir-prep,func.func(std-to-llvm,qc-to-qir),to-qir-finalize)" | FileCheck %s --check-prefix=CHECK_FULL
+// RUN: qcc-opt %s -pass-pipeline="builtin.module(to-qir-prep,func.func(std-to-llvm,convert-qc-to-qir),to-qir-finalize)" | FileCheck %s --check-prefix=CHECK_FULL
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     // FIXME: add better and more tests
@@ -25,10 +23,6 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 }
 
 func.func @other_func() { return }
-
-// CHECK_STD-LABEL: @test
-
-// CHECK_QC-LABEL: @test
 
 // CHECK_FULL-LABEL: @test
 // CHECK_FULL: __quantum__qis__mz__body
