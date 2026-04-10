@@ -16,6 +16,7 @@
 #include <mlir/Conversion/LLVMCommon/TypeConverter.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/IR/Builders.h>
+#include <mlir/IR/Diagnostics.h>
 #include <mlir/IR/Types.h>
 #include <mlir/IR/Value.h>
 #include <mlir/IR/ValueRange.h>
@@ -92,6 +93,11 @@ SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
   return ptrValues;
 }
 
+/// To be used in a rewrite pattern.
+InFlightDiagnostic emitMissingDeclError(Operation* op, StringRef name) {
+  return op->emitError() << "QIR QIS declaration not found: '" << name << "'";
+}
+
 struct QCToQIRTypeConverter final : LLVMTypeConverter {
   explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
     addConversion([ctx](qc::QubitType) { return LLVM::LLVMPointerType::get(ctx); });
@@ -109,13 +115,14 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
     auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtReadResult);
 
     if (!mzFnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: " << qcc::qirQisMZ;
+      return emitMissingDeclError(op, qcc::qirQisMZ);
     }
 
     if (!readFnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: " << qcc::qirRtReadResult;
+      return emitMissingDeclError(op, qcc::qirRtReadResult);
     }
 
+    // FIXME: wrong!
     // NOTE: Qubit and result pointer share the same index.
     auto qubit = op.getQubit();
     auto ptrs = qubitsToPtrs(rewriter, {qubit, qubit});
@@ -145,7 +152,7 @@ struct UnitaryLowering : public ConversionPattern {
     auto qisName = mapUnitaryToQIS(unitaryOp);
     auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
     if (!fnDecl) {
-      return op->emitError() << "QIR QIS declaration not found: '" << qisName << "'";
+      return emitMissingDeclError(unitaryOp, qisName);
     }
 
     auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
@@ -182,7 +189,7 @@ protected:
       return;
     }
 
-    if (failed(setRequiredNumQubits())) {
+    if (failed(setEntryPointAttrs())) {
       return signalPassFailure();
     }
 
@@ -210,7 +217,7 @@ private:
   LogicalResult insertRtInit() {
     func::FuncOp funcOp = getOperation();
     auto moduleOp = funcOp->getParentOfType<ModuleOp>();
-    auto* context = funcOp.getContext();
+    auto* ctx = funcOp.getContext();
 
     auto initFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtInit);
 
@@ -219,19 +226,49 @@ private:
     }
 
     auto loc = funcOp.getLoc();
-    OpBuilder builder(context);
+    OpBuilder builder(ctx);
     builder.setInsertionPointToStart(&funcOp.front());
 
-    auto ptrType = LLVM::LLVMPointerType::get(context);
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
     auto nullPtr = LLVM::ZeroOp::create(builder, loc, ptrType);
     LLVM::CallOp::create(builder, loc, initFnDecl, ValueRange{nullPtr});
 
     return llvm::success();
   }
 
+  template <class Op> int count() {
+    func::FuncOp funcOp = getOperation();
+    int numQubits = 0;
+    funcOp->walk([&](Op) -> void { numQubits += 1; });
+    return numQubits;
+  }
+
+  LogicalResult setEntryPointAttrs() {
+    func::FuncOp funcOp = getOperation();
+    OpBuilder builder(funcOp.getContext());
+
+    auto requiredNumQubits = count<qc::StaticOp>();
+    auto requiredNumResults = count<qc::MeasureOp>(); // FIXME: wrong!
+
+    auto getKV = [&](StringRef key, StringRef value) {
+      return builder.getArrayAttr({builder.getStringAttr(key), builder.getStringAttr(value)});
+    };
+
+    // Assuming numQubits and numResults are variables
+    SmallVector<Attribute> passthrough = {
+        builder.getStringAttr("entry_point"), getKV("output_labeling_schema", "schema_id"),
+        getKV("qir_profiles", "adaptive_profile"), getKV("required_num_qubits", std::to_string(requiredNumQubits)),
+        getKV("required_num_results", std::to_string(requiredNumResults))};
+
+    funcOp->setAttr("passthrough", builder.getArrayAttr(passthrough));
+
+    return success();
+  }
+
+  // FIXME: remove
   /// Determine the number of qubits from the size attribute of the alloc
   /// operations. Returns failure iff they disagree. In case of success the
-  /// corresponding attribute is written to the current op (function).
+  /// corresponding attribute is written to the current op (`func.func`).
   LogicalResult setRequiredNumQubits() {
     func::FuncOp funcOp = getOperation();
     uint64_t numQubits = 0;

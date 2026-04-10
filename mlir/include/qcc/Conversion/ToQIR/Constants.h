@@ -5,6 +5,13 @@
 namespace qcc {
 
 //===----------------------------------------------------------------------===//
+// FIXME: stuff that probably belongs elsewhere
+//===----------------------------------------------------------------------===//
+
+/// A unit attribute to mark a `func.func` as the starting point of a quantum program.
+static constexpr llvm::StringLiteral QCC_ENTRY_POINT_ATTR_NAME = "qcc.entry_point";
+
+//===----------------------------------------------------------------------===//
 // QIR runtime functions
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +20,9 @@ static constexpr llvm::StringLiteral qirRtInit = "__quantum__rt__initialize";
 
 /// Convert a measurement result to a i1.
 static constexpr llvm::StringLiteral qirRtReadResult = "__quantum__rt__read_result";
+
+/// Record a measurement result.
+static constexpr llvm::StringLiteral qirRtResultRecordOutput = "__quantum__rt__result_record_output";
 
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)

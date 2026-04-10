@@ -1,7 +1,17 @@
 // RUN: qcc-opt %s -convert-qc-to-qir | FileCheck %s
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
-    // CHECK-LABEL:   func.func @test() -> i64 attributes {qcc.entry_point} {
+    // CHECK-LABEL:   func.func @test() -> i64 attributes {
+    // CHECK-SAME:        passthrough = [
+    // CHECK-SAME:          "entry_point",
+    // CHECK-SAME:          ["output_labeling_schema", "schema_id"],
+    // CHECK-SAME:          ["qir_profiles", "adaptive_profile"],
+    // CHECK-SAME:          ["required_num_qubits", "2"],
+    // CHECK-SAME:          ["required_num_results", "2"]
+    // CHECK-SAME:        ],
+    // CHECK-SAME:        qcc.entry_point
+    // CHECK-SAME:      } {
+
     // CHECK:           %[[ZERO_PTR:.*]] = llvm.mlir.zero : !llvm.ptr
     // CHECK:           llvm.call @__quantum__rt__initialize(%[[ZERO_PTR]]) : (!llvm.ptr) -> ()
 

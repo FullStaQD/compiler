@@ -19,20 +19,17 @@ using namespace mlir;
 
 namespace {
 
-// FIXME: move into dedicated "constants" file
-/// A unit attribute to mark a func.funcOp as the starting point of a quantum program.
-static constexpr llvm::StringLiteral QCC_ENTRY_POINT_ATTR_NAME = "qcc.entry_point";
-
 struct PrepareFuncAttrs : public OpRewritePattern<func::FuncOp> {
   using OpRewritePattern<func::FuncOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(func::FuncOp funcOp, PatternRewriter& rewriter) const override {
+  LogicalResult matchAndRewrite(func::FuncOp funcOp, PatternRewriter& /*rewriter*/) const override {
     OpBuilder builder(funcOp->getContext());
 
-    if (funcOp->hasAttr(QCC_ENTRY_POINT_ATTR_NAME)) {
+    if (funcOp->hasAttr(qcc::QCC_ENTRY_POINT_ATTR_NAME)) {
       llvm::errs() << "!!! found entry point: " << funcOp.getName() << "\n";
-      funcOp->removeAttr(QCC_ENTRY_POINT_ATTR_NAME);
-      funcOp->setAttr("passthrough", builder.getArrayAttr({builder.getStringAttr("entry_point")}));
+      funcOp->removeAttr(qcc::QCC_ENTRY_POINT_ATTR_NAME);
+      // FIXME:
+      // funcOp->setAttr("passthrough", builder.getArrayAttr({builder.getStringAttr("entry_point")}));
     } else {
       /// FIXME: requires capability (6)
       llvm::errs() << "!!! found IR defined function: " << funcOp.getName() << "\n";
@@ -57,32 +54,34 @@ protected:
     // FIXME: finish impl
 
     ModuleOp moduleOp = getOperation();
-    auto context = moduleOp.getContext();
+    auto* ctx = moduleOp.getContext();
 
     // Prepare func attrs.
     {
-      RewritePatternSet patterns(context);
-      patterns.add<PrepareFuncAttrs>(context);
+      RewritePatternSet patterns(ctx);
+      patterns.add<PrepareFuncAttrs>(ctx);
 
-      if (failed(applyPatternsGreedily(moduleOp, std::move(patterns))))
+      if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
         signalPassFailure();
+      }
     }
 
     // Full conversion to LLVM.
     {
-      LLVMConversionTarget target(*context);
+      LLVMConversionTarget target(*ctx);
       target.addLegalOp<ModuleOp>();
 
       target.addLegalDialect<qc::QCDialect>(); // FIXME: remove
 
-      LLVMTypeConverter typeConverter(context);
-      RewritePatternSet patterns(context);
+      LLVMTypeConverter typeConverter(ctx);
+      RewritePatternSet patterns(ctx);
 
       arith::populateArithToLLVMConversionPatterns(typeConverter, patterns); // FIXME: maybe not needed here
       populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
-      if (failed(applyFullConversion(moduleOp, target, std::move(patterns))))
+      if (failed(applyFullConversion(moduleOp, target, std::move(patterns)))) {
         return signalPassFailure();
+      }
     }
   }
 };
