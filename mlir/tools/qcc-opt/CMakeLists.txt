@@ -8,6 +8,7 @@ target_link_libraries(
           MLIRArithDialect
           MLIRSCFDialect
           MLIRTensorDialect
+          QCCAuxDialect
           QCCJaspDialect
           QCCJaspToQC
           QCCToQIR

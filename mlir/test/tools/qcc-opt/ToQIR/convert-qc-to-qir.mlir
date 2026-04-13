@@ -48,8 +48,7 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 
     // FIXME: treat results explicitly! The pass must be fixed! Probably dedicated test.
     // FIXME: record results.
-
-    // aux.record_qir_measurement_result %m5
+    aux.record_bool // %m5
 
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64

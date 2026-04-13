@@ -9,6 +9,7 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
+#include "qcc/Dialect/Aux/IR/Aux.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
@@ -26,9 +27,21 @@
 
 int main(int argc, char** argv) {
   mlir::DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
-                  mlir::cf::ControlFlowDialect, mlir::scf::SCFDialect, mlir::LLVM::LLVMDialect, jasp::JaspDialect,
-                  mlir::qc::QCDialect>();
+
+  registry.insert<
+      // clang-format off
+    mlir::func::FuncDialect,
+    mlir::arith::ArithDialect,
+    mlir::tensor::TensorDialect,
+    mlir::cf::ControlFlowDialect,
+    mlir::scf::SCFDialect,
+    mlir::LLVM::LLVMDialect,
+    jasp::JaspDialect,
+    mlir::qc::QCDialect,
+    qcc::aux::AuxDialect
+      // clang-format on
+      >();
+
   // 3rd party dialects
   mlir::stablehlo::registerAllDialects(registry);
 
