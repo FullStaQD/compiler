@@ -47,8 +47,8 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK:           llvm.call @__quantum__qis__mz__body
 
     // FIXME: treat results explicitly! The pass must be fixed! Probably dedicated test.
-    // FIXME: record results.
-    aux.record_bool // %m5
+    // FIXME: add label
+    aux.record_bool %m5
 
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64
