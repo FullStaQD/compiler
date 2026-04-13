@@ -2,10 +2,14 @@
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/BufferizableOpInterfaceImpl.h"
@@ -14,19 +18,9 @@
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/Transforms/Passes.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
-
-#include <mlir/Conversion/Passes.h>
-#include <mlir/Conversion/VectorToSCF/VectorToSCF.h>
-#include <mlir/Dialect/Bufferization/IR/Bufferization.h>
-#include <mlir/Dialect/Bufferization/Transforms/Passes.h>
-#include <mlir/Dialect/Func/Extensions/InlinerExtension.h>
-#include <mlir/Dialect/Linalg/Passes.h>
-#include <mlir/Dialect/MemRef/Transforms/Passes.h>
-#include <mlir/Dialect/Tensor/Transforms/Passes.h>
-#include <mlir/Transforms/InliningUtils.h>
-#include <mlir/Transforms/Passes.h>
 
 int main(int argc, char** argv) {
 

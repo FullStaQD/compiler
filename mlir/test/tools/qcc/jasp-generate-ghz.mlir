@@ -1,4 +1,20 @@
-// RUN: qcc-opt %s | FileCheck %s
+// RUN: qcc -o - %s | FileCheck %s
+
+// This test corresponds to the following qrisp program:
+//
+// def generate_ghz(n):
+//     # 1. Create a QuantumVariable with n qubits
+//     q_var = QuantumVariable(n)
+//
+//     # 2. Apply Hadamard to the first qubit to start the superposition
+//     h(q_var[0])
+//
+//     # 3. Use a for loop to entangle the rest of the qubits
+//     # We start from index 1 and use the previous qubit as a control
+//     for i in jrange(1, n):
+//         cx(q_var[i-1], q_var[i])
+//
+//     return q_var
 
 #map = affine_map<() -> ()>
 module @jasp_module {
@@ -75,4 +91,30 @@ module @jasp_module {
   }
 }
 
-// CHECK: module
+// CHECK-LABEL:   func.func @main(
+// CHECK-SAME:                    %[[ARG0:.*]]: i64) -> memref<?x!qc.qubit> {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : i64
+// CHECK:           %[[INDEX_CAST_0:.*]] = arith.index_cast %[[ARG0]] : i64 to index
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc(%[[INDEX_CAST_0]]) : memref<?x!qc.qubit>
+// CHECK:           %[[LOAD_0:.*]] = memref.load %[[ALLOC_0]]{{\[}}%[[CONSTANT_0]]] : memref<?x!qc.qubit>
+// CHECK:           qc.h %[[LOAD_0]] : !qc.qubit
+// CHECK:           %[[SUBI_0:.*]] = arith.subi %[[ARG0]], %[[CONSTANT_1]] : i64
+// CHECK:           %[[WHILE_0:.*]] = scf.while (%[[VAL_0:.*]] = %[[CONSTANT_1]]) : (i64) -> i64 {
+// CHECK:             %[[CMPI_0:.*]] = arith.cmpi sle, %[[VAL_0]], %[[SUBI_0]] : i64
+// CHECK:             scf.condition(%[[CMPI_0]]) %[[VAL_0]] : i64
+// CHECK:           } do {
+// CHECK:           ^bb0(%[[VAL_1:.*]]: i64):
+// CHECK:             %[[SUBI_1:.*]] = arith.subi %[[VAL_1]], %[[CONSTANT_1]] : i64
+// CHECK:             %[[INDEX_CAST_1:.*]] = arith.index_cast %[[SUBI_1]] : i64 to index
+// CHECK:             %[[LOAD_1:.*]] = memref.load %[[ALLOC_0]]{{\[}}%[[INDEX_CAST_1]]] : memref<?x!qc.qubit>
+// CHECK:             %[[INDEX_CAST_2:.*]] = arith.index_cast %[[VAL_1]] : i64 to index
+// CHECK:             %[[LOAD_2:.*]] = memref.load %[[ALLOC_0]]{{\[}}%[[INDEX_CAST_2]]] : memref<?x!qc.qubit>
+// CHECK:             qc.ctrl(%[[LOAD_1]]) {
+// CHECK:               qc.x %[[LOAD_2]] : !qc.qubit
+// CHECK:             } : !qc.qubit
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[VAL_1]], %[[CONSTANT_1]] : i64
+// CHECK:             scf.yield %[[ADDI_0]] : i64
+// CHECK:           }
+// CHECK:           return %[[ALLOC_0]] : memref<?x!qc.qubit>
+// CHECK:         }
