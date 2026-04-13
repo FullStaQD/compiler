@@ -90,7 +90,7 @@ public:
         return nullptr;
       }
 
-      return mlir::tensor::FromElementsOp::create(builder, loc, type, inputs[0]);
+      return {mlir::tensor::FromElementsOp::create(builder, loc, type, inputs[0])};
     });
   }
 };
