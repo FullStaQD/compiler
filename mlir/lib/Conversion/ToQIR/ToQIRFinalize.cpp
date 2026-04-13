@@ -25,9 +25,9 @@ struct PrepareFuncAttrs : public OpRewritePattern<func::FuncOp> {
   LogicalResult matchAndRewrite(func::FuncOp funcOp, PatternRewriter& /*rewriter*/) const override {
     OpBuilder builder(funcOp->getContext());
 
-    if (funcOp->hasAttr(qcc::QCC_ENTRY_POINT_ATTR_NAME)) {
+    if (funcOp->hasAttr(qcc::entryPointAttrName)) {
       llvm::errs() << "!!! found entry point: " << funcOp.getName() << "\n";
-      funcOp->removeAttr(qcc::QCC_ENTRY_POINT_ATTR_NAME);
+      funcOp->removeAttr(qcc::entryPointAttrName);
       // FIXME:
       // funcOp->setAttr("passthrough", builder.getArrayAttr({builder.getStringAttr("entry_point")}));
     } else {

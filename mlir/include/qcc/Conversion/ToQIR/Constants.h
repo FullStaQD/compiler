@@ -9,20 +9,36 @@ namespace qcc {
 //===----------------------------------------------------------------------===//
 
 /// A unit attribute to mark a `func.func` as the starting point of a quantum program.
-static constexpr llvm::StringLiteral QCC_ENTRY_POINT_ATTR_NAME = "qcc.entry_point";
+static constexpr llvm::StringLiteral entryPointAttrName = "qcc.entry_point";
 
 //===----------------------------------------------------------------------===//
 // QIR runtime functions
 //===----------------------------------------------------------------------===//
 
-/// Must be called right at the start of an entry-point.
+/// Initializes the execution environment.
+///
+/// Signature: `void(ptr)`.
+///
+/// Sets all qubits to a zero-state if they are not dynamically managed. Must be
+/// called right at the start of an entry-point.
 static constexpr llvm::StringLiteral qirRtInit = "__quantum__rt__initialize";
 
-/// Convert a measurement result to a i1.
+/// Convert a measurement result to a bool.
+///
+/// Signature `i1(ptr readonly)`.
 static constexpr llvm::StringLiteral qirRtReadResult = "__quantum__rt__read_result";
 
+// TODO: it is unclear how our compiler should handle it.
 /// Record a measurement result.
 static constexpr llvm::StringLiteral qirRtResultRecordOutput = "__quantum__rt__result_record_output";
+
+/// Adds a boolean value to the generated output.
+///
+/// Signature: `void(i1,ptr)`.
+///
+/// The second parameter defines a string label for the result value. Depending
+/// on the output schema, the label is included in the output or omitted.
+static constexpr llvm::StringLiteral qirRtBoolRecordOutput = "__quantum__rt__result_record_output";
 
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)

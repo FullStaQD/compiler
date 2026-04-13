@@ -122,7 +122,7 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
       return emitMissingDeclError(op, qcc::qirRtReadResult);
     }
 
-    // FIXME: wrong!
+    // TODO: This holds only for HiSEP-Q.
     // NOTE: Qubit and result pointer share the same index.
     auto qubit = op.getQubit();
     auto ptrs = qubitsToPtrs(rewriter, {qubit, qubit});
