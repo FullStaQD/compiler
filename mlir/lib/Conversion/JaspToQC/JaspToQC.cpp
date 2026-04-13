@@ -1,11 +1,6 @@
 
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/QC/IR/QCDialect.h"
-#include "mlir/Dialect/QC/IR/QCOps.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include <llvm/Support/Casting.h>
@@ -232,9 +227,9 @@ struct ConvertJaspConsumeQuantumKernelOp final : OpConversionPattern<jasp::Consu
 struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp> {
   using OpConversionPattern<jasp::QuantumGateOp>::OpConversionPattern;
 
-/// Macro to attempt converting a jasp gate to a specific QC operation
+  /// Macro to attempt converting a jasp gate to a specific QC operation
 #define TRY_CONVERT_GATE(NAME, OPTYPE, N_CONTROLS, N_TARGETS, N_PARAMS)                                                \
-  if (gateName == NAME) {                                                                                              \
+  if (gateName == (NAME)) {                                                                                            \
     return convertGate<OPTYPE>(op, adaptor, rewriter, std::make_index_sequence<N_CONTROLS>{},                          \
                                std::make_index_sequence<N_TARGETS>{}, std::make_index_sequence<N_PARAMS>{});           \
   }
@@ -279,24 +274,25 @@ private:
   template <typename QCOp, std::size_t... controlOperandIndices, std::size_t... targetOperandIndices,
             std::size_t... paramOperandIndices>
   LogicalResult convertGate(jasp::QuantumGateOp op, jasp::QuantumGateOp::Adaptor adaptor,
-                            ConversionPatternRewriter& rewriter, std::index_sequence<controlOperandIndices...>,
-                            std::index_sequence<targetOperandIndices...>,
-                            std::index_sequence<paramOperandIndices...>) const {
+                            ConversionPatternRewriter& rewriter,
+                            std::index_sequence<controlOperandIndices...> /*unused*/,
+                            std::index_sequence<targetOperandIndices...> /*unused*/,
+                            std::index_sequence<paramOperandIndices...> /*unused*/) const {
     auto operands = adaptor.getGateOperands();
-    const auto n_controls = sizeof...(controlOperandIndices);
-    const auto n_targets = sizeof...(targetOperandIndices);
-    const auto n_params = sizeof...(paramOperandIndices);
+    const auto numControls = sizeof...(controlOperandIndices);
+    const auto numTargets = sizeof...(targetOperandIndices);
+    const auto numParams = sizeof...(paramOperandIndices);
 
-    const auto targetIndexOffset = n_controls;
-    const auto paramIndexOffset = targetIndexOffset + n_targets;
+    const auto targetIndexOffset = numControls;
+    const auto paramIndexOffset = targetIndexOffset + numTargets;
 
-    assert(operands.size() == n_controls + n_targets + n_params && "Invalid number of gate operands");
+    assert(operands.size() == numControls + numTargets + numParams && "Invalid number of gate operands");
 
-    if constexpr (n_controls == 0) {
+    if constexpr (numControls == 0) {
       QCOp::create(rewriter, op.getLoc(), operands[targetOperandIndices]...,
                    operands[paramOperandIndices + paramIndexOffset]...);
     } else {
-      qc::CtrlOp::create(rewriter, op.getLoc(), operands.take_front(n_controls), [&]() {
+      qc::CtrlOp::create(rewriter, op.getLoc(), operands.take_front(numControls), [&]() {
         QCOp::create(rewriter, op.getLoc(), operands[targetOperandIndices + targetIndexOffset]...,
                      operands[paramOperandIndices + paramIndexOffset]...);
       });
@@ -452,5 +448,5 @@ protected:
     }
   }
 };
-
+} // namespace
 } // namespace qcc

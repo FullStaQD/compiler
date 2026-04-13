@@ -28,5 +28,7 @@ include(mlir/cmake/SetupMLIR.cmake)
 
 add_subdirectory(mlir/include)
 add_subdirectory(mlir/lib)
-add_subdirectory(mlir/test)
 add_subdirectory(mlir/tools)
+
+enable_testing()
+add_subdirectory(mlir/test)

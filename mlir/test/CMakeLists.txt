@@ -5,3 +5,6 @@ set(MLIR_COMPILER_TEST_DEPENDS FileCheck count not qcc-opt qcc)
 
 add_lit_testsuite(test-qcc-project "Run the QCC project tests" ${CMAKE_CURRENT_BINARY_DIR} DEPENDS
                   ${MLIR_COMPILER_TEST_DEPENDS})
+
+add_test(NAME test-qcc-project COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG> --target
+                                       test-qcc-project)
