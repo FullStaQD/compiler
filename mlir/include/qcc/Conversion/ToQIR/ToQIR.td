@@ -1,6 +1,6 @@
 include "mlir/Pass/PassBase.td"
 
-def ToQIRPrep : Pass<"to-qir-prep", "mlir::ModuleOp"> {
+def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
   let summary = "Very first pass to apply if you want to convert to QIR (adaptive).";
 
   let description = [{

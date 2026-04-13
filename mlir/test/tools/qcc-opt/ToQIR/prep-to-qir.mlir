@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s -to-qir-prep | FileCheck %s
+// RUN: qcc-opt %s -prep-to-qir | FileCheck %s
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     %exit_code = arith.constant 0 : i64

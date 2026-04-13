@@ -10,11 +10,11 @@ using namespace mlir;
 
 namespace qcc {
 
-#define GEN_PASS_DEF_TOQIRPREP
+#define GEN_PASS_DEF_PREPTOQIR
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
-struct ToQIRPrep final : public impl::ToQIRPrepBase<ToQIRPrep> {
-  using impl::ToQIRPrepBase<ToQIRPrep>::ToQIRPrepBase;
+struct PrepToQIR final : public impl::PrepToQIRBase<PrepToQIR> {
+  using impl::PrepToQIRBase<PrepToQIR>::PrepToQIRBase;
 
 protected:
   void runOnOperation() override {
