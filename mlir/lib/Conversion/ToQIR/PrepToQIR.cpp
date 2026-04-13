@@ -5,6 +5,7 @@
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
+#include <mlir/IR/Builders.h>
 
 using namespace mlir;
 
@@ -24,7 +25,7 @@ protected:
 
     // Runtime functions:
     createVoidFnDecl(qcc::qirRtInit, 1);
-    createVoidFnDecl(qcc::qirRtResultRecordOutput, 2);
+    createRtBoolRecordOutputDecl();
     createRtReadResultDecl();
 
     // QIS:
@@ -36,19 +37,21 @@ protected:
     createVoidFnDecl(qcc::qirQisCX, 2);
 
     addQIRModuleFlags();
+
+    addGlobalDummyLabel();
   }
 
 private:
   /// Insert `llvm.func` with signature `fnName(ptr, ptr, ...) -> void`.
   LLVM::LLVMFuncOp createVoidFnDecl(StringRef fnName, int numPtrs) {
     ModuleOp moduleOp = getOperation();
-    auto* context = moduleOp.getContext();
-    OpBuilder builder(context);
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
     builder.setInsertionPointToEnd(moduleOp.getBody());
 
-    auto ptrType = LLVM::LLVMPointerType::get(context);
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
     SmallVector<Type, 2> argTypes(numPtrs, ptrType);
-    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context), argTypes);
+    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), argTypes);
 
     auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
 
@@ -68,6 +71,21 @@ private:
 
     auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtReadResult, fnType);
     fnDecl.setArgAttr(0, "llvm.readonly", builder.getUnitAttr());
+  }
+
+  /// Insert `llvm.func` with signature `__quantum__rt__bool_record_output(i1, ptr) -> void`.
+  void createRtBoolRecordOutputDecl() {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+
+    auto voidType = LLVM::LLVMVoidType::get(ctx);
+    auto i1Type = IntegerType::get(ctx, 1);
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto fnType = LLVM::LLVMFunctionType::get(voidType, {i1Type, ptrType});
+
+    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
   }
 
   /// Create the module flags which specify the capabilities which the backend needs to support.
@@ -102,6 +120,28 @@ private:
         createFlag(LLVM::ModFlagBehavior::Error, "multiple_return_points", 0)};
 
     LLVM::ModuleFlagsOp::create(builder, loc, builder.getArrayAttr(flags));
+  }
+
+  /// TODO: This is a workaround to satisfy QIRs need to always report a label
+  /// when recording results. The input program currently has no notion of these
+  /// labels hence we have to add one in an artificial way.
+  void addGlobalDummyLabel() {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+
+    auto loc = moduleOp->getLoc();
+    auto i8Type = builder.getI8Type();
+    StringRef label = "dummy_label";
+
+    unsigned size = label.size() + 1; // including null terminator '\0'
+    auto i8ArrayType = LLVM::LLVMArrayType::get(i8Type, size);
+
+    LLVM::GlobalOp::create(builder, loc, i8ArrayType,
+                           /*isConstant=*/true, LLVM::Linkage::Internal, qcc::qirDummyLabelGlobalSymbolName,
+                           builder.getStringAttr(label.str() + '\0') // Manual null terminator
+    );
   }
 };
 

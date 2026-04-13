@@ -43,12 +43,16 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK-DAG:       %[[RC5:.*]] = llvm.mlir.constant(5 : i64) : i64
     // CHECK-DAG:       %[[RP5:.*]] = llvm.inttoptr %[[RC5]] : i64 to !llvm.ptr
     // CHECK:           llvm.call @__quantum__qis__mz__body(%[[QP5]], %[[RP5]]) : (!llvm.ptr, !llvm.ptr) -> ()
+    // CHECK:           %[[MR5:.*]] = llvm.call @__quantum__rt__read_result(%[[RP5]]) : (!llvm.ptr) -> i1
     %m7 = qc.measure %q7 : !qc.qubit -> i1
     // CHECK:           llvm.call @__quantum__qis__mz__body
+    // CHECK:           llvm.call @__quantum__rt__read_result
 
-    // FIXME: treat results explicitly! The pass must be fixed! Probably dedicated test.
-    // FIXME: add label
-    aux.record_bool %m5
+    aux.record_bool %m5, @".qir_dummy_label"
+    // CHECK:           %[[LABEL_PTR:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+    // CHECK:           llvm.call @__quantum__rt__bool_record_output(%[[MR5]], %[[LABEL_PTR]]) : (i1, !llvm.ptr) -> ()
+    aux.record_bool %m7, @".qir_dummy_label"
+    // CHECK:           llvm.call @__quantum__rt__bool_record_output
 
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64
@@ -58,9 +62,12 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 
 // The pass assumes that these decls already exist.
 llvm.func @__quantum__rt__initialize(!llvm.ptr)
-llvm.func @__quantum__rt__result_record_output(!llvm.ptr, !llvm.ptr)
+llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr)
 llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
 llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
 llvm.func @__quantum__qis__h__body(!llvm.ptr)
 llvm.func @__quantum__qis__x__body(!llvm.ptr)
 llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr)
+
+// The label to which `aux.record_bool` is referring to.
+llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}

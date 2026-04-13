@@ -11,7 +11,7 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 // CHECK:           return %[[CONSTANT_0]] : i64
 // CHECK:         }
 // CHECK-DAG:     llvm.func @__quantum__rt__initialize(!llvm.ptr)
-// CHECK-DAG:     llvm.func @__quantum__rt__result_record_output(!llvm.ptr, !llvm.ptr)
+// CHECK-DAG:     llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr)
 // CHECK-DAG:     llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
 // CHECK-DAG:     llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
 // CHECK-DAG:     llvm.func @__quantum__qis__h__body(!llvm.ptr)
@@ -21,3 +21,4 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 // CHECK-SAME:      #llvm.mlir.module_flag<error, "qir_major_version", 2 : i32>
 //                  ... other flags
 // CHECK-SAME:    ]
+// FIXME: check for the global label

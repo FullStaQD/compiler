@@ -11,6 +11,9 @@ namespace qcc {
 /// A unit attribute to mark a `func.func` as the starting point of a quantum program.
 static constexpr llvm::StringLiteral entryPointAttrName = "qcc.entry_point";
 
+/// FIXME: add docstring
+static constexpr llvm::StringLiteral qirDummyLabelGlobalSymbolName = ".qir_dummy_label";
+
 //===----------------------------------------------------------------------===//
 // QIR runtime functions
 //===----------------------------------------------------------------------===//
@@ -38,7 +41,7 @@ static constexpr llvm::StringLiteral qirRtResultRecordOutput = "__quantum__rt__r
 ///
 /// The second parameter defines a string label for the result value. Depending
 /// on the output schema, the label is included in the output or omitted.
-static constexpr llvm::StringLiteral qirRtBoolRecordOutput = "__quantum__rt__result_record_output";
+static constexpr llvm::StringLiteral qirRtBoolRecordOutput = "__quantum__rt__bool_record_output";
 
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)

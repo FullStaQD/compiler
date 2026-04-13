@@ -7,6 +7,7 @@
 #include "mlir/Dialect/QC/IR/QCOps.h"
 #include "qcc/Conversion/ToQIR/Constants.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
+#include "qcc/Dialect/Aux/IR/Aux.h"
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
@@ -27,6 +28,7 @@
 #include <cstdint>
 
 using namespace mlir;
+using namespace qcc;
 
 namespace {
 
@@ -135,6 +137,23 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   }
 };
 
+struct RecordBoolLowering : public OpConversionPattern<aux::RecordBoolOp> {
+  using OpConversionPattern<aux::RecordBoolOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(aux::RecordBoolOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    StringRef labelName = op.getLabel(); // Returns the string from FlatSymbolRefAttr
+
+    auto addressOf =
+        LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtBoolRecordOutput, ValueRange{adaptor.getValue(), addressOf});
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
@@ -204,7 +223,7 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordBoolLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
