@@ -1,7 +1,3 @@
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/raw_ostream.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
@@ -29,6 +25,11 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "qcc/Compiler/Pipeline.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
+
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/ToolOutputFile.h>
+#include <llvm/Support/raw_ostream.h>
 
 namespace cl = llvm::cl;
 
