@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
   qcc::registerConvertQCToQIR();
   qcc::registerStdToLLVM();
   qcc::registerPrepToQIR();
-  qcc::registerToQIRFinalize(); // FIXME: do we really want to register them individually?
+  qcc::registerFinalizeToQIR(); // FIXME: do we really want to register them individually?
 
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "qcc optimizer", registry));
 }

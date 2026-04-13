@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s -to-qir-finalize | FileCheck %s
+// RUN: qcc-opt %s -finalize-to-qir | FileCheck %s
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     %0 = llvm.mlir.constant(0 : i64) : i64

@@ -10,13 +10,13 @@ include "mlir/IR/BuiltinTypes.td"
 include "AuxDialect.td"
 
 //===----------------------------------------------------------------------===//
-// Jasp operations
+// Aux operations
 //===----------------------------------------------------------------------===//
 
 class AuxOp<string mnemonic, list<Trait> traits = []> :
         Op<AuxDialect, mnemonic, traits>;
 
-// FIXME: implement
+// FIXME: cleanup
 def RecordBoolOp : AuxOp<"record_bool"> {
     let summary = "Records a boolean with a symbolic label reference.";
 

@@ -19,7 +19,7 @@ def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
   ];
 }
 
-def ToQIRFinalize : Pass<"to-qir-finalize", "mlir::ModuleOp"> {
+def FinalizeToQIR : Pass<"finalize-to-qir", "mlir::ModuleOp"> {
   let summary = "FIXME: add summary";
 
   let description = [{
