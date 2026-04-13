@@ -1,31 +1,28 @@
 
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
+#include "llvm/Support/Casting.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Types.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
-
-#include <llvm/Support/Casting.h>
-#include <llvm/Support/raw_ostream.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/Dialect/Func/Transforms/FuncConversions.h>
-#include <mlir/Dialect/Linalg/IR/Linalg.h>
-#include <mlir/Dialect/SCF/Transforms/Patterns.h>
-#include <mlir/IR/Attributes.h>
-#include <mlir/IR/Builders.h>
-#include <mlir/IR/BuiltinAttributes.h>
-#include <mlir/IR/BuiltinTypeInterfaces.h>
-#include <mlir/IR/MLIRContext.h>
-#include <mlir/IR/OperationSupport.h>
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/IR/Types.h>
-#include <mlir/IR/ValueRange.h>
-#include <mlir/Support/LLVM.h>
-#include <mlir/Support/LogicalResult.h>
-#include <mlir/Transforms/DialectConversion.h>
 
 #include <cassert>
 #include <cstddef>
@@ -76,7 +73,7 @@ public:
     // Target Materialization: Source Type (tensor<T>) -> Target Type (T)
     // This is called when an unconverted operation's result needs to be used by a converted operation.
     addTargetMaterialization(
-        [](mlir::OpBuilder& builder, mlir::Type type, mlir::ValueRange inputs, mlir::Location loc) -> mlir::Value {
+        [](mlir::OpBuilder& builder, mlir::Type /*type*/, mlir::ValueRange inputs, mlir::Location loc) -> mlir::Value {
           if (inputs.size() != 1 || !llvm::isa<mlir::TensorType>(inputs[0].getType())) {
             return nullptr;
           }
@@ -429,10 +426,6 @@ protected:
       auto islegal = stateDestroyer.isSignatureLegal(op.getFunctionType());
       return islegal;
     });
-
-    // target.markUnknownOpDynamicallyLegal([&](mlir::Operation* op) {
-    //   return typeConverter.isLegal(op->getOperandTypes()) && typeConverter.isLegal(op->getResultTypes());
-    // });
 
     populateAnyFunctionOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
 
