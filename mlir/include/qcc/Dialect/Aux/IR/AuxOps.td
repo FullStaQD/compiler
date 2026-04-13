@@ -18,13 +18,14 @@ class AuxOp<string mnemonic, list<Trait> traits = []> :
 
 // FIXME: implement
 def RecordBoolOp : AuxOp<"record_bool"> {
-    let summary = "Records a boolean value for output.";
-    let description = "FIXME:";
+    let summary = "Records a boolean with a symbolic label reference.";
 
-    let arguments = (ins I1:$value); // FIXME: add label
+    // Change AnyType to FlatSymbolRefAttr
+    let arguments = (ins I1:$value, FlatSymbolRefAttr:$label);
     let results = (outs);
 
-    let assemblyFormat = "$value attr-dict";
+    // The syntax $label will now correctly handle the @symbol notation
+    let assemblyFormat = "$value `,` $label attr-dict";
 }
 
 #endif // INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_
