@@ -4,16 +4,17 @@ add_mlir_conversion_library(
   QCCToQIR
   ${CONVERSION_SOURCES}
   DEPENDS
-  # FIXME: which ones do I need in the end?
   QCCToQIRIncGen
   LINK_LIBS
+  # Dialects
   MLIRQCDialect
-  MLIRArithDialect
-  MLIRArithToLLVM
   MLIRFuncDialect
-  MLIRFuncToLLVM
   MLIRLLVMDialect
+  QCCAuxDialect
+  # Conversion infra
   MLIRLLVMCommonConversion
   MLIRTransforms
-  MLIRFuncTransforms
-  QCCAuxDialect)
+  MLIRFuncToLLVM
+  # Core MLIR
+  MLIRIR
+  MLIRPass)

@@ -1,3 +1,4 @@
+#include "qcc/Constants.h"
 #include "qcc/Conversion/ToQIR/Constants.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 

@@ -15,15 +15,14 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/WalkResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/LogicalResult.h"
 
 #include <cstdint>
 

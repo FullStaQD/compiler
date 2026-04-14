@@ -1,9 +1,5 @@
 #include "qcc/Dialect/Aux/IR/Aux.h"
 
-// FIXME: what includes needed?
-#include <llvm/ADT/TypeSwitch.h>
-#include <mlir/IR/DialectImplementation.h>
-
 using namespace mlir;
 using namespace qcc::aux;
 

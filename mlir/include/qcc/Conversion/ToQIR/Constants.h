@@ -5,13 +5,11 @@
 namespace qcc {
 
 //===----------------------------------------------------------------------===//
-// FIXME: stuff that probably belongs elsewhere
+// Misc
 //===----------------------------------------------------------------------===//
 
-/// A unit attribute to mark a `func.func` as the starting point of a quantum program.
-static constexpr llvm::StringLiteral entryPointAttrName = "qcc.entry_point";
-
-/// FIXME: add docstring
+/// Record runtime functions need a label. We do not really support those hence
+/// we live with the workaround to always use a dummy label.
 static constexpr llvm::StringLiteral qirDummyLabelGlobalSymbolName = ".qir_dummy_label";
 
 //===----------------------------------------------------------------------===//
