@@ -12,7 +12,7 @@ decision-makers:
 
 ## Context and Problem Statement
 
-As quantum computing systems become more complex and approach production use, there is a need for an industry-grade compiler framework capable of meeting the stringent requirements of quantum program execution and control. Our goal is to build a quantum compiler framework by leveraging an established classical compiler infrastructure.
+As quantum computing systems become more complex and approach production use, there is a need for an industry-grade compiler framework capable of meeting the highly demanding requirements of quantum program execution and control. Our goal is to build a quantum compiler framework by leveraging an established classical compiler infrastructure.
 
 The framework should be open source to enable collaboration from the broader quantum software community and facilitate integration by hardware manufacturers into their compilation pipelines. It must also support integration into high-performance computing (HPC) environments, which are expected to be early execution platforms for hybrid quantum-classical workflows.
 
