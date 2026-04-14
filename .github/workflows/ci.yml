@@ -127,4 +127,8 @@ jobs:
               fromJSON(needs.change-detection.outputs.run-cpp-tests)
               && '' || 'cpp-coverage,'
             }}
+            ${{
+              fromJSON(needs.change-detection.outputs.run-cpp-linter)
+              && '' || 'cpp-linter,'
+            }}
           jobs: ${{ toJSON(needs) }}
