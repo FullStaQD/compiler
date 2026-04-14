@@ -2,7 +2,7 @@
 status: "accepted"
 date: 2026-04-14
 decision-makers:
-  - "Enrique Naranjo"
+  - "Enrique Naranjo Bejarano"
   - "Julian Farnsteiner"
   - "Reinhard Stahn"
   - "Lukas Burgholzer"
