@@ -15,6 +15,8 @@ namespace qcc {
 #define GEN_PASS_DEF_PREPTOQIR
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
+namespace {
+
 struct PrepToQIR final : public impl::PrepToQIRBase<PrepToQIR> {
   using impl::PrepToQIRBase<PrepToQIR>::PrepToQIRBase;
 
@@ -51,7 +53,7 @@ private:
     builder.setInsertionPointToEnd(moduleOp.getBody());
 
     auto ptrType = LLVM::LLVMPointerType::get(ctx);
-    SmallVector<Type, 2> argTypes(numPtrs, ptrType);
+    const SmallVector<Type, 2> argTypes(numPtrs, ptrType);
     auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), argTypes);
 
     auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
@@ -86,7 +88,7 @@ private:
     auto ptrType = LLVM::LLVMPointerType::get(ctx);
     auto fnType = LLVM::LLVMFunctionType::get(voidType, {i1Type, ptrType});
 
-    auto fnDecl = LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
+    LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
   }
 
   /// Create the module flags which specify the capabilities which the backend needs to support.
@@ -109,7 +111,7 @@ private:
     };
 
     // NOTE: Missing flags are implicitly set to "false".
-    SmallVector<Attribute> flags = {
+    const SmallVector<Attribute> flags = {
         createFlag(LLVM::ModFlagBehavior::Error, "qir_major_version", 2),
         createFlag(LLVM::ModFlagBehavior::Max, "qir_minor_version", 0),
         createFlag(LLVM::ModFlagBehavior::Error, "dynamic_qubit_management", 0),
@@ -136,7 +138,7 @@ private:
     auto i8Type = builder.getI8Type();
     StringRef label = "dummy_label";
 
-    unsigned size = label.size() + 1; // including null terminator '\0'
+    const unsigned size = label.size() + 1; // including null terminator '\0'
     auto i8ArrayType = LLVM::LLVMArrayType::get(i8Type, size);
 
     LLVM::GlobalOp::create(builder, loc, i8ArrayType,
@@ -146,4 +148,5 @@ private:
   }
 };
 
+} // namespace
 } // namespace qcc

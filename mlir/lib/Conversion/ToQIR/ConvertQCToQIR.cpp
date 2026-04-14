@@ -30,14 +30,12 @@
 using namespace mlir;
 using namespace qcc;
 
-namespace {
-
 /// Map any of the (unitary) gate-ops to their QIR QIS function declaration if possible.
 ///
 /// Returns an empty string upon failure. Succeeds iff the gate is among the supported native gate set.
 ///
 /// TODO: The native gate set is currently hardcoded.
-StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
+static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
   if (unitaryOp.getNumControls() == 0) {
     return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
         .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
@@ -71,7 +69,7 @@ StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
 /// ```
 ///
 /// Finally it returns the list of all created `ptr` values (`%2` in the above example is one of these ptr).
-SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
+static SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
   SmallVector<Value> ptrValues;
   ptrValues.reserve(qubitValues.size());
 
@@ -96,9 +94,11 @@ SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
 }
 
 /// To be used in a rewrite pattern.
-InFlightDiagnostic emitMissingDeclError(Operation* op, StringRef name) {
+static InFlightDiagnostic emitMissingDeclError(Operation* op, StringRef name) {
   return op->emitError() << "QIR QIS declaration not found: '" << name << "'";
 }
+
+namespace {
 
 struct QCToQIRTypeConverter final : LLVMTypeConverter {
   explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
@@ -192,13 +192,14 @@ namespace qcc {
 #define GEN_PASS_DEF_CONVERTQCTOQIR
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
 
+namespace {
+
 struct ConvertQCToQIR final : impl::ConvertQCToQIRBase<ConvertQCToQIR> {
   using ConvertQCToQIRBase::ConvertQCToQIRBase;
 
 protected:
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
-    auto moduleOp = funcOp->getParentOfType<ModuleOp>();
     auto* ctx = funcOp.getContext();
 
     // TODO: assume that only entrypoints contain quantum ops.
@@ -254,7 +255,7 @@ private:
   }
 
   uint64_t getRequiredNumQubits() {
-    func::FuncOp funcOp = getOperation();
+    const func::FuncOp funcOp = getOperation();
     uint64_t numQubits = 0;
     funcOp->walk([&](qc::StaticOp op) -> void {
       auto index = op.getIndex();
@@ -276,7 +277,7 @@ private:
     };
 
     // Assuming numQubits and numResults are variables
-    SmallVector<Attribute> passthrough = {
+    const SmallVector<Attribute> passthrough = {
         builder.getStringAttr("entry_point"), getKV("output_labeling_schema", "schema_id"),
         getKV("qir_profiles", "adaptive_profile"), getKV("required_num_qubits", std::to_string(requiredNumQubits)),
         getKV("required_num_results", std::to_string(requiredNumResults))};
@@ -301,4 +302,5 @@ private:
   }
 };
 
+} // namespace
 } // namespace qcc

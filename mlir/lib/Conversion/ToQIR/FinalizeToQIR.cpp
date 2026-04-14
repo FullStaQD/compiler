@@ -18,7 +18,7 @@ struct CleanupFuncAttrs : public OpRewritePattern<func::FuncOp> {
   using OpRewritePattern<func::FuncOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp, PatternRewriter& /*rewriter*/) const override {
-    OpBuilder builder(funcOp->getContext());
+    const OpBuilder builder(funcOp->getContext());
 
     if (funcOp->hasAttr(qcc::entryPointAttrName)) {
       funcOp->removeAttr(qcc::entryPointAttrName);
@@ -34,6 +34,8 @@ namespace qcc {
 
 #define GEN_PASS_DEF_FINALIZETOQIR
 #include "qcc/Conversion/ToQIR/ToQIR.h.inc"
+
+namespace {
 
 struct FinalizeToQIR final : public impl::FinalizeToQIRBase<FinalizeToQIR> {
   using FinalizeToQIRBase::FinalizeToQIRBase;
@@ -58,7 +60,7 @@ protected:
       LLVMConversionTarget target(*ctx);
       target.addLegalOp<ModuleOp>();
 
-      LLVMTypeConverter typeConverter(ctx);
+      const LLVMTypeConverter typeConverter(ctx);
       RewritePatternSet patterns(ctx);
 
       populateFuncToLLVMConversionPatterns(typeConverter, patterns);
@@ -70,4 +72,5 @@ protected:
   }
 };
 
+} // namespace
 } // namespace qcc
