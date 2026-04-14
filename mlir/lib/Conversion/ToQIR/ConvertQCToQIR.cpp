@@ -1,6 +1,6 @@
 #include "qcc/Conversion/ToQIR/Constants.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
-#include "qcc/Dialect/Aux/IR/Aux.h"
+#include "qcc/Dialect/Aux_/IR/Aux.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"

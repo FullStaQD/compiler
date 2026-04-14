@@ -9,11 +9,11 @@
 // Aux Dialect
 //===----------------------------------------------------------------------===//
 
-#include "qcc/Dialect/Aux/IR/AuxDialect.h.inc"
+#include "qcc/Dialect/Aux_/IR/AuxDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Aux Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
-#include "qcc/Dialect/Aux/IR/AuxOps.h.inc"
+#include "qcc/Dialect/Aux_/IR/AuxOps.h.inc"
