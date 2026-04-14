@@ -1,4 +1,4 @@
-#include "qcc/Dialect/Aux_/IR/Aux.h"
+#include "qcc/Dialect/Aux_/IR/Aux_.h"
 
 using namespace mlir;
 using namespace qcc::aux;

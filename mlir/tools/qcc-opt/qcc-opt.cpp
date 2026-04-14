@@ -1,6 +1,6 @@
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
-#include "qcc/Dialect/Aux_/IR/Aux.h"
+#include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include "mlir/Conversion/Passes.h"
