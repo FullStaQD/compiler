@@ -66,13 +66,11 @@ public:
 
     addConversion([](mlir::RankedTensorType type) -> std::optional<mlir::Type> {
       if (type.getRank() == 0) {
-        return type.getElementType(); // This extracts the i64 or f64
+        return type.getElementType();
       }
       return std::nullopt; // Leave multi-dimensional tensors alone
     });
 
-    // Target Materialization: Source Type (tensor<T>) -> Target Type (T)
-    // This is called when an unconverted operation's result needs to be used by a converted operation.
     addTargetMaterialization(
         [](mlir::OpBuilder& builder, mlir::Type /*type*/, mlir::ValueRange inputs, mlir::Location loc) -> mlir::Value {
           if (inputs.size() != 1 || !llvm::isa<mlir::TensorType>(inputs[0].getType())) {
@@ -82,8 +80,6 @@ public:
           return mlir::tensor::ExtractOp::create(builder, loc, inputs[0], mlir::ValueRange{});
         });
 
-    // Source Materialization: Target Type (i64) -> Source Type (tensor<i64>)
-    // This is called when a converted operation's result needs to be used by an unconverted operation.
     addSourceMaterialization([](mlir::OpBuilder& builder, mlir::RankedTensorType type, mlir::ValueRange inputs,
                                 mlir::Location loc) -> mlir::Value {
       if (inputs.size() != 1 || !inputs[0].getType().isIntOrIndexOrFloat()) {
@@ -329,8 +325,6 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     auto qcQubit = adaptor.getMeasQ();
 
-    // Create qc.measure (in-place operation, returns only bit)
-    // Preserve register metadata for output recording
     auto qcMeasureOp = qc::MeasureOp::create(rewriter, op.getLoc(), qcQubit);
 
     auto measureBit = qcMeasureOp.getResult();
@@ -370,23 +364,19 @@ struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::Generi
 
   LogicalResult matchAndRewrite(linalg::GenericOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    // 1. Collect new input types from the adaptor
     SmallVector<Value> newInputs = adaptor.getInputs();
 
-    // 2. Update indexing maps if any tensor became a scalar
     SmallVector<AffineMap> newMaps = op.getIndexingMapsArray();
     for (auto it : llvm::enumerate(op.getInputs())) {
       if (isa<RankedTensorType>(it.value().getType()) &&
           llvm::cast<RankedTensorType>(it.value().getType()).getRank() == 0) {
-        newMaps[it.index()] = rewriter.getMultiDimIdentityMap(0); // () -> ()
+        newMaps[it.index()] = rewriter.getMultiDimIdentityMap(0);
       }
     }
 
-    // 3. Create the new generic op
     auto newOp = linalg::GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), newInputs, adaptor.getOutputs(),
                                            newMaps, op.getIteratorTypesArray());
 
-    // 4. Move the region over
     rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(), newOp.getRegion().begin());
 
     rewriter.replaceOp(op, newOp.getResults());
@@ -417,12 +407,10 @@ protected:
     target.addLegalDialect<QCDialect, memref::MemRefDialect, arith::ArithDialect, func::FuncDialect,
                            linalg::LinalgDialect>();
 
-    // Register operation conversion patterns
     patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspCreateQubitsOp,
                  ConvertJaspGetQubitOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp, ConvertJaspDeleteQubitsOp,
                  ConvertRankZeroTensorsInLinalg>(typeConverter, context);
 
-    // Conversion of jasp types in func.func signatures
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       auto islegal = stateDestroyer.isSignatureLegal(op.getFunctionType());
       return islegal;
@@ -430,20 +418,16 @@ protected:
 
     populateAnyFunctionOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
 
-    // Conversion of jasp types in func.return
     populateReturnOpTypeConversionPattern(patterns, stateDestroyer);
     target.addDynamicallyLegalOp<func::ReturnOp>([&](const func::ReturnOp op) { return stateDestroyer.isLegal(op); });
 
-    // Conversion of jasp types in func.call
     populateCallOpTypeConversionPattern(patterns, stateDestroyer);
     target.addDynamicallyLegalOp<func::CallOp>([&](const func::CallOp op) { return stateDestroyer.isLegal(op); });
 
-    // Conversion of jasp types in control-flow ops (e.g., cf.br, cf.cond_br)
     populateBranchOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
 
     scf::populateSCFStructuralTypeConversionsAndLegality(stateDestroyer, patterns, target);
 
-    // Apply the conversion
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
     }
