@@ -48,9 +48,8 @@ int main(int argc, char** argv) {
   // Our passes
   qcc::registerJaspToQC();
   qcc::registerConvertQCToQIR();
-  qcc::registerStdToLLVM();
   qcc::registerPrepToQIR();
-  qcc::registerFinalizeToQIR(); // FIXME: do we really want to register them individually?
+  qcc::registerFinalizeToQIR();
 
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "qcc optimizer", registry));
 }

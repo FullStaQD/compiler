@@ -34,18 +34,6 @@ def FinalizeToQIR : Pass<"finalize-to-qir", "mlir::ModuleOp"> {
   ];
 }
 
-def StdToLLVM : Pass<"std-to-llvm", "mlir::func::FuncOp"> {
-  let summary = "FIXME: add summary";
-
-  let description = [{
-      FIXME: add description
-   }];
-
-  let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
-  ];
-}
-
 def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
   let summary = "Lower the QC dialect into QIR (adaptive) conforming LLVM dialect.";
 

@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s -pass-pipeline="builtin.module(prep-to-qir,func.func(std-to-llvm,convert-qc-to-qir),finalize-to-qir)" | FileCheck %s --check-prefix=CHECK_FULL
+// RUN: qcc-opt %s -pass-pipeline="builtin.module(prep-to-qir,func.func(convert-arith-to-llvm,convert-qc-to-qir),convert-cf-to-llvm,finalize-to-qir)" | FileCheck %s --check-prefix=CHECK_FULL
 
 func.func @test() -> i64 attributes { qcc.entry_point } {
     // FIXME: add better and more tests
