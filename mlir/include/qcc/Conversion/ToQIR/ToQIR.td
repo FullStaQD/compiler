@@ -46,10 +46,34 @@ def StdToLLVM : Pass<"std-to-llvm", "mlir::func::FuncOp"> {
 }
 
 def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
-  let summary = "FIXME: add summary";
+  let summary = "Lower the QC dialect into QIR (adaptive) conforming LLVM dialect.";
 
   let description = [{
-      FIXME: add description
+      The pass anchors to a function and guarantees the following:
+
+      - The QIR initialization function is inserted at the start of the function.
+      - Required QIR attributes (like `required_num_qubits`) are added to the function. Via `passthrough`.
+      - `qc` gate and measurement ops are translated to QIR QIS function calls.
+      - Only the llvm dialect (in the function body) is considered legal after this pass.
+      - TODO: To support some kind of output recording: We lower `aux.record_bool` to the
+        bool recording intrinsic. Currently no other output recording intrinsics are in use.
+
+      TODO: For simplicity we assume that only entry point functions have
+      quantum operations. Before we extend support we have to figure out how to
+      do qubit mapping across function calls.
+
+      TODO: We hardcode hardware capabilities for now as we have no way to query
+      those. It is currently tailored towards HiSEP-Q. In particular we use
+      static qubit and result management. Note that HiSEP-Q has a dedicated
+      (single bit) measurement result register for each qubit. It refers to the
+      last measurement done at the respective qubit. Hence we use the exact same
+      index for the result of a qubit measurement.
+
+      Assumptions:
+      - All required QIR intrinsics (e.g. `__quantum__rt__initialize`) are already declared in the
+        containing module.
+      - TODO: It expects a global dummy-label to be present for the record intrinsics:
+        `llvm.mlir.global internal constant @".qir_dummy_label"("arbitrary_label\00") {addr_space = 0 : i32}`.
    }];
 
   let dependentDialects = [

@@ -201,9 +201,7 @@ protected:
     auto moduleOp = funcOp->getParentOfType<ModuleOp>();
     auto* ctx = funcOp.getContext();
 
-    // TODO: For simplicity we assume that only entry_point functions have
-    // quantum operations. Before we extend support we have to figure out how to
-    // do qubit mapping across function calls.
+    // TODO: assume that only entrypoints contain quantum ops.
     if (!funcOp->hasAttr("qcc.entry_point")) {
       return;
     }
