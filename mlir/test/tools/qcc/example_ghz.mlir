@@ -21,7 +21,7 @@ func.func @ghz_manual() attributes { qcc.entry_point } {
     return
 }
 
-// CHECK-LABEL:   llvm.func @ghz_manual()
+// CHECK-LABEL:   llvm.func @ghz_manual() attributes
 // CHECK:           %[[STATIC_2:.*]] = llvm.mlir.constant(2 : i64) : i64
 // CHECK:           %[[STATIC_1:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[STATIC_0:.*]] = llvm.mlir.constant(0 : i64) : i64
@@ -29,24 +29,16 @@ func.func @ghz_manual() attributes { qcc.entry_point } {
 // CHECK:           llvm.call @__quantum__rt__initialize(%[[ZERO]]) : (!llvm.ptr) -> ()
 // CHECK:           %[[INTTOPTR_0:.*]] = llvm.inttoptr %[[STATIC_0]] : i64 to !llvm.ptr
 // CHECK:           llvm.call @__quantum__qis__h__body(%[[INTTOPTR_0]]) : (!llvm.ptr) -> ()
-// CHECK:           %[[INTTOPTR_1:.*]] = llvm.inttoptr %[[STATIC_0]] : i64 to !llvm.ptr
-// CHECK:           %[[INTTOPTR_2:.*]] = llvm.inttoptr %[[STATIC_1]] : i64 to !llvm.ptr
+// CHECK:           %[[INTTOPTR_1:.*]] = llvm.inttoptr %[[STATIC_1]] : i64 to !llvm.ptr
+// CHECK:           llvm.call @__quantum__qis__cx__body(%[[INTTOPTR_0]], %[[INTTOPTR_1]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           %[[INTTOPTR_2:.*]] = llvm.inttoptr %[[STATIC_2]] : i64 to !llvm.ptr
 // CHECK:           llvm.call @__quantum__qis__cx__body(%[[INTTOPTR_1]], %[[INTTOPTR_2]]) : (!llvm.ptr, !llvm.ptr) -> ()
-// CHECK:           %[[INTTOPTR_3:.*]] = llvm.inttoptr %[[STATIC_1]] : i64 to !llvm.ptr
-// CHECK:           %[[INTTOPTR_4:.*]] = llvm.inttoptr %[[STATIC_2]] : i64 to !llvm.ptr
-// CHECK:           llvm.call @__quantum__qis__cx__body(%[[INTTOPTR_3]], %[[INTTOPTR_4]]) : (!llvm.ptr, !llvm.ptr) -> ()
-// CHECK:           %[[INTTOPTR_5:.*]] = llvm.inttoptr %[[STATIC_0]] : i64 to !llvm.ptr
-// CHECK:           %[[INTTOPTR_6:.*]] = llvm.inttoptr %[[STATIC_0]] : i64 to !llvm.ptr
-// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_5]], %[[INTTOPTR_6]]) : (!llvm.ptr, !llvm.ptr) -> ()
-// CHECK:           %[[CALL_0:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_6]]) : (!llvm.ptr) -> i1
-// CHECK:           %[[INTTOPTR_7:.*]] = llvm.inttoptr %[[STATIC_1]] : i64 to !llvm.ptr
-// CHECK:           %[[INTTOPTR_8:.*]] = llvm.inttoptr %[[STATIC_1]] : i64 to !llvm.ptr
-// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_7]], %[[INTTOPTR_8]]) : (!llvm.ptr, !llvm.ptr) -> ()
-// CHECK:           %[[CALL_1:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_8]]) : (!llvm.ptr) -> i1
-// CHECK:           %[[INTTOPTR_9:.*]] = llvm.inttoptr %[[STATIC_2]] : i64 to !llvm.ptr
-// CHECK:           %[[INTTOPTR_10:.*]] = llvm.inttoptr %[[STATIC_2]] : i64 to !llvm.ptr
-// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_9]], %[[INTTOPTR_10]]) : (!llvm.ptr, !llvm.ptr) -> ()
-// CHECK:           %[[CALL_2:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_10]]) : (!llvm.ptr) -> i1
+// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_0]], %[[INTTOPTR_0]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           %[[CALL_0:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_0]]) : (!llvm.ptr) -> i1
+// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_1]], %[[INTTOPTR_1]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           %[[CALL_1:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_1]]) : (!llvm.ptr) -> i1
+// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_2]], %[[INTTOPTR_2]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           %[[CALL_2:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_2]]) : (!llvm.ptr) -> i1
 // CHECK:           llvm.return
 // CHECK:         }
 // CHECK:         llvm.func @__quantum__rt__initialize(!llvm.ptr)
@@ -57,4 +49,4 @@ func.func @ghz_manual() attributes { qcc.entry_point } {
 // CHECK:         llvm.func @__quantum__qis__x__body(!llvm.ptr)
 // CHECK:         llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr)
 // CHECK:         llvm.module_flags
-// CHECK:         llvm.mlir.global internal constant @".qir_dummy_label"("{{.+}}\00") {addr_space = 0 : i32}
+// CHECK:         llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
