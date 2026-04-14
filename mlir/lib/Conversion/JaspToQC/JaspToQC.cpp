@@ -94,10 +94,7 @@ public:
 /// Type converter for jasp-to-QC conversion, to be
 /// used in function signature conversions.
 ///
-/// Handles type conversion between the jasp and QC dialects.
-///  - The jasp qubit type is mapped to the QC qubit type.
-///  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
-///  - !jasp.QuantumState is destroyed.
+/// In addition to the base converter, !jasp.QuantumState is destroyed.
 class QuantumStateEliminator final : public JaspToQCTypeConverter {
 public:
   explicit QuantumStateEliminator(MLIRContext* ctx) : JaspToQCTypeConverter(ctx) {
@@ -384,12 +381,6 @@ struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::Generi
   }
 };
 
-/// Pass implementation for jasp-to-QC conversion
-///
-/// This pass converts the Jasp dialect to the QC dialect. It handles the
-/// transformation of quantum state management from a functional-style
-/// (QuantumState passing) to a side-effecting model. It also lowers qubit
-/// array management to memref allocations and deallocations.
 struct JaspToQC final : impl::JaspToQCBase<JaspToQC> {
   using JaspToQCBase::JaspToQCBase;
 
