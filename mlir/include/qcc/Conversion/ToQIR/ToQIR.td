@@ -20,14 +20,16 @@ def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
 }
 
 def FinalizeToQIR : Pass<"finalize-to-qir", "mlir::ModuleOp"> {
-  let summary = "FIXME: add summary";
+  let summary = "Ensure that no non-llvm ops are left in the module.";
 
   let description = [{
-      FIXME: add description
+      Essentially lowers the `func` dialect (to llvm) and does a bit of cleanup.
+
+      It assumes that the bodies of the functions are already properly lowered
+      (except `func` related ops).
    }];
 
   let dependentDialects = [
-    // FIXME: which ones do I need?
     "mlir::LLVM::LLVMDialect"
   ];
 }
