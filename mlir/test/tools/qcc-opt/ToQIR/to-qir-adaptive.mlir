@@ -22,7 +22,10 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     return %exit_code : i64
 }
 
-func.func @other_func() { return }
+func.func @one() -> i1 {
+  %1 = arith.constant 1 : i1
+  return %1 : i1
+}
 
 // CHECK_FULL-LABEL: @test
 // CHECK_FULL: __quantum__qis__mz__body

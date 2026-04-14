@@ -28,21 +28,20 @@ def RecordBoolOp : AuxOp<"record_bool"> {
         ```mlir
         func.func @main() -> i64 attributes { qcc.entry_point } {
           ...
-          aux.record_bool %m7, @".qir_dummy_label"
+          aux.record_bool %m7
           ...
         }
-
-        // The global label it refers to:
-        llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
         ```
+
+        To actually translate it to the above QIR runtime function we use a dummy label.
     }];
 
     // Change AnyType to FlatSymbolRefAttr
-    let arguments = (ins I1:$value, FlatSymbolRefAttr:$label);
+    let arguments = (ins I1:$value);
     let results = (outs);
 
     // The syntax $label will now correctly handle the @symbol notation
-    let assemblyFormat = "$value `,` $label attr-dict";
+    let assemblyFormat = "$value attr-dict";
 }
 
 #endif // INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_

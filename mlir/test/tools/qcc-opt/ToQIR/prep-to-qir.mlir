@@ -21,4 +21,4 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 // CHECK-SAME:      #llvm.mlir.module_flag<error, "qir_major_version", 2 : i32>
 //                  ... other flags
 // CHECK-SAME:    ]
-// FIXME: check for the global label
+// CHECK:         llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}

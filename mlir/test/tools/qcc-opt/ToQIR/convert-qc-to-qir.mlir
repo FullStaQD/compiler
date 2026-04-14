@@ -48,10 +48,10 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK:           llvm.call @__quantum__qis__mz__body
     // CHECK:           llvm.call @__quantum__rt__read_result
 
-    aux.record_bool %m5, @".qir_dummy_label"
+    aux.record_bool %m5
     // CHECK:           %[[LABEL_PTR:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
     // CHECK:           llvm.call @__quantum__rt__bool_record_output(%[[MR5]], %[[LABEL_PTR]]) : (i1, !llvm.ptr) -> ()
-    aux.record_bool %m7, @".qir_dummy_label"
+    aux.record_bool %m7
     // CHECK:           llvm.call @__quantum__rt__bool_record_output
 
     %exit_code = arith.constant 0 : i64
@@ -69,5 +69,5 @@ llvm.func @__quantum__qis__h__body(!llvm.ptr)
 llvm.func @__quantum__qis__x__body(!llvm.ptr)
 llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr)
 
-// The label to which `aux.record_bool` is referring to.
+// The label needed to lower `aux.record_bool` to its corresponding runtime function:
 llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}

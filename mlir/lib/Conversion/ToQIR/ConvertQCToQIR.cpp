@@ -142,7 +142,7 @@ struct RecordBoolLowering : public OpConversionPattern<aux::RecordBoolOp> {
   LogicalResult matchAndRewrite(aux::RecordBoolOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     auto loc = op.getLoc();
-    StringRef labelName = op.getLabel(); // Returns the string from FlatSymbolRefAttr
+    StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
 
     auto addressOf =
         LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
