@@ -27,51 +27,51 @@ func.func @zero() -> i64 {
   return %1 : i64
 }
 
-// CHECK:        source_filename = "LLVMDialectModule"
-// CHECK:        @.qir_dummy_label = internal constant [12 x i8] c"dummy_label\00"
+// CHECK:            source_filename = "LLVMDialectModule"
+// CHECK:            @.qir_dummy_label = internal constant [12 x i8] c"dummy_label\00"
 
-// CHECK-LABEL:  define i64 @simple_quantum_with_branching()
-// CHECK-SAME:   #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:     call void @__quantum__rt__initialize(ptr null)
-// CHECK-NEXT:     call void @__quantum__qis__h__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:     call void @__quantum__qis__x__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:     call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:     %[[RES1:.*]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:     br i1 %[[RES1]], label %[[LBL2:.*]], label %[[LBL3:.*]]
+// CHECK-LABEL:      define i64 @simple_quantum_with_branching()
+// CHECK-SAME:       #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:         call void @__quantum__rt__initialize(ptr null)
+// CHECK-NEXT:         call void @__quantum__qis__h__body(ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:         call void @__quantum__qis__x__body(ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:         call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:         %[[RES1:.*]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:         br i1 %[[RES1]], label %[[LBL2:.*]], label %[[LBL3:.*]]
 
-// CHECK:       [[LBL2]]:
-// CHECK-NEXT:    call void @__quantum__qis__x__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:    br label %[[LBL3]]
+// CHECK:           [[LBL2]]:
+// CHECK-NEXT:        call void @__quantum__qis__x__body(ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:        br label %[[LBL3]]
 
-// CHECK:       [[LBL3]]:
-// CHECK-NEXT:    call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:    %[[RES2:.*]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
-// CHECK-NEXT:    call void @__quantum__rt__bool_record_output(i1 %[[RES2]], ptr @.qir_dummy_label)
-// CHECK-NEXT:    %[[EXIT_CODE:.*]] = call i64 @zero()
-// CHECK-NEXT:    ret i64 %[[EXIT_CODE]]
-// CHECK:       }
+// CHECK:           [[LBL3]]:
+// CHECK-NEXT:        call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:        %[[RES2:.*]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
+// CHECK-NEXT:        call void @__quantum__rt__bool_record_output(i1 %[[RES2]], ptr @.qir_dummy_label)
+// CHECK-NEXT:        %[[EXIT_CODE:.*]] = call i64 @zero()
+// CHECK-NEXT:        ret i64 %[[EXIT_CODE]]
+// CHECK:           }
 
-// CHECK:       define i64 @zero() {
-// CHECK:         ret i64 0
-// CHECK:       }
+// CHECK:           define i64 @zero() {
+// CHECK:             ret i64 0
+// CHECK:           }
 
-// CHECK:        declare void @__quantum__rt__initialize(ptr)
-// CHECK:        declare void @__quantum__rt__bool_record_output(i1, ptr)
-// CHECK:        declare i1 @__quantum__rt__read_result(ptr readonly)
-// CHECK:        declare void @__quantum__qis__mz__body(ptr, ptr writeonly) #[[ATTR1:[0-9]+]]
-// CHECK:        declare void @__quantum__qis__h__body(ptr)
-// CHECK:        declare void @__quantum__qis__x__body(ptr)
-// CHECK:        declare void @__quantum__qis__cx__body(ptr, ptr)
+// CHECK:           declare void @__quantum__rt__initialize(ptr)
+// CHECK:           declare void @__quantum__rt__bool_record_output(i1, ptr)
+// CHECK:           declare i1 @__quantum__rt__read_result(ptr readonly)
+// CHECK:           declare void @__quantum__qis__mz__body(ptr, ptr writeonly) #[[ATTR1:[0-9]+]]
+// CHECK:           declare void @__quantum__qis__h__body(ptr)
+// CHECK:           declare void @__quantum__qis__x__body(ptr)
+// CHECK:           declare void @__quantum__qis__cx__body(ptr, ptr)
 
-// CHECK:        attributes #[[ATTR0]] = { {{.*}} }
-// CHECK:        attributes #[[ATTR1]] = { "irreversible" }
+// CHECK:           attributes #[[ATTR0]] = { {{.*}} }
+// CHECK:           attributes #[[ATTR1]] = { "irreversible" }
 
-// CHECK:        !llvm.module.flags = !{![[M0:[0-9]+]], {{.*}}}
-// CHECK-DAG:    ![[M0]] = !{i32 1, !"qir_major_version", i32 2}
-// CHECK-DAG:    ![[#]] = !{i32 7, !"qir_minor_version", i32 0}
-// CHECK-DAG:    ![[#]] = !{i32 1, !"dynamic_qubit_management", i32 0}
-// CHECK-DAG:    ![[#]] = !{i32 1, !"dynamic_result_management", i32 0}
-// CHECK-DAG:    ![[#]] = !{i32 1, !"ir_functions", i32 1}
-// CHECK-DAG:    ![[#]] = !{i32 1, !"backwards_branching", i32 1}
-// CHECK-DAG:    ![[#]] = !{i32 1, !"multiple_target_branching", i32 0}
-// CHECK-DAG:    ![[#]] = !{i32 1, !"multiple_return_points", i32 0}
+// CHECK:           !llvm.module.flags = !{![[M0:[0-9]+]], {{.*}}}
+// CHECK-DAG:       ![[M0]] = !{i32 1, !"qir_major_version", i32 2}
+// CHECK-DAG:       ![[#]] = !{i32 7, !"qir_minor_version", i32 0}
+// CHECK-DAG:       ![[#]] = !{i32 1, !"dynamic_qubit_management", i32 0}
+// CHECK-DAG:       ![[#]] = !{i32 1, !"dynamic_result_management", i32 0}
+// CHECK-DAG:       ![[#]] = !{i32 1, !"ir_functions", i32 1}
+// CHECK-DAG:       ![[#]] = !{i32 1, !"backwards_branching", i32 1}
+// CHECK-DAG:       ![[#]] = !{i32 1, !"multiple_target_branching", i32 0}
+// CHECK-DAG:       ![[#]] = !{i32 1, !"multiple_return_points", i32 0}
