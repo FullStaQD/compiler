@@ -17,11 +17,15 @@ func.func @simple_quantum_with_branching() -> i64 attributes { qcc.entry_point }
     %m1 = qc.measure %0 : !qc.qubit -> i1
     aux.record_bool %m1
 
-    %exit_code = arith.constant 0 : i64
+    %exit_code = func.call @zero() : () -> i64
     return %exit_code : i64
 }
 
-// FIXME: check that this runs
+/// just for fun
+func.func @zero() -> i64 {
+  %1 = arith.constant 0 : i64
+  return %1 : i64
+}
 
 // CHECK:        source_filename = "LLVMDialectModule"
 // CHECK:        @.qir_dummy_label = internal constant [12 x i8] c"dummy_label\00"
@@ -43,7 +47,12 @@ func.func @simple_quantum_with_branching() -> i64 attributes { qcc.entry_point }
 // CHECK-NEXT:    call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
 // CHECK-NEXT:    %[[RES2:.*]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
 // CHECK-NEXT:    call void @__quantum__rt__bool_record_output(i1 %[[RES2]], ptr @.qir_dummy_label)
-// CHECK-NEXT:    ret i64 0
+// CHECK-NEXT:    %[[EXIT_CODE:.*]] = call i64 @zero()
+// CHECK-NEXT:    ret i64 %[[EXIT_CODE]]
+// CHECK:       }
+
+// CHECK:       define i64 @zero() {
+// CHECK:         ret i64 0
 // CHECK:       }
 
 // CHECK:        declare void @__quantum__rt__initialize(ptr)
