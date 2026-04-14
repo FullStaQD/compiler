@@ -55,13 +55,13 @@ func.func @zero() -> i64 {
 // CHECK:             ret i64 0
 // CHECK:           }
 
-// CHECK:           declare void @__quantum__rt__initialize(ptr)
-// CHECK:           declare void @__quantum__rt__bool_record_output(i1, ptr)
-// CHECK:           declare i1 @__quantum__rt__read_result(ptr readonly)
-// CHECK:           declare void @__quantum__qis__mz__body(ptr, ptr writeonly) #[[ATTR1:[0-9]+]]
-// CHECK:           declare void @__quantum__qis__h__body(ptr)
-// CHECK:           declare void @__quantum__qis__x__body(ptr)
-// CHECK:           declare void @__quantum__qis__cx__body(ptr, ptr)
+// CHECK-DAG:       declare void @__quantum__rt__initialize(ptr)
+// CHECK-DAG:       declare void @__quantum__rt__bool_record_output(i1, ptr)
+// CHECK-DAG:       declare i1 @__quantum__rt__read_result(ptr readonly)
+// CHECK-DAG:       declare void @__quantum__qis__mz__body(ptr, ptr writeonly) #[[ATTR1:[0-9]+]]
+// CHECK-DAG:       declare void @__quantum__qis__h__body(ptr)
+// CHECK-DAG:       declare void @__quantum__qis__x__body(ptr)
+// CHECK-DAG:       declare void @__quantum__qis__cx__body(ptr, ptr)
 
 // CHECK:           attributes #[[ATTR0]] = { {{.*}} }
 // CHECK:           attributes #[[ATTR1]] = { "irreversible" }
