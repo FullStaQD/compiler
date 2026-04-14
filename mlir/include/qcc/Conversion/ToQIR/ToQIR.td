@@ -42,7 +42,6 @@ def StdToLLVM : Pass<"std-to-llvm", "mlir::func::FuncOp"> {
    }];
 
   let dependentDialects = [
-    // FIXME: which ones do I need?
     "mlir::LLVM::LLVMDialect"
   ];
 }
@@ -79,7 +78,6 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
    }];
 
   let dependentDialects = [
-    // FIXME: which ones do I need?
     "mlir::LLVM::LLVMDialect"
   ];
 }
