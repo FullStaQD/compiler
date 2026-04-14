@@ -9,6 +9,7 @@ target_link_libraries(
           MLIRSCFDialect
           MLIRTensorDialect
           QCCJaspDialect
+          QCCPrelimHLEPDialect
           QCCJaspToQC
           StablehloRegister
           MLIRQCDialect)
