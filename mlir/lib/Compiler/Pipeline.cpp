@@ -1,8 +1,9 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
+
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>

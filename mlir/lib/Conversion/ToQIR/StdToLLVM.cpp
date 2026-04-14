@@ -1,9 +1,10 @@
+#include "qcc/Conversion/ToQIR/ToQIR.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/IR/Builders.h"
-#include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>

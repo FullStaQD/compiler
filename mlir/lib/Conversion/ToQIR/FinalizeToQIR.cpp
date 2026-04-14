@@ -1,3 +1,6 @@
+#include "qcc/Conversion/ToQIR/Constants.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
+
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -6,8 +9,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "qcc/Conversion/ToQIR/Constants.h"
-#include "qcc/Conversion/ToQIR/ToQIR.h"
 
 using namespace mlir;
 

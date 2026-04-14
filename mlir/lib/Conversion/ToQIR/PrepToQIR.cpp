@@ -1,8 +1,9 @@
+#include "qcc/Conversion/ToQIR/Constants.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
+
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "qcc/Conversion/ToQIR/Constants.h"
-#include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 #include <mlir/IR/Builders.h>

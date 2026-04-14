@@ -3,6 +3,8 @@
 
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
+#include <cassert>
+#include <cstddef>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/Func/Transforms/FuncConversions.h>
@@ -18,9 +20,6 @@
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/LogicalResult.h>
 #include <mlir/Transforms/DialectConversion.h>
-
-#include <cassert>
-#include <cstddef>
 #include <utility>
 
 namespace qcc {
