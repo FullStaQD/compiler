@@ -4,6 +4,27 @@ add_mlir_library(
   LINK_LIBS
   MLIRPass
   MLIRTransforms
-  MLIRTransformUtils
+  # Dialects
+  MLIRFuncDialect
+  MLIRArithDialect
+  MLIRSCFDialect
+  MLIRTensorDialect
+  MLIRLinalgDialect
+  MLIRMemRefDialect
+  MLIRBufferizationDialect
+  QCCJaspDialect
+  MLIRQCDialect
+  # Passes
+  MLIRMemRefTransforms
+  MLIRArithTransforms
+  MLIRFuncTransforms
+  MLIRLinalgTransforms
+  MLIRSCFTransforms
   MLIRQCToQIR
-  QCCToQIR)
+  MLIRTensorTransforms
+  MLIRBufferizationTransforms
+  QCCJaspToQC
+  QCCToQIR
+  # Extensions/Interfaces
+  MLIRFuncInlinerExtension
+  MLIRTransformUtils)
