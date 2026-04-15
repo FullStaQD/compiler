@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s --jasp-to-qc | FileCheck %s
+// RUN: qcc-opt %s -jasp-to-qc | FileCheck %s
 
 func.func @test() -> tensor<i1> {
     %state0 = jasp.create_quantum_kernel -> !jasp.QuantumState

@@ -30,7 +30,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // bufferization.
   pm.addPass(mlir::bufferization::createEmptyTensorToAllocTensorPass());
 
-  // Detensorization attempts to converts those rank-0-tensors to plain values
+  // Detensorization attempts to convert those rank-0-tensors to plain values
   // which have not been eliminated in the JaspToQC pass.
   // Aggressive mode ensures that some trivial `linalg.generic` ops are
   // unwrapped.

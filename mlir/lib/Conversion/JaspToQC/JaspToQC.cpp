@@ -361,8 +361,6 @@ struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::Generi
 
   LogicalResult matchAndRewrite(linalg::GenericOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    SmallVector<Value> newInputs = adaptor.getInputs();
-
     SmallVector<AffineMap> newMaps = op.getIndexingMapsArray();
     for (auto it : llvm::enumerate(op.getInputs())) {
       if (isa<RankedTensorType>(it.value().getType()) &&
@@ -371,7 +369,7 @@ struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::Generi
       }
     }
 
-    auto newOp = linalg::GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), newInputs, adaptor.getOutputs(),
+    auto newOp = linalg::GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), adaptor.getInputs(), adaptor.getOutputs(),
                                            newMaps, op.getIteratorTypesArray());
 
     rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(), newOp.getRegion().begin());
