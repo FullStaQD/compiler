@@ -13,7 +13,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
-// FIXME: clean this up locally
 
 namespace qcc {
 

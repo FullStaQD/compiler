@@ -28,10 +28,7 @@
 #include "mlir/Transforms/Passes.h"
 
 #include <mlir/Conversion/ArithToLLVM/ArithToLLVM.h>
-#include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMDialect.h>
-#include <mlir/Transforms/Passes.h>
-// FIXME: cleanup
 
 int main(int argc, char** argv) {
 
@@ -63,7 +60,6 @@ int main(int argc, char** argv) {
   mlir::bufferization::registerEmptyTensorToAllocTensorPass();
   mlir::bufferization::registerOneShotBufferizePass();
   mlir::registerLinalgDetensorizePass();
-  // mlir::registerCanonicalizer(); // FIXME: duplicate?
   mlir::bufferization::registerBufferLoopHoistingPass();
   mlir::registerMem2RegPass();
   mlir::registerSCCP();
