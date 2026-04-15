@@ -99,8 +99,8 @@ static SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValue
 }
 
 /// To be used in a rewrite pattern.
-static InFlightDiagnostic emitMissingQISDeclError(Operation* op, StringRef name) {
-  return op->emitError() << "QIR QIS declaration not found: '" << name << "'";
+static InFlightDiagnostic emitMissingQIRDeclError(Operation* op, StringRef name) {
+  return op->emitError() << "missing required declaration of QIR function: '" << name << "'";
 }
 
 namespace {
@@ -120,12 +120,12 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
 
     auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirQisMZ);
     if (!mzFnDecl) {
-      return emitMissingQISDeclError(op, qcc::qirQisMZ);
+      return emitMissingQIRDeclError(op, qcc::qirQisMZ);
     }
 
     auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtReadResult);
     if (!readFnDecl) {
-      return emitMissingQISDeclError(op, qcc::qirRtReadResult);
+      return emitMissingQIRDeclError(op, qcc::qirRtReadResult);
     }
 
     // TODO: This holds only for HiSEP-Q.
@@ -176,7 +176,7 @@ struct UnitaryLowering : public ConversionPattern {
     auto qisName = mapUnitaryToQIS(unitaryOp);
     auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
     if (!fnDecl) {
-      return emitMissingQISDeclError(unitaryOp, qisName);
+      return emitMissingQIRDeclError(unitaryOp, qisName);
     }
 
     auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
@@ -245,7 +245,7 @@ private:
     auto initFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtInit);
 
     if (!initFnDecl) {
-      return moduleOp.emitError() << "missing required declaration of QIR runtime function: " << qcc::qirRtInit;
+      return emitMissingQIRDeclError(moduleOp, qcc::qirRtInit);
     }
 
     auto loc = funcOp.getLoc();
