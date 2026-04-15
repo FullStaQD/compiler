@@ -1,4 +1,5 @@
 #include "qcc/Compiler/Pipeline.h"
+#include "qcc/Dialect/Aux_/IR/Aux_.h"
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/SourceMgr.h>
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::qc::QCDialect>();
+  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::qc::QCDialect, qcc::aux::AuxDialect>();
 
   mlir::MLIRContext context(registry);
 

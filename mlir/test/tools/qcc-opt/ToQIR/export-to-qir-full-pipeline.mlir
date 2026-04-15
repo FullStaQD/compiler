@@ -68,7 +68,7 @@ func.func @zero() -> i64 {
 
 // CHECK:           !llvm.module.flags = !{![[M0:[0-9]+]], {{.*}}}
 // CHECK-DAG:       ![[M0]] = !{i32 1, !"qir_major_version", i32 2}
-// CHECK-DAG:       ![[#]] = !{i32 7, !"qir_minor_version", i32 0}
+// CHECK-DAG:       ![[#]] = !{i32 7, !"qir_minor_version", i32 1}
 // CHECK-DAG:       ![[#]] = !{i32 1, !"dynamic_qubit_management", i32 0}
 // CHECK-DAG:       ![[#]] = !{i32 1, !"dynamic_result_management", i32 0}
 // CHECK-DAG:       ![[#]] = !{i32 1, !"ir_functions", i32 1}

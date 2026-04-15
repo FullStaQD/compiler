@@ -112,7 +112,7 @@ private:
     // NOTE: Missing flags are implicitly set to "false".
     const SmallVector<Attribute> flags = {
         createFlag(LLVM::ModFlagBehavior::Error, "qir_major_version", 2),
-        createFlag(LLVM::ModFlagBehavior::Max, "qir_minor_version", 0),
+        createFlag(LLVM::ModFlagBehavior::Max, "qir_minor_version", 1),
         createFlag(LLVM::ModFlagBehavior::Error, "dynamic_qubit_management", 0),
         createFlag(LLVM::ModFlagBehavior::Error, "dynamic_result_management", 0),
         createFlag(LLVM::ModFlagBehavior::Error, "ir_functions", 1),

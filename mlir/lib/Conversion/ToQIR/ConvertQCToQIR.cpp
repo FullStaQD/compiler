@@ -293,17 +293,7 @@ private:
   }
 
   void removeQCStaticOps() {
-    SmallVector<Operation*> toErase;
-
-    getOperation()->walk([&](Operation* op) {
-      if (isa<qc::StaticOp>(op)) {
-        toErase.push_back(op);
-      }
-    });
-
-    for (Operation* op : toErase) {
-      op->erase();
-    }
+    getOperation()->walk([](qc::StaticOp op) { op.erase(); });
   }
 };
 
