@@ -4,17 +4,20 @@ ColumnLimit: 120
 # See also: https://llvm.org/docs/CodingStandards.html#include-style
 IncludeBlocks: Regroup
 IncludeCategories:
-  # Our Headers
+  # Our headers
   - Regex: '^"qcc/'
-    Priority: 1
-  # LLVM Subproject Headers (MLIR)
-  - Regex: '^"mlir/'
     Priority: 2
-  # LLVM Subproject Headers (LLVM)
-  - Regex: '^"llvm/'
+  # LLVM Subproject headers (MLIR)
+  - Regex: '^"mlir/'
     Priority: 3
-  # System Headers
-  - Regex: "^<.*>"
+  # LLVM Subproject headers (LLVM)
+  - Regex: '^"llvm/'
     Priority: 4
+  # System or standard library headers
+  - Regex: "^<.*>"
+    Priority: 5
+  # Local headers (and anything else)
+  - Regex: '^".*'
+    Priority: 1
 PointerAlignment: Left
 Standard: c++20
