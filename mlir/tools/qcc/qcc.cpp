@@ -39,10 +39,13 @@ namespace cl = llvm::cl;
 static cl::OptionCategory qccCategory("QCC options");
 
 int main(int argc, char** argv) {
+  mlir::registerMLIRContextCLOptions();
+  mlir::registerPassManagerCLOptions();
+  mlir::registerDefaultTimingManagerCLOptions();
+
   cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
   cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::cat(qccCategory));
 
-  cl::HideUnrelatedOptions(qccCategory);
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
   mlir::DialectRegistry registry;

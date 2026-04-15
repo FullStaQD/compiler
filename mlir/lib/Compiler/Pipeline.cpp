@@ -84,8 +84,8 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(qcc::createFinalizeToQIR());
 
   // cleanup QIR
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createRemoveDeadValuesPass());
 }
 

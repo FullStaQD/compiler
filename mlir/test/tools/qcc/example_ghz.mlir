@@ -2,8 +2,8 @@
 
 /// Prepare GHZ state (without loop so far).
 ///
-/// TODO: This test only tracks what can be done so far with `qcc`. If more functionality
-/// evolves this test can go and be replaced by a better test.
+/// TODO: This must be replaced by a test starting from jasp. Currently the frontend and the
+/// backend do not fit together.
 func.func @ghz_manual() attributes { qcc.entry_point } {
     %0 = qc.static 0 : !qc.qubit
     %1 = qc.static 1 : !qc.qubit
@@ -28,9 +28,9 @@ func.func @ghz_manual() attributes { qcc.entry_point } {
 // CHECK-LABEL:   llvm.func @ghz_manual() attributes
 // CHECK:           %[[LABEL_ADDR:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
 
-// CHECK:           %[[STATIC_2:.*]] = llvm.mlir.constant(2 : i64) : i64
-// CHECK:           %[[STATIC_1:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:           %[[STATIC_0:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK-DAG:       %[[STATIC_2:.*]] = llvm.mlir.constant(2 : i64) : i64
+// CHECK-DAG:       %[[STATIC_1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK-DAG:       %[[STATIC_0:.*]] = llvm.mlir.constant(0 : i64) : i64
 
 // CHECK:           %[[ZERO:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK:           llvm.call @__quantum__rt__initialize(%[[ZERO]]) : (!llvm.ptr) -> ()
