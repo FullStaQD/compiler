@@ -369,8 +369,8 @@ struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::Generi
       }
     }
 
-    auto newOp = linalg::GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), adaptor.getInputs(), adaptor.getOutputs(),
-                                           newMaps, op.getIteratorTypesArray());
+    auto newOp = linalg::GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), adaptor.getInputs(),
+                                           adaptor.getOutputs(), newMaps, op.getIteratorTypesArray());
 
     rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(), newOp.getRegion().begin());
 
