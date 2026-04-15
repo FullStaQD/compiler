@@ -49,7 +49,7 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
       - TODO: It expects a global dummy-label to be present for the record intrinsics:
         `llvm.mlir.global internal constant @".qir_dummy_label"("arbitrary_label\00") {addr_space = 0 : i32}`.
 
-      To satisfy the assumptions you likely want to run `-prep-to-qir` before this pass. Sometime 
+      To satisfy the assumptions you likely want to run `-prep-to-qir` before this pass. Sometime
       after this pass you probably also want to run `-finalize-to-qir`.
    }];
 
