@@ -1,3 +1,6 @@
+#include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Dialect/Jasp/IR/Jasp.h"
+
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -19,8 +22,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
-#include "qcc/Conversion/JaspToQC/JaspToQC.h"
-#include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 int main(int argc, char** argv) {
 

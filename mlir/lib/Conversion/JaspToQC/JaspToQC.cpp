@@ -1,6 +1,8 @@
 
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
+#include "qcc/Dialect/Jasp/IR/Jasp.h"
+
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
@@ -21,12 +23,10 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "qcc/Dialect/Jasp/IR/Jasp.h"
-
-#include <llvm/Support/Casting.h>
 
 #include <cassert>
 #include <cstddef>
+#include <llvm/Support/Casting.h>
 #include <optional>
 #include <utility>
 

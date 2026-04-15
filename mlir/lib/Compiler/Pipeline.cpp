@@ -1,13 +1,14 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
+#include "qcc/Conversion/JaspToQC/JaspToQC.h"
+
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
-#include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
 namespace qcc {
 
