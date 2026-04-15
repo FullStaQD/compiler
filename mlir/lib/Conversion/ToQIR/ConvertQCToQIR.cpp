@@ -113,12 +113,11 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirQisMZ);
-    auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtReadResult);
-
     if (!mzFnDecl) {
       return emitMissingDeclError(op, qcc::qirQisMZ);
     }
 
+    auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtReadResult);
     if (!readFnDecl) {
       return emitMissingDeclError(op, qcc::qirRtReadResult);
     }

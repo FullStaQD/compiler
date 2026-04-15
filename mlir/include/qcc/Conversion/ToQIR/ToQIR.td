@@ -1,7 +1,7 @@
 include "mlir/Pass/PassBase.td"
 
 def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
-  let summary = "Very first pass to apply if you want to convert to QIR (adaptive).";
+  let summary = "Very first pass to apply for a conversion to QIR (adaptive).";
 
   let description = [{
       Adds the QIR function declarations (runtime functions like `__quantum__rt__initialize` and QIS functions like
@@ -12,21 +12,6 @@ def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
 
       TODO:
       - Currently we hardcode the capabilities, must be target specific in the future.
-   }];
-
-  let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
-  ];
-}
-
-def FinalizeToQIR : Pass<"finalize-to-qir", "mlir::ModuleOp"> {
-  let summary = "Ensure that no non-llvm ops are left in the module.";
-
-  let description = [{
-      Essentially lowers the `func` dialect (to llvm) and does a bit of cleanup.
-
-      It assumes that the bodies of the functions are already properly lowered
-      (except `func` related ops).
    }];
 
   let dependentDialects = [
@@ -63,6 +48,24 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
         containing module.
       - TODO: It expects a global dummy-label to be present for the record intrinsics:
         `llvm.mlir.global internal constant @".qir_dummy_label"("arbitrary_label\00") {addr_space = 0 : i32}`.
+
+      To satisfy the assumptions you likely want to run `-prep-to-qir` before this pass. Sometime 
+      after this pass you probably also want to run `-finalize-to-qir`.
+   }];
+
+  let dependentDialects = [
+    "mlir::LLVM::LLVMDialect"
+  ];
+}
+
+def FinalizeToQIR : Pass<"finalize-to-qir", "mlir::ModuleOp"> {
+  let summary = "Ensure that no non-llvm ops are left in the module.";
+
+  let description = [{
+      Essentially lowers the `func` dialect (to llvm) and does a bit of cleanup.
+
+      It assumes that the bodies of the functions are already properly lowered
+      (except `func` related ops).
    }];
 
   let dependentDialects = [

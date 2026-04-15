@@ -13,7 +13,7 @@ class AuxOp<string mnemonic, list<Trait> traits = []> :
         Op<AuxDialect, mnemonic, traits>;
 
 def RecordBoolOp : AuxOp<"record_bool"> {
-    let summary = "Records a boolean with a symbolic label reference.";
+    let summary = "Records a boolean value.";
 
     let description = [{
         This corresponds to the following QIR runtime function:
@@ -33,14 +33,13 @@ def RecordBoolOp : AuxOp<"record_bool"> {
         }
         ```
 
-        To actually translate it to the above QIR runtime function we use a dummy label.
+        To actually translate it to the above QIR runtime function we use a dummy label for the second argument of
+        the QIR function.
     }];
 
-    // Change AnyType to FlatSymbolRefAttr
     let arguments = (ins I1:$value);
     let results = (outs);
 
-    // The syntax $label will now correctly handle the @symbol notation
     let assemblyFormat = "$value attr-dict";
 }
 
