@@ -1,23 +1,25 @@
 BasedOnStyle: LLVM
 ColumnLimit: 120
+
 # Handling of include blocks must be consistent with clang-tidy(llvm-include-order).
 # See also: https://llvm.org/docs/CodingStandards.html#include-style
 IncludeBlocks: Regroup
 IncludeCategories:
-  # Our headers
+  # NOTE: main headers (e.g. `#include "foo.h"` inside `foo.cpp`) have implicit priority 0.
+  # Our headers:
   - Regex: '^"qcc/'
-    Priority: 2
-  # LLVM Subproject headers (MLIR)
+    Priority: 10
+  # LLVM Subproject headers (LLVM, MLIR):
   - Regex: '^"mlir/'
-    Priority: 3
-  # LLVM Subproject headers (LLVM)
+    Priority: 20
   - Regex: '^"llvm/'
-    Priority: 4
-  # System or standard library headers
+    Priority: 30
+  # System or standard library headers:
   - Regex: "^<.*>"
-    Priority: 5
-  # Local headers (and anything else)
+    Priority: 40
+  # Catch all, but mostly 3rd party dependencies:
   - Regex: '^".*'
-    Priority: 1
+    Priority: 15
+
 PointerAlignment: Left
 Standard: c++20
