@@ -32,6 +32,7 @@
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/raw_ostream.h>
+// FIXME: cleanup includes
 
 namespace cl = llvm::cl;
 
@@ -45,11 +46,15 @@ int main(int argc, char** argv) {
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
-                  mlir::bufferization::BufferizationDialect, mlir::linalg::LinalgDialect, mlir::scf::SCFDialect,
-                  jasp::JaspDialect, mlir::qc::QCDialect, qcc::aux::AuxDialect>();
 
-  // Extension registration
+  // Register all builtin dialects and their extensions/interfaces:
+  mlir::registerAllDialects(registry);
+
+  // Our dialects:
+  registry.insert<jasp::JaspDialect, mlir::qc::QCDialect, qcc::aux::AuxDialect>();
+
+  // Register the specific interface implementations for the pipeline
+  // Note: OneShotBufferize requires these for the "Standard" dialects
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::linalg::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::scf::registerBufferizableOpInterfaceExternalModels(registry);

@@ -54,9 +54,6 @@ int main(int argc, char** argv) {
       // clang-format on
       >();
 
-  // 3rd party dialects
-  mlir::stablehlo::registerAllDialects(registry);
-
   // Builtin passes:
   mlir::registerCanonicalizerPass();
   mlir::registerCSEPass();
