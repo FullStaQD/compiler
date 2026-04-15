@@ -35,8 +35,9 @@ int main(int argc, char** argv) {
   mlir::registerPassManagerCLOptions();
   mlir::registerDefaultTimingManagerCLOptions();
 
-  cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
-  cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::cat(qccCategory));
+  const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
+  const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"),
+                                            cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
   sourceMgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
 
   // Enable nice diagnostic printing for parser and pass errors
-  mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
+  const mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
 
   mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   if (!module) {

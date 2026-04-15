@@ -24,9 +24,10 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "llvm/Support/Casting.h"
+
 #include <cassert>
 #include <cstddef>
-#include <llvm/Support/Casting.h>
 #include <optional>
 #include <utility>
 
@@ -389,7 +390,7 @@ protected:
 
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
-    JaspToQCTypeConverter typeConverter(context);
+    const JaspToQCTypeConverter typeConverter(context);
     QuantumStateEliminator stateDestroyer(context);
 
     target.addIllegalDialect<JaspDialect>();
