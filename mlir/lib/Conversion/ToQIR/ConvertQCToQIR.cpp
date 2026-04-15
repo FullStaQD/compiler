@@ -54,7 +54,9 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
   return "";
 }
 
-/// For each of the qubit values it assumes that it was created by a static op, like this:
+/// Convert a qubit to an llvm ptr.
+///
+/// We assume that it was created by a static op, like this:
 ///
 /// ```mlir
 /// %0 = qc.static 42 : !qc.qubit
@@ -66,26 +68,30 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
 /// %1 = llvm.mlir.constant(42 : i64) : i64
 /// %2 = llvm.inttoptr %1 : i64 to !llvm.ptr
 /// ```
-///
-/// Finally it returns the list of all created `ptr` values (`%2` in the above example is one of these ptr).
+static Value qubitToPtr(OpBuilder& builder, Value qubitValue) {
+  auto* defOp = qubitValue.getDefiningOp();
+  assert(defOp && isa<qc::StaticOp>(defOp) &&
+         "The pass assumes that all qubits come from static allocations (in particular no function args).");
+  auto alloc = cast<qc::StaticOp>(defOp);
+
+  auto index = static_cast<int64_t>(alloc.getIndex());
+
+  auto i64Type = builder.getI64Type();
+  auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
+
+  auto constantOp = LLVM::ConstantOp::create(builder, defOp->getLoc(), i64Type, builder.getI64IntegerAttr(index));
+  auto ptrOp = LLVM::IntToPtrOp::create(builder, defOp->getLoc(), ptrType, {constantOp});
+
+  return ptrOp;
+}
+
+/// Applies `qubitToPtr` to each qubit of the given list and returns the result.
 static SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValues) {
   SmallVector<Value> ptrValues;
   ptrValues.reserve(qubitValues.size());
 
   for (auto qubitValue : qubitValues) {
-    auto* defOp = qubitValue.getDefiningOp();
-    assert(defOp && isa<qc::StaticOp>(defOp) &&
-           "The pass assumes that all qubits come from static allocations (in particular no function args).");
-    auto alloc = cast<qc::StaticOp>(defOp);
-
-    auto index = static_cast<int64_t>(alloc.getIndex());
-
-    auto i64Type = builder.getI64Type();
-    auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
-
-    auto constantOp = LLVM::ConstantOp::create(builder, defOp->getLoc(), i64Type, builder.getI64IntegerAttr(index));
-    auto ptrOp = LLVM::IntToPtrOp::create(builder, defOp->getLoc(), ptrType, {constantOp});
-
+    auto ptrOp = qubitToPtr(builder, qubitValue);
     ptrValues.push_back(ptrOp);
   }
 
@@ -93,7 +99,7 @@ static SmallVector<Value> qubitsToPtrs(OpBuilder& builder, ValueRange qubitValue
 }
 
 /// To be used in a rewrite pattern.
-static InFlightDiagnostic emitMissingDeclError(Operation* op, StringRef name) {
+static InFlightDiagnostic emitMissingQISDeclError(Operation* op, StringRef name) {
   return op->emitError() << "QIR QIS declaration not found: '" << name << "'";
 }
 
@@ -114,21 +120,22 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
 
     auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirQisMZ);
     if (!mzFnDecl) {
-      return emitMissingDeclError(op, qcc::qirQisMZ);
+      return emitMissingQISDeclError(op, qcc::qirQisMZ);
     }
 
     auto readFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirRtReadResult);
     if (!readFnDecl) {
-      return emitMissingDeclError(op, qcc::qirRtReadResult);
+      return emitMissingQISDeclError(op, qcc::qirRtReadResult);
     }
 
     // TODO: This holds only for HiSEP-Q.
     // NOTE: Qubit and result pointer share the same index.
     auto qubit = op.getQubit();
-    auto ptrs = qubitsToPtrs(rewriter, {qubit, qubit});
+    auto qubitPtr = qubitToPtr(rewriter, qubit);
+    auto resultPtr = qubitToPtr(rewriter, qubit);
 
-    LLVM::CallOp::create(rewriter, op.getLoc(), mzFnDecl, ptrs);
-    auto callReadOp = LLVM::CallOp::create(rewriter, op.getLoc(), readFnDecl, {ptrs[1]});
+    LLVM::CallOp::create(rewriter, op.getLoc(), mzFnDecl, {qubitPtr, resultPtr});
+    auto callReadOp = LLVM::CallOp::create(rewriter, op.getLoc(), readFnDecl, {resultPtr});
 
     rewriter.replaceOp(op, callReadOp);
     return success();
@@ -169,7 +176,7 @@ struct UnitaryLowering : public ConversionPattern {
     auto qisName = mapUnitaryToQIS(unitaryOp);
     auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
     if (!fnDecl) {
-      return emitMissingDeclError(unitaryOp, qisName);
+      return emitMissingQISDeclError(unitaryOp, qisName);
     }
 
     auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
