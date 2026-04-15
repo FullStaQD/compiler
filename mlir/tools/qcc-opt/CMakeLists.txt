@@ -4,12 +4,25 @@ target_link_libraries(
   PRIVATE MLIRIR
           MLIROptLib
           MLIRSupport
+          # Dialects
           MLIRFuncDialect
           MLIRArithDialect
           MLIRSCFDialect
           MLIRTensorDialect
+          MLIRLinalgDialect
+          MLIRMemRefDialect
+          MLIRBufferizationDialect
           QCCJaspDialect
+          # Passes
+          MLIRMemRefTransforms
+          MLIRArithTransforms
+          MLIRFuncTransforms
+          MLIRLinalgTransforms
+          MLIRTensorTransforms
+          MLIRBufferizationTransforms
           QCCPrelimHLEPDialect
           QCCJaspToQC
-          StablehloRegister
+          # Extensions/Interfaces
+          MLIRFuncInlinerExtension
+          MLIRTransformUtils
           MLIRQCDialect)

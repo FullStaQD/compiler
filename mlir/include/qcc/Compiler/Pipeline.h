@@ -1,4 +1,5 @@
 #pragma once
+#include <mlir/IR/DialectRegistry.h>
 #include <mlir/Pass/PassManager.h>
 
 namespace qcc {
