@@ -24,7 +24,7 @@ static constexpr llvm::StringLiteral qirDummyLabelGlobalSymbolName = ".qir_dummy
 /// called right at the start of an entry-point.
 static constexpr llvm::StringLiteral qirRtInit = "__quantum__rt__initialize";
 
-/// Convert a measurement result to a bool.
+/// Converts a measurement result to a bool.
 ///
 /// Signature `i1(ptr readonly)`.
 static constexpr llvm::StringLiteral qirRtReadResult = "__quantum__rt__read_result";

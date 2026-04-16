@@ -29,7 +29,7 @@
 using namespace mlir;
 using namespace qcc;
 
-/// Map any of the (unitary) gate-ops to their QIR QIS function declaration if possible.
+/// Maps any of the (unitary) gate-ops to their QIR QIS function declaration if possible.
 ///
 /// Returns an empty string upon failure. Succeeds iff the gate is among the supported native gate set.
 ///
@@ -54,7 +54,7 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
   return "";
 }
 
-/// Convert a qubit to an llvm ptr.
+/// Converts a qubit to an llvm ptr.
 ///
 /// We assume that it was created by a static op, like this:
 ///
@@ -269,7 +269,7 @@ private:
     return numQubits;
   }
 
-  /// Attach all the relevant QIR attributes (like `required_num_qubits`) to the function.
+  /// Attaches all the relevant QIR attributes (like `required_num_qubits`) to the function.
   LogicalResult setEntryPointAttrs() {
     func::FuncOp funcOp = getOperation();
     OpBuilder builder(funcOp.getContext());

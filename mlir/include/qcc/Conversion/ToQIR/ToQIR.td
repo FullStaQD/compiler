@@ -20,7 +20,7 @@ def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
 }
 
 def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
-  let summary = "Lower the QC dialect into QIR (adaptive) conforming LLVM dialect.";
+  let summary = "Lowers the QC dialect into QIR (adaptive) conforming LLVM dialect.";
 
   let description = [{
       The pass anchors to a function and guarantees the following:
@@ -30,7 +30,7 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
       - `qc` gate and measurement ops are translated to QIR QIS function calls.
       - Only the llvm dialect (in the function body) is considered legal after this pass.
       - TODO: To support some kind of output recording: We lower `aux.record_bool` to the
-        bool recording intrinsic. Currently no other output recording intrinsics are in use.
+        bool recording function. Currently no other output recording function are in use.
 
       TODO: For simplicity we assume that only entry point functions have
       quantum operations. Before we extend support we have to figure out how to
@@ -44,9 +44,9 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
       index for the result of a qubit measurement.
 
       Assumptions:
-      - All required QIR intrinsics (e.g. `__quantum__rt__initialize`) are already declared in the
+      - All required QIR functions (e.g. `__quantum__rt__initialize`) are already declared in the
         containing module.
-      - TODO: It expects a global dummy-label to be present for the record intrinsics:
+      - TODO: It expects a global dummy-label to be present for the record function:
         `llvm.mlir.global internal constant @".qir_dummy_label"("arbitrary_label\00") {addr_space = 0 : i32}`.
 
       To satisfy the assumptions you likely want to run `-prep-to-qir` before this pass. Sometime
@@ -59,7 +59,7 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
 }
 
 def FinalizeToQIR : Pass<"finalize-to-qir", "mlir::ModuleOp"> {
-  let summary = "Ensure that no non-llvm ops are left in the module.";
+  let summary = "Ensures that no non-llvm ops are left in the module.";
 
   let description = [{
       Essentially lowers the `func` dialect (to llvm) and does a bit of cleanup.

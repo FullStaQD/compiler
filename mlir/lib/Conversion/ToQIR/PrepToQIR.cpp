@@ -44,7 +44,7 @@ protected:
   }
 
 private:
-  /// Insert `llvm.func` with signature `fnName(ptr, ptr, ...) -> void`.
+  /// Inserts `llvm.func` with signature `fnName(ptr, ptr, ...) -> void`.
   LLVM::LLVMFuncOp createVoidFnDecl(StringRef fnName, int numPtrs) {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
@@ -60,7 +60,7 @@ private:
     return fnDecl;
   }
 
-  /// Insert `llvm.func` with signature `__quantum__rt__read_result(ptr readonly) -> void`.
+  /// Inserts `llvm.func` with signature `__quantum__rt__read_result(ptr readonly) -> void`.
   void createRtReadResultDecl() {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
@@ -75,7 +75,7 @@ private:
     fnDecl.setArgAttr(0, "llvm.readonly", builder.getUnitAttr());
   }
 
-  /// Insert `llvm.func` with signature `__quantum__rt__bool_record_output(i1, ptr) -> void`.
+  /// Inserts `llvm.func` with signature `__quantum__rt__bool_record_output(i1, ptr) -> void`.
   void createRtBoolRecordOutputDecl() {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
@@ -90,7 +90,7 @@ private:
     LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
   }
 
-  /// Create the module flags which specify the capabilities which the backend needs to support.
+  /// Creates the module flags which specify the capabilities which the backend needs to support.
   ///
   /// Of course we in turn also have to ensure that our output does not go beyond those capabilities.
   ///
