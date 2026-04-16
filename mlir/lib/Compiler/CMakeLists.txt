@@ -20,9 +20,11 @@ add_mlir_library(
   MLIRFuncTransforms
   MLIRLinalgTransforms
   MLIRSCFTransforms
+  MLIRQCToQIR
   MLIRTensorTransforms
   MLIRBufferizationTransforms
   QCCJaspToQC
+  QCCToQIR
   # Extensions/Interfaces
   MLIRFuncInlinerExtension
   MLIRTransformUtils)

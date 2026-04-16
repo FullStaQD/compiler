@@ -1,12 +1,18 @@
 BasedOnStyle: LLVM
 ColumnLimit: 120
 IncludeBlocks: Regroup
-IncludeCategories:
-  - Regex: '^".*"'
+IncludeCategories: # consistent with clang-tidy(llvm-include-order)
+  # Our Headers
+  - Regex: '^"qcc/'
     Priority: 1
-  - Regex: '^<.*\.(h|hpp)>'
+  # LLVM Subproject Headers (MLIR)
+  - Regex: '^"mlir/'
     Priority: 2
-  - Regex: "^<.*>"
+  # LLVM Subproject Headers (LLVM)
+  - Regex: '^"llvm/'
     Priority: 3
+  # System Headers
+  - Regex: "^<.*>"
+    Priority: 4
 PointerAlignment: Left
 Standard: c++20
