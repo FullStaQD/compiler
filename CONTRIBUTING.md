@@ -43,12 +43,12 @@ Please adhere to the following guidelines to help the project grow sustainably.
 ### C++ guidelines
 
 As an LLVM/MLIR base project we mostly follow their guidelines.
-We also follow googles guidelines but LLVM guidelines take precedence.
+We also follow Google's guidelines but LLVM guidelines take precedence.
 
 As a particular example, we follow [LLVMs recommendation](https://llvm.org/docs/CodingStandards.html#include-style)
 on include order from most specific (top) to least specific (bottom).
 
-When it comes to includes with angle brackets vs quoted includes we follow google's recommendation:
+When it comes to includes with angle brackets vs quoted includes we follow Google's recommendation:
 Headers should only be included using an angle-bracketed path if the library requires you to do so.
 In particular, the following headers require angle brackets:
 
@@ -60,7 +60,7 @@ See also our `.clang-format` file.
 
 Also note that MLIR based projects typically do not _strictly_ follow const correctness.
 The details can be found in [MLIR on the usage of 'const'](https://mlir.llvm.org/docs/Rationale/UsageOfConst/).
-The slightly simpliefied gist is as follows:
+The slightly simplified gist is as follows:
 
 - Do _not_ use `const` in combination with IR objects like `Operation*` or `Value`.
 - _Try_ to follow const correctness for non-IR objects (e.g. `SmallVector`, `StringRef`).
