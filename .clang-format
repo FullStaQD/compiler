@@ -2,7 +2,12 @@ BasedOnStyle: LLVM
 ColumnLimit: 120
 
 # Handling of include blocks must be consistent with clang-tidy(llvm-include-order).
-# See also: https://llvm.org/docs/CodingStandards.html#include-style
+# See also: https://llvm.org/docs/CodingStandards.html#include-style.
+#
+# NOTE: Headers should only be included using an angle-bracketed path of the library requires you
+# to do so. Primary examples are: C/C++ standard library headers, OS system headers,
+# _rarely_ third-party library headers like `<Python.h>`.
+# See also: https://google.github.io/styleguide/cppguide.html#Names_and_Order_of_Includes.
 IncludeBlocks: Regroup
 IncludeCategories:
   # NOTE: main headers (e.g. `#include "foo.h"` inside `foo.cpp`) have implicit priority 0.
@@ -14,10 +19,10 @@ IncludeCategories:
     Priority: 20
   - Regex: '^"llvm/'
     Priority: 30
-  # System or standard library headers:
+  # System or standard library headers (rarely 3rd party library headers):
   - Regex: "^<.*>"
     Priority: 40
-  # Catch all, but mostly 3rd party dependencies:
+  # Catch all remaining quoted headers (private headers and most 3rd party libraries):
   - Regex: '^".*'
     Priority: 15
 
