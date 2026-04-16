@@ -1,16 +1,22 @@
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
+#include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
@@ -27,23 +33,43 @@ int main(int argc, char** argv) {
 
   // Dialect registration
   mlir::DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
-                  mlir::bufferization::BufferizationDialect, mlir::linalg::LinalgDialect, mlir::scf::SCFDialect,
-                  jasp::JaspDialect, mlir::qc::QCDialect>();
 
-  // Pass registration
-  qcc::registerJaspToQC();
+  registry.insert<
+      // clang-format off
+    mlir::func::FuncDialect,
+    mlir::arith::ArithDialect,
+    mlir::tensor::TensorDialect,
+    mlir::bufferization::BufferizationDialect,
+    mlir::linalg::LinalgDialect,
+    mlir::cf::ControlFlowDialect,
+    mlir::scf::SCFDialect,
+    mlir::LLVM::LLVMDialect,
+    jasp::JaspDialect,
+    mlir::qc::QCDialect,
+    qcc::aux::AuxDialect
+      // clang-format on
+      >();
+
+  // Builtin passes:
+  mlir::registerCanonicalizerPass();
+  mlir::registerCSEPass();
+  mlir::registerArithToLLVMConversionPass();
+  mlir::registerConvertControlFlowToLLVMPass();
   mlir::registerConvertLinalgToLoopsPass();
   mlir::bufferization::registerEmptyTensorToAllocTensorPass();
   mlir::bufferization::registerOneShotBufferizePass();
   mlir::registerLinalgDetensorizePass();
-  mlir::registerCanonicalizer();
-  mlir::registerCSEPass();
   mlir::bufferization::registerBufferLoopHoistingPass();
   mlir::registerMem2RegPass();
   mlir::registerSCCP();
   mlir::bufferization::registerPromoteBuffersToStackPass();
   mlir::registerInlinerPass();
+
+  // Our passes
+  qcc::registerJaspToQC();
+  qcc::registerConvertQCToQIR();
+  qcc::registerPrepToQIR();
+  qcc::registerFinalizeToQIR();
 
   // Extension registration
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);

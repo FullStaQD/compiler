@@ -390,7 +390,7 @@ protected:
 
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
-    JaspToQCTypeConverter typeConverter(context);
+    const JaspToQCTypeConverter typeConverter(context);
     QuantumStateEliminator stateDestroyer(context);
 
     target.addIllegalDialect<JaspDialect>();
