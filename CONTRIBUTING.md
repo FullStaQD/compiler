@@ -40,6 +40,35 @@ Please adhere to the following guidelines to help the project grow sustainably.
 - Follow the project's coding standards and conventions.
 - Be open to feedback and willing to make necessary changes based on code reviews.
 
+### C++ guidelines
+
+As an LLVM/MLIR base project we mostly follow their guidelines.
+We also follow Google's guidelines but LLVM guidelines take precedence.
+
+As a particular example, we follow [LLVMs recommendation](https://llvm.org/docs/CodingStandards.html#include-style)
+on include order from most specific (top) to least specific (bottom).
+
+When it comes to includes with angle brackets vs quoted includes we follow Google's recommendation:
+Headers should only be included using an angle-bracketed path if the library requires you to do so.
+In particular, the following headers require angle brackets:
+
+- C and C++ standard library headers (e.g., <stdlib.h> and ).
+- POSIX, Linux, and Windows system headers (e.g., <unistd.h> and <windows.h>).
+- In rare cases, third_party libraries (e.g., <Python.h>).
+
+See also our `.clang-format` file.
+
+Also note that MLIR based projects typically do not _strictly_ follow const correctness.
+The details can be found in [MLIR on the usage of 'const'](https://mlir.llvm.org/docs/Rationale/UsageOfConst/).
+The slightly simplified gist is as follows:
+
+- Do _not_ use `const` in combination with IR objects like `Operation*` or `Value`.
+- _Try_ to follow const correctness for non-IR objects (e.g. `SmallVector`, `StringRef`).
+- But even then do not worry too much about adding `const`, leave it out if in doubt.
+
+That being said: do not take this guideline as a justification to drop const correctness in _other_ projects.
+This is a particular quirk of MLIR based projects.
+
 ### Pull Request Workflow
 
 - Create PRs early.

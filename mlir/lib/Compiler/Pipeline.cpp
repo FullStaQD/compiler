@@ -1,13 +1,18 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
+#include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/ToQIR/ToQIR.h"
+
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
-#include "qcc/Conversion/JaspToQC/JaspToQC.h"
 
 namespace qcc {
 
@@ -64,10 +69,23 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // plain register-values (e.g. `i64`).
   pm.addPass(mlir::createMem2Reg());
 
-  // Final cleanup
+  // cleanup
   pm.addPass(mlir::createSCCPPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
+
+  // conversion to QIR
+  pm.addPass(qcc::createPrepToQIR());
+  mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();
+  fpm.addPass(mlir::createArithToLLVMConversionPass());
+  fpm.addPass(qcc::createConvertQCToQIR());
+  pm.addPass(mlir::createConvertControlFlowToLLVMPass());
+  pm.addPass(qcc::createFinalizeToQIR());
+
+  // cleanup QIR
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+  pm.addPass(mlir::createRemoveDeadValuesPass());
 }
 
 } // namespace qcc

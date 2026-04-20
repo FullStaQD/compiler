@@ -1,19 +1,17 @@
+#include "qcc/Compiler/Pipeline.h"
+#include "qcc/Dialect/Aux_/IR/Aux_.h"
+#include "qcc/Dialect/Jasp/IR/Jasp.h"
+
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -23,31 +21,36 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
-#include "qcc/Compiler/Pipeline.h"
-#include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
-#include <llvm/Support/raw_ostream.h>
 
 namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
 
 int main(int argc, char** argv) {
-  cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
-  cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::cat(qccCategory));
+  mlir::registerMLIRContextCLOptions();
+  mlir::registerPassManagerCLOptions();
+  mlir::registerDefaultTimingManagerCLOptions();
 
-  cl::HideUnrelatedOptions(qccCategory);
+  const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
+  const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"),
+                                            cl::cat(qccCategory));
+
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::func::FuncDialect, mlir::arith::ArithDialect, mlir::tensor::TensorDialect,
-                  mlir::bufferization::BufferizationDialect, mlir::linalg::LinalgDialect, mlir::scf::SCFDialect,
-                  jasp::JaspDialect, mlir::qc::QCDialect>();
 
-  // Extension registration
+  // Register all builtin dialects and their extensions/interfaces:
+  mlir::registerAllDialects(registry);
+
+  // Our dialects:
+  registry.insert<jasp::JaspDialect, mlir::qc::QCDialect, qcc::aux::AuxDialect>();
+
+  // Register the specific interface implementations for the pipeline
+  // Note: OneShotBufferize requires these for the "Standard" dialects
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::linalg::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::scf::registerBufferizableOpInterfaceExternalModels(registry);
@@ -69,7 +72,7 @@ int main(int argc, char** argv) {
   sourceMgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
 
   // Enable nice diagnostic printing for parser and pass errors
-  mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
+  const mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
 
   mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
   if (!module) {
