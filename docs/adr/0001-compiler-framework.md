@@ -49,12 +49,15 @@ We considered a fully custom frontend, a path taken by projects like [HUGR](http
 
 ## Consequences
 
-- Positive: LLVM and MLIR provide a mature, actively maintained, and widely adopted compiler infrastructure suitable for HPC and heterogeneous execution environments.
-- Positive: MLIR enables modular design with domain-specific dialects, which is well aligned with quantum compilation requirements.
-- Positive: Leveraging LLVM/MLIR reduces the need to develop and maintain a full compiler back end stack.
-- Negative: LLVM versioning and upgrade coordination introduces integration overhead due to limited backward compatibility guarantees.
-- Negative: Extending LLVM back ends or integrating tightly with low-level code generation pipelines can be complex.
-- Negative: Quantum-specific semantics must be explicitly encoded and enforced through MLIR dialect design and transformation logic rather than being inherently supported by the framework.
+Positive:
+- LLVM and MLIR provide a mature, actively maintained, and widely adopted compiler infrastructure suitable for HPC and heterogeneous execution environments.
+- MLIR enables modular design with domain-specific dialects, which is well aligned with quantum compilation requirements.
+- Leveraging LLVM/MLIR reduces the need to develop and maintain a full compiler backend stack.
+
+Negative:
+- LLVM versioning and upgrade coordination introduces integration overhead due to limited API and ABI stability.
+- Extending LLVM backends or integrating tightly with low-level code generation pipelines can be complex and requires a skilled work-force.
+- Quantum-specific semantics must be explicitly encoded and enforced through MLIR dialect design and transformation logic rather than being inherently supported by the underlying infrastructure.
 
 ## More Information
 
