@@ -41,7 +41,11 @@ MLIR enables the definition of custom dialects that can encode quantum operation
 
 A key design consideration is that certain quantum-specific semantics (e.g., linear resource constraints, uncomputation, and reversibility requirements) are not natively represented as first-class constructs in MLIR and must instead be enforced through dialect design and compiler transformations. While this introduces implementation complexity, it is considered acceptable given the maturity of the ecosystem and its extensibility.
 
-A fully custom front end IR was considered in order to natively encode quantum semantics at the language level. However, this approach would significantly increase long-term maintenance cost and reduce interoperability with existing compiler tooling ecosystems.
+We considered a fully custom frontend, a path taken by projects like [HUGR](https://github.com/Quantinuum/hugr). While HUGR provides a specialized graph-based IR for quantum computing, we declined this route for three reasons:
+
+- Maintenance Overhead: A custom implementation like HUGR effectively recreates MLIR's core functionality (e.g., pass managers, verifiers) without the benefit of the global LLVM contributor base.
+- Ecosystem Fragmentation: A custom IR limits direct interoperability with the vast library of existing classical LLVM/MLIR tooling, increasing the "integration tax" for hybrid applications.
+- Resource Allocation: We prioritize developing quantum-specific optimizations over maintaining foundational IR infrastructure.
 
 ## Consequences
 
