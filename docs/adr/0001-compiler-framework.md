@@ -33,7 +33,7 @@ We select LLVM as the back end compiler infrastructure and MLIR as the primary i
 
 LLVM is a widely adopted, mature open-source compiler infrastructure that provides robust code generation capabilities across a broad range of target architectures, including those used in heterogeneous and HPC environments. It is actively maintained and broadly used in industry and research contexts. While LLVM provides strong back end capabilities, it imposes constraints in terms of IR flexibility and requires careful version management due to limited long-term ABI stability guarantees across releases. These constraints are manageable but require explicit dependency control and integration discipline.
 
-Alternative compiler back ends such as GCC were considered but are less suitable for modular compiler construction due to their more monolithic architecture and comparatively limited support for custom IR pipelines and extensibility in modern compiler research contexts.
+Alternative compiler back ends such as GCC were considered but found to be less suitable for modular compiler construction due to their more monolithic architecture and comparatively limited support for custom IR pipelines and extensibility.
 
 MLIR is selected as the primary front end and mid-level IR infrastructure. It provides a flexible multi-level intermediate representation framework designed to support domain-specific IR dialects and progressive lowering. This makes it particularly well suited for representing quantum-specific abstractions while integrating with LLVM-based back end pipelines.
 
