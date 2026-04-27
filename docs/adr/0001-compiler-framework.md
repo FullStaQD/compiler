@@ -6,6 +6,7 @@ decision-makers:
   - "Julian Farnsteiner"
   - "Reinhard Stahn"
   - "Lukas Burgholzer"
+  - "Yannick Stade"
 ---
 
 # Compiler Framework
