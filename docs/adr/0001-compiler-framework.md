@@ -37,7 +37,7 @@ Alternative compiler back ends such as GCC were considered but found to be less 
 
 MLIR ("multi-level intermediate representation") is selected as the primary front end and mid-level IR infrastructure. It provides a flexible framework designed to support domain-specific IR language fragments ("dialects") and progressive lowering. This makes it particularly well suited for representing quantum-specific abstractions while integrating with LLVM-based back end pipelines.
 
-MLIR enables the definition of custom dialects that can encode quantum operations, control flow, and hardware-specific constraints, and supports structured transformation and optimization passes across abstraction levels. This is particularly relevant for quantum compilation, where multiple representation layers are required between high-level circuit descriptions and low-level control instructions.
+MLIR enables the definition of custom dialects that can encode quantum operations, control flow, and hardware-specific constraints, and supports structured transformation and optimization passes across abstraction levels. This is particularly relevant for quantum compilation, where multiple representation layers are required between high-level quantum programs, mid-level circuit descriptions, and low-level control instructions.
 
 A key design consideration is that certain quantum-specific semantics (e.g., linear resource constraints, uncomputation, and reversibility requirements) are not natively represented as first-class constructs in MLIR and must instead be enforced through dialect design and compiler transformations. While this introduces implementation complexity, it is considered acceptable given the maturity of the ecosystem and its extensibility.
 
