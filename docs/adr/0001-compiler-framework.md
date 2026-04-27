@@ -35,7 +35,7 @@ LLVM is a widely adopted, mature open-source compiler infrastructure that provid
 
 Alternative compiler back ends such as GCC were considered but found to be less suitable for modular compiler construction due to their more monolithic architecture and comparatively limited support for custom IR pipelines and extensibility.
 
-MLIR is selected as the primary front end and mid-level IR infrastructure. It provides a flexible multi-level intermediate representation framework designed to support domain-specific IR dialects and progressive lowering. This makes it particularly well suited for representing quantum-specific abstractions while integrating with LLVM-based back end pipelines.
+MLIR ("multi-level intermediate representation") is selected as the primary front end and mid-level IR infrastructure. It provides a flexible framework designed to support domain-specific IR language fragments ("dialects") and progressive lowering. This makes it particularly well suited for representing quantum-specific abstractions while integrating with LLVM-based back end pipelines.
 
 MLIR enables the definition of custom dialects that can encode quantum operations, control flow, and hardware-specific constraints, and supports structured transformation and optimization passes across abstraction levels. This is particularly relevant for quantum compilation, where multiple representation layers are required between high-level circuit descriptions and low-level control instructions.
 
