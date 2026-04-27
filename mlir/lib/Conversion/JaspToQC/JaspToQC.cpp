@@ -3,24 +3,32 @@
 
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
-#include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/Dialect/Func/Transforms/FuncConversions.h>
-#include <mlir/Dialect/MemRef/IR/MemRef.h>
-#include <mlir/Dialect/QC/IR/QCDialect.h>
-#include <mlir/Dialect/QC/IR/QCOps.h>
-#include <mlir/Dialect/Tensor/IR/Tensor.h>
-#include <mlir/IR/BuiltinTypeInterfaces.h>
-#include <mlir/IR/MLIRContext.h>
-#include <mlir/IR/OperationSupport.h>
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/IR/ValueRange.h>
-#include <mlir/Support/LLVM.h>
-#include <mlir/Support/LogicalResult.h>
-#include <mlir/Transforms/DialectConversion.h>
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/QC/IR/QCDialect.h"
+#include "mlir/Dialect/QC/IR/QCOps.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Types.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/DialectConversion.h"
+
+#include "llvm/Support/Casting.h"
 
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <utility>
 
 namespace qcc {
@@ -32,13 +40,21 @@ using namespace mlir::qc;
 #include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
 
 namespace {
-/// Type converter for jasp-to-QC conversion
+/// Type converter for jasp-to-QC conversion, to be used
+/// for op-conversions.
 ///
 /// Handles type conversion between the jasp and QC dialects.
 ///  - The jasp qubit type is mapped to the QC qubit type.
 ///  - !jasp.QubitArray is mapped to memref<?x!qc.qubit>.
-///  - TODO: !jasp.QuantumState is destroyed.
-class JaspToQCTypeConverter final : public TypeConverter {
+///  - !jasp.QuantumState is left intact.
+///    TODO: This is a hack. If we delete the QuantumState
+///    type here, conversion fails before any pattern is applied.
+///    But if we leave it out, function signatures will not be
+///    updated. Therefore, we need two separate type converters.
+///
+/// In addition, prevalent rank-zero-tensors `tensor<i64>` and `tensor<f64>`
+/// are converted to plain values wherever possible.
+class JaspToQCTypeConverter : public TypeConverter {
 public:
   explicit JaspToQCTypeConverter(MLIRContext* ctx) {
     // Identity conversion for all types by default
@@ -48,6 +64,42 @@ public:
     addConversion([ctx](jasp::QubitArrayType /*type*/) -> Type {
       return MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(ctx));
     });
+
+    addConversion([](mlir::RankedTensorType type) -> std::optional<mlir::Type> {
+      if (type.getRank() == 0) {
+        return type.getElementType();
+      }
+      return std::nullopt; // Leave multi-dimensional tensors alone
+    });
+
+    addTargetMaterialization(
+        [](mlir::OpBuilder& builder, mlir::Type /*type*/, mlir::ValueRange inputs, mlir::Location loc) -> mlir::Value {
+          if (inputs.size() != 1 || !llvm::isa<mlir::TensorType>(inputs[0].getType())) {
+            return nullptr;
+          }
+
+          return mlir::tensor::ExtractOp::create(builder, loc, inputs[0], mlir::ValueRange{});
+        });
+
+    addSourceMaterialization([](mlir::OpBuilder& builder, mlir::RankedTensorType type, mlir::ValueRange inputs,
+                                mlir::Location loc) -> mlir::Value {
+      if (inputs.size() != 1 || !inputs[0].getType().isIntOrIndexOrFloat()) {
+        return nullptr;
+      }
+
+      return {mlir::tensor::FromElementsOp::create(builder, loc, type, inputs[0])};
+    });
+  }
+};
+
+/// Type converter for jasp-to-QC conversion, to be
+/// used in function signature conversions.
+///
+/// In addition to the base converter, !jasp.QuantumState is destroyed.
+class QuantumStateEliminator final : public JaspToQCTypeConverter {
+public:
+  explicit QuantumStateEliminator(MLIRContext* ctx) : JaspToQCTypeConverter(ctx) {
+    addConversion([](jasp::QuantumStateType /*type*/, SmallVectorImpl<Type>&) { return success(); });
   }
 };
 
@@ -76,14 +128,13 @@ struct ConvertJaspCreateQuantumKernelOp final : OpConversionPattern<jasp::Create
 ///
 /// Example transformation:
 /// ```mlir
-/// %q_arr, %state1 = jasp.create_qubits %tensor_index, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray,
+/// %q_arr, %state1 = jasp.create_qubits %index, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray,
 /// !jasp.QuantumState
 /// ```
 /// becomes:
 /// ```mlir
-/// %index_i64 = tensor.extract %tensor_index[] : tensor<i64>
-/// %index = arith.index_cast %index_i64 : i64 to index
-/// %q_arr = memref.alloc(%index) : memref<?x!qc.qubit>
+/// %index_1 = arith.index_cast %index : i64 to index
+/// %q_arr = memref.alloc(%index_1) : memref<?x!qc.qubit>
 /// ```
 struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -91,8 +142,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
   LogicalResult matchAndRewrite(jasp::CreateQubitsOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     auto loc = op.getLoc();
-    auto extracted = tensor::ExtractOp::create(rewriter, loc, adaptor.getAmount(), ValueRange{});
-    auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extracted);
+    auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), adaptor.getAmount());
     auto memrefType = MemRefType::get({ShapedType::kDynamic}, qc::QubitType::get(getContext()));
     auto alloc = memref::AllocOp::create(rewriter, loc, cast<MemRefType>(memrefType), ValueRange{index});
     rewriter.replaceOpWithMultiple(op, {alloc.getResult(), ValueRange()});
@@ -111,8 +161,7 @@ struct ConvertJaspCreateQubitsOp final : OpConversionPattern<jasp::CreateQubitsO
 /// ```
 /// becomes:
 /// ```mlir
-/// %i_i64 = tensor.extract %i[] : tensor<i64>
-/// %i_index = arith.index_cast %i_i64 : i64 to index
+/// %i_index = arith.index_cast %i : i64 to index
 ///  %q = memref.load %q_arr[%i_index] : memref<?x!qc.qubit>
 /// ```
 struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
@@ -123,8 +172,7 @@ struct ConvertJaspGetQubitOp final : OpConversionPattern<jasp::GetQubitOp> {
     auto loc = op.getLoc();
     auto indexTensor = adaptor.getPosition();
 
-    auto extractOp = tensor::ExtractOp::create(rewriter, loc, indexTensor, ValueRange{});
-    auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), extractOp);
+    auto index = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), indexTensor);
     rewriter.replaceOpWithNewOp<memref::LoadOp>(op, adaptor.getQbArray(), ValueRange{index});
 
     return success();
@@ -151,10 +199,8 @@ struct ConvertJaspConsumeQuantumKernelOp final : OpConversionPattern<jasp::Consu
   LogicalResult matchAndRewrite(jasp::ConsumeQuantumKernelOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
 
-    auto type = op.getType();
     auto trueAttr = rewriter.getBoolAttr(true);
-    auto denseAttr = DenseElementsAttr::get(type, trueAttr);
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, type, cast<TypedAttr>(denseAttr));
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, rewriter.getI1Type(), cast<TypedAttr>(trueAttr));
 
     return success();
   }
@@ -224,10 +270,6 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
 #undef TRY_CONVERT_GATE
 
 private:
-  static Value extractParam(jasp::QuantumGateOp op, Value paramTensor, ConversionPatternRewriter& rewriter) {
-    return tensor::ExtractOp::create(rewriter, op.getLoc(), paramTensor, ValueRange{}).getResult();
-  }
-
   template <typename QCOp, std::size_t... controlOperandIndices, std::size_t... targetOperandIndices,
             std::size_t... paramOperandIndices>
   LogicalResult convertGate(jasp::QuantumGateOp op, jasp::QuantumGateOp::Adaptor adaptor,
@@ -247,11 +289,11 @@ private:
 
     if constexpr (numControls == 0) {
       QCOp::create(rewriter, op.getLoc(), operands[targetOperandIndices]...,
-                   extractParam(op, operands[paramOperandIndices + paramIndexOffset], rewriter)...);
+                   operands[paramOperandIndices + paramIndexOffset]...);
     } else {
       qc::CtrlOp::create(rewriter, op.getLoc(), operands.take_front(numControls), [&]() {
         QCOp::create(rewriter, op.getLoc(), operands[targetOperandIndices + targetIndexOffset]...,
-                     extractParam(op, operands[paramOperandIndices + paramIndexOffset], rewriter)...);
+                     operands[paramOperandIndices + paramIndexOffset]...);
       });
     }
 
@@ -272,8 +314,7 @@ private:
 /// ```
 /// becomes:
 /// ```mlir
-/// %c = qc.measure %q : !qc.qubit -> i1
-/// %measured = tensor.from_elements %c : tensor<i1>
+/// %measured = qc.measure %q : !qc.qubit -> i1
 /// ```
 struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -282,16 +323,11 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     auto qcQubit = adaptor.getMeasQ();
 
-    // Create qc.measure (in-place operation, returns only bit)
-    // Preserve register metadata for output recording
     auto qcMeasureOp = qc::MeasureOp::create(rewriter, op.getLoc(), qcQubit);
 
     auto measureBit = qcMeasureOp.getResult();
 
-    // Create tensor from the i1 result to match jasp.measure's return type
-    auto tensorResult = tensor::FromElementsOp::create(rewriter, op.getLoc(), op.getType(0), measureBit);
-
-    rewriter.replaceOpWithMultiple(op, {tensorResult.getResult(), ValueRange()});
+    rewriter.replaceOpWithMultiple(op, {measureBit, ValueRange()});
 
     return success();
   }
@@ -319,12 +355,31 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
   }
 };
 
-/// Pass implementation for jasp-to-QC conversion
-///
-/// This pass converts the Jasp dialect to the QC dialect. It handles the
-/// transformation of quantum state management from a functional-style
-/// (QuantumState passing) to a side-effecting model. It also lowers qubit
-/// array management to memref allocations and deallocations.
+/// Convert Rank-Zero Tensors to their wrapped types in `linalg.generic` operations.
+/// Only operands are affected.
+struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::GenericOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(linalg::GenericOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    SmallVector<AffineMap> newMaps = op.getIndexingMapsArray();
+    for (auto it : llvm::enumerate(op.getInputs())) {
+      if (isa<RankedTensorType>(it.value().getType()) &&
+          llvm::cast<RankedTensorType>(it.value().getType()).getRank() == 0) {
+        newMaps[it.index()] = rewriter.getMultiDimIdentityMap(0);
+      }
+    }
+
+    auto newOp = linalg::GenericOp::create(rewriter, op.getLoc(), op.getResultTypes(), adaptor.getInputs(),
+                                           adaptor.getOutputs(), newMaps, op.getIteratorTypesArray());
+
+    rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(), newOp.getRegion().begin());
+
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+
 struct JaspToQC final : impl::JaspToQCBase<JaspToQC> {
   using JaspToQCBase::JaspToQCBase;
 
@@ -335,36 +390,34 @@ protected:
 
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
-    JaspToQCTypeConverter typeConverter(context);
+    const JaspToQCTypeConverter typeConverter(context);
+    QuantumStateEliminator stateDestroyer(context);
 
     target.addIllegalDialect<JaspDialect>();
-    target.addLegalDialect<QCDialect, memref::MemRefDialect, tensor::TensorDialect, arith::ArithDialect>();
+    target.addLegalDialect<QCDialect, memref::MemRefDialect, arith::ArithDialect, func::FuncDialect,
+                           linalg::LinalgDialect>();
 
-    // Register operation conversion patterns
     patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspCreateQubitsOp,
-                 ConvertJaspGetQubitOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp, ConvertJaspDeleteQubitsOp>(
-        typeConverter, context);
+                 ConvertJaspGetQubitOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp, ConvertJaspDeleteQubitsOp,
+                 ConvertRankZeroTensorsInLinalg>(typeConverter, context);
 
-    // Conversion of jasp types in func.func signatures
-    // Note: This currently has limitations with signature changes
-    // TODO: Find solution that works for 1-to-0 conversion of jasp:QuantumStateType
-    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns, typeConverter);
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getFunctionType()) && typeConverter.isLegal(&op.getBody());
+      auto islegal = stateDestroyer.isSignatureLegal(op.getFunctionType());
+      return islegal;
     });
 
-    // Conversion of jasp types in func.return
-    populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::ReturnOp>([&](const func::ReturnOp op) { return typeConverter.isLegal(op); });
+    populateAnyFunctionOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
 
-    // Conversion of jasp types in func.call
-    populateCallOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::CallOp>([&](const func::CallOp op) { return typeConverter.isLegal(op); });
+    populateReturnOpTypeConversionPattern(patterns, stateDestroyer);
+    target.addDynamicallyLegalOp<func::ReturnOp>([&](const func::ReturnOp op) { return stateDestroyer.isLegal(op); });
 
-    // Conversion of jasp types in control-flow ops (e.g., cf.br, cf.cond_br)
-    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
+    populateCallOpTypeConversionPattern(patterns, stateDestroyer);
+    target.addDynamicallyLegalOp<func::CallOp>([&](const func::CallOp op) { return stateDestroyer.isLegal(op); });
 
-    // Apply the conversion
+    populateBranchOpInterfaceTypeConversionPattern(patterns, stateDestroyer);
+
+    scf::populateSCFStructuralTypeConversionsAndLegality(stateDestroyer, patterns, target);
+
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
     }

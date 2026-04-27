@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s --jasp-to-qc | FileCheck %s
+// RUN: qcc-opt %s -jasp-to-qc | FileCheck %s
 
 func.func @test() -> tensor<i1> {
     %state0 = jasp.create_quantum_kernel -> !jasp.QuantumState
@@ -25,9 +25,6 @@ func.func @test() -> tensor<i1> {
 
     %random_bit, %state3 = jasp.measure %qubit_reference, %state2 : !jasp.Qubit, !jasp.QuantumState -> tensor<i1>, !jasp.QuantumState
     // CHECK: [[random_bit:%.+]] = qc.measure [[qubit_reference]] : !qc.qubit
-    // qc.measure returns i1 values, which need to be converted to tensor<i1>
-    // to connect to the remaining code.
-    // CHECK: [[random_bit_tensor:%.+]] = tensor.from_elements [[random_bit]] : tensor<i1>
 
     %state4 = jasp.delete_qubits %qubit_array, %state3 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
     // CHECK: memref.dealloc [[qubit_array]] : memref<?x!qc.qubit>
@@ -36,8 +33,8 @@ func.func @test() -> tensor<i1> {
     // We do not lower the functionality of returning a success value
     // for the kernel execution. A constant value of 1 is returned,
     // assuming a successful execution.
-    // CHECK: [[success:%.+]] = arith.constant dense<true> : tensor<i1>
+    // CHECK: [[success:%.+]] = arith.constant true
 
     return %random_bit : tensor<i1>
-    // CHECK: return [[random_bit_tensor]] : tensor<i1>
+    // CHECK: return [[random_bit]] : i1
 }
