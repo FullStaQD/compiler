@@ -56,8 +56,9 @@ protected:
     op->walk([&](memref::AllocOp allocOp) {
       auto memrefType = dyn_cast<MemRefType>(allocOp.getType());
 
-      if (!memrefType || !isa<qc::QubitType>(memrefType.getElementType()))
+      if (!memrefType || !isa<qc::QubitType>(memrefType.getElementType())) {
         return;
+      }
 
       if (memrefType.isDynamicDim(0)) {
         allocOp->emitError("qubit array allocation size must be a compile-time constant; "
@@ -74,8 +75,9 @@ protected:
       }
     });
 
-    if (failed)
+    if (failed) {
       signalPassFailure();
+    }
   }
 };
 } // namespace

@@ -58,8 +58,10 @@ protected:
 
     // Helper: Identifies if a type is a MemRef containing Qubits.
     auto isQubitMemref = [](Type type) {
-      if (auto mType = dyn_cast<MemRefType>(type))
+      if (auto mType = dyn_cast<MemRefType>(type)) {
         return isa<qc::QubitType>(mType.getElementType());
+      }
+
       return false;
     };
 
@@ -67,8 +69,9 @@ protected:
     // We treat every 'alloc' as a request for N physical qubits.
     // We generate these qubits immediately and store them in our map.
     op->walk([&](memref::AllocOp allocOp) {
-      if (!isQubitMemref(allocOp.getType()))
+      if (!isQubitMemref(allocOp.getType())) {
         return;
+      }
 
       auto memrefType = cast<MemRefType>(allocOp.getType());
       if (memrefType.isDynamicDim(0)) {
@@ -88,15 +91,17 @@ protected:
       }
     });
 
-    if (failed)
+    if (failed) {
       return signalPassFailure();
+    }
 
     // --- Step 2: Resolve Loads to Static Values ---
     // We replace any 'load' operation with a direct reference to the physical qubit
     // created in Step 1. This effectively eliminates the need for the memref.
     op->walk([&](memref::LoadOp loadOp) {
-      if (!isa<qc::QubitType>(loadOp.getType()))
+      if (!isa<qc::QubitType>(loadOp.getType())) {
         return;
+      }
 
       Value baseMemref = loadOp.getMemRef();
       Value indexVal = loadOp.getIndices()[0];
@@ -132,8 +137,9 @@ protected:
       loadOp.erase(); // The load is now redundant.
     });
 
-    if (failed)
+    if (failed) {
       return signalPassFailure();
+    }
 
     // Note: memref.alloc and dealloc ops are typically cleaned up by
     // subsequent standard MLIR buffer-deallocation or Canonicalization passes.
