@@ -13,9 +13,9 @@ decision-makers:
 
 ## Context and Problem Statement
 
-As quantum computing systems become more complex and approach production use, there is a need for an industry-grade compiler infrastructure capable of meeting the highly demanding requirements of quantum program execution and control. Our goal is to build a quantum compiler infrastructure by leveraging an established classical compiler infrastructure.
+As quantum computing systems become more complex and approach production use, there is a need for an industry-grade compiler infrastructure capable of meeting the highly demanding requirements of quantum program execution and control. Our goal is to build a quantum compiler infrastructure by leveraging an established classical compiler infrastructure. In this ADR, we address the question of which classical compiler infrastructure we choose to build the quantum compiler infrastructure.
 
-The infrastructure should be open source to enable collaboration from the broader quantum software community and facilitate integration by hardware manufacturers into their compilation pipelines. It must also support integration into high-performance computing (HPC) environments, which are expected to be early execution platforms for hybrid quantum-classical workflows.
+The resulting quantum compiler infrastructure should be open source to enable collaboration from the broader quantum software community and facilitate integration by hardware manufacturers into their compilation pipelines. It must also support integration into high-performance computing (HPC) environments, which are expected to be early execution platforms for hybrid quantum-classical workflows.
 
 The architecture must be extensible across both front-end and back-end layers and support the requirements of fault-tolerant quantum computing systems, including low-latency control flow execution.
 
@@ -26,6 +26,7 @@ On the frontend, the compiler must be able to represent high-level quantum progr
 - Develop a custom end-to-end compiler infrastructure.
 - Use LLVM as backend and MLIR as the primary intermediate representation / front-end infrastructure.
 - Use LLVM as backend with a custom-designed front-end IR.
+- Use another stablished compiler backend like GCC.
 
 ## Decision Outcome and Justification
 
@@ -53,8 +54,8 @@ We considered a fully custom frontend, a path taken by projects like [HUGR](http
 
 Positive:
 
-- LLVM and MLIR provide a mature, actively maintained, and widely adopted compiler infrastructure suitable for HPC and heterogeneous execution environments.
-- MLIR enables modular design with domain-specific dialects, which is well aligned with quantum compilation requirements.
+- LLVM and MLIR provide a mature, actively maintained, and widely adopted compiler infrastructure that can be well integrated in HPC and heterogeneous execution environments.
+- MLIR enables modular design with domain-specific dialects that allows for the design of quantum IRs across all levels of the compilation pipeline.
 - Leveraging LLVM/MLIR reduces the need to develop and maintain a full compiler backend stack.
 
 Negative:
