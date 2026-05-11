@@ -1,10 +1,3 @@
-# SetupMLIR.cmake
-#
-# Copyright (c) 2026 FullStaQD Project
-# All rights reserved.
-#
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-
 if(DEFINED ENV{LLVM_EXTERNAL_LIT} AND NOT DEFINED LLVM_EXTERNAL_LIT)
   set(LLVM_EXTERNAL_LIT
       $ENV{LLVM_EXTERNAL_LIT}
