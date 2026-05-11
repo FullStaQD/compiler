@@ -1,10 +1,3 @@
-# CMakeLists.txt
-#
-# Copyright (c) 2026 FullStaQD Project
-# All rights reserved.
-#
-# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-
 set(LLVM_TARGET_DEFINITIONS JaspDialect.td)
 mlir_tablegen(JaspDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(JaspDialect.cpp.inc -gen-dialect-defs)

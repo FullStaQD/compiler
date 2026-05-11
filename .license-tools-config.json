@@ -15,5 +15,12 @@
     ".mlir": "SLASH_STYLE",
     ".td": "SLASH_STYLE"
   },
-  "exclude": ["^\\.[^/]+", "/\\.[^/]+", ".*\\.json", ".*\\.md", "(^|/)LICENSE$"]
+  "exclude": [
+    "^\\.[^/]+",
+    "/\\.[^/]+",
+    ".*\\.json",
+    ".*\\.md",
+    "CMakeLists.txt",
+    "(^|/)LICENSE$"
+  ]
 }
