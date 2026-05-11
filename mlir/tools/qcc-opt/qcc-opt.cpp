@@ -44,6 +44,7 @@ int main(int argc, char** argv) {
     mlir::cf::ControlFlowDialect,
     mlir::scf::SCFDialect,
     mlir::LLVM::LLVMDialect,
+    mlir::memref::MemRefDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
     qcc::aux::AuxDialect

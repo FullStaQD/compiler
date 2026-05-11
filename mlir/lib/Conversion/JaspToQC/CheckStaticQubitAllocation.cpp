@@ -45,37 +45,33 @@ struct CheckStaticQubitAllocation final : public impl::CheckStaticQubitAllocatio
   using CheckStaticQubitAllocationBase<CheckStaticQubitAllocation>::CheckStaticQubitAllocationBase;
 
 protected:
-  /**
-    Ensures qubit memory allocations use positive, compile-time constant sizes. This pass prevents dynamic qubit
-    scaling, which is unsupported by the target quantum backend.
-  */
   void runOnOperation() override {
     Operation* op = getOperation();
     bool failed = false;
 
-    op->walk([&](memref::AllocOp allocOp) {
+    WalkResult result = op->walk([&](memref::AllocOp allocOp) {
       auto memrefType = dyn_cast<MemRefType>(allocOp.getType());
 
       if (!memrefType || !isa<qc::QubitType>(memrefType.getElementType())) {
-        return;
+        return WalkResult::advance();
       }
 
       if (memrefType.isDynamicDim(0)) {
-        allocOp->emitError("qubit array allocation size must be a compile-time constant; "
-                           "dynamic qubit array sizes are not supported");
-        failed = true;
-        return;
+        allocOp.emitError("qubit array allocation size must be a compile-time constant; "
+                          "dynamic qubit array sizes are not supported");
+        return WalkResult::interrupt();
       }
 
-      int64_t size = memrefType.getDimSize(0);
+      auto size = memrefType.getDimSize(0);
       if (size <= 0) {
-        allocOp->emitError("qubit array size must be positive, got ") << size;
-        failed = true;
-        return;
+        allocOp.emitError("qubit array size must be positive, got ") << size;
+        return WalkResult::interrupt();
       }
+
+      return WalkResult::advance();
     });
 
-    if (failed) {
+    if (result.wasInterrupted()) {
       signalPassFailure();
     }
   }

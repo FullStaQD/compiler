@@ -43,6 +43,16 @@ namespace {
 struct StaticizeQubitRefs final : public impl::StaticizeQubitRefsBase<StaticizeQubitRefs> {
   using StaticizeQubitRefsBase<StaticizeQubitRefs>::StaticizeQubitRefsBase;
 
+private:
+  // Identifies if a type is a MemRef containing Qubits.
+  static auto isQubitMemref(Type type) {
+    if (auto mType = dyn_cast<MemRefType>(type)) {
+      return isa<qc::QubitType>(mType.getElementType());
+    }
+
+    return false;
+  };
+
 protected:
   void runOnOperation() override {
     Operation* op = getOperation();
@@ -56,28 +66,18 @@ protected:
     int64_t nextGlobalQubitIdx = 0;
     bool failed = false;
 
-    // Helper: Identifies if a type is a MemRef containing Qubits.
-    auto isQubitMemref = [](Type type) {
-      if (auto mType = dyn_cast<MemRefType>(type)) {
-        return isa<qc::QubitType>(mType.getElementType());
-      }
-
-      return false;
-    };
-
     // --- Step 1: Lower Allocations to Static Hardware Qubits ---
     // We treat every 'alloc' as a request for N physical qubits.
     // We generate these qubits immediately and store them in our map.
-    op->walk([&](memref::AllocOp allocOp) {
+    WalkResult result = op->walk([&](memref::AllocOp allocOp) {
       if (!isQubitMemref(allocOp.getType())) {
-        return;
+        return WalkResult::advance();
       }
 
       auto memrefType = cast<MemRefType>(allocOp.getType());
       if (memrefType.isDynamicDim(0)) {
         allocOp->emitError("found dynamic qubit allocation; expected static size from previous pass");
-        failed = true;
-        return;
+        return WalkResult::interrupt();
       }
 
       int64_t size = memrefType.getDimSize(0);
@@ -89,18 +89,20 @@ protected:
                                                 nextGlobalQubitIdx++);
         qubitMap[{allocOp.getResult(), i}] = staticQubit.getResult();
       }
+
+      return WalkResult::advance();
     });
 
-    if (failed) {
-      return signalPassFailure();
+    if (result.wasInterrupted()) {
+      signalPassFailure();
     }
 
     // --- Step 2: Resolve Loads to Static Values ---
     // We replace any 'load' operation with a direct reference to the physical qubit
     // created in Step 1. This effectively eliminates the need for the memref.
-    op->walk([&](memref::LoadOp loadOp) {
+    WalkResult secondResult = op->walk([&](memref::LoadOp loadOp) {
       if (!isa<qc::QubitType>(loadOp.getType())) {
-        return;
+        return WalkResult::advance();
       }
 
       Value baseMemref = loadOp.getMemRef();
@@ -111,8 +113,7 @@ protected:
       auto constantIdx = getConstantIntValue(indexVal);
       if (!constantIdx) {
         loadOp->emitError("qubit index must be a constant; unroll loops before this pass");
-        failed = true;
-        return;
+        return WalkResult::interrupt();
       }
 
       int64_t idx = *constantIdx;
@@ -120,29 +121,26 @@ protected:
 
       if (idx < 0 || idx >= memrefType.getDimSize(0)) {
         loadOp->emitError("qubit index out of bounds");
-        failed = true;
-        return;
+        return WalkResult::interrupt();
       }
 
       // Retrieve the pre-allocated physical qubit from our map.
       auto it = qubitMap.find({baseMemref, idx});
       if (it == qubitMap.end()) {
         loadOp->emitError("internal error: static qubit not found for this allocation");
-        failed = true;
-        return;
+        return WalkResult::interrupt();
       }
 
       // Replace all uses of the 'loaded' qubit with the 'static' hardware qubit.
       loadOp.getResult().replaceAllUsesWith(it->second);
       loadOp.erase(); // The load is now redundant.
+
+      return WalkResult::advance();
     });
 
-    if (failed) {
-      return signalPassFailure();
+    if (secondResult.wasInterrupted()) {
+      signalPassFailure();
     }
-
-    // Note: memref.alloc and dealloc ops are typically cleaned up by
-    // subsequent standard MLIR buffer-deallocation or Canonicalization passes.
   }
 };
 } // namespace
