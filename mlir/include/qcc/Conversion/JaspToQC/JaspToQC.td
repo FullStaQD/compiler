@@ -14,9 +14,9 @@ def CheckStaticQubitAllocation : Pass<"check-static-qubit-allocation"> {
 }
 
 def StaticizeQubitRefs : Pass<"staticize-qubit-refs"> {
-  let summary = "Replace d ynamic qubit array loads with static qubit references.";
+  let summary = "Replace dynamic qubit array loads with static qubits.";
                     let description = [{
-      Transforms memref.load on qubit arrays into direct qc.static references.
+      Transforms `memref.load` on qubit arrays into direct `qc.static` references.
       Requires compile-time constant indices (typically from loop unrolling).
    }];
   let dependentDialects = [

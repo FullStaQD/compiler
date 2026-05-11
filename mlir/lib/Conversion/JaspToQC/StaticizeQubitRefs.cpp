@@ -23,11 +23,11 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
-#include "llvm/ADT/DenseMap.h" // DenseMap
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
 
 #include <cassert>
-#include <utility> // std::pair
+#include <utility>
 
 namespace qcc {
 
