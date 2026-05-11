@@ -1,3 +1,10 @@
+// ToQIR.td
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 include "mlir/Pass/PassBase.td"
 
 def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {

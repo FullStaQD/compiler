@@ -1,4 +1,10 @@
 # -*- Python -*-
+# lit.cfg.py
+#
+# Copyright (c) 2026 FullStaQD Project
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 import sys
 from pathlib import Path

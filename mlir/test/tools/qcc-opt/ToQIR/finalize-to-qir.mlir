@@ -1,3 +1,10 @@
+// finalize-to-qir.mlir
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 // RUN: qcc-opt %s -finalize-to-qir | FileCheck %s
 
 func.func @main() -> i64 attributes { qcc.entry_point, passthrough = [ "some_attr" ] } {

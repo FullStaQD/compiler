@@ -1,3 +1,10 @@
+// mqt-core-integration-test.mlir
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 // RUN: qcc-opt %s | FileCheck %s
 module {
   func.func @main() -> i64 attributes {passthrough = ["entry_point"]} {

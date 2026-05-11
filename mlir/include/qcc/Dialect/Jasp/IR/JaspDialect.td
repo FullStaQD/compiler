@@ -1,3 +1,10 @@
+// JaspDialect.td
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #ifndef INCLUDE_QCC_DIALECT_JASP_IR_JASPDIALECT_TD_
 #define INCLUDE_QCC_DIALECT_JASP_IR_JASPDIALECT_TD_
 

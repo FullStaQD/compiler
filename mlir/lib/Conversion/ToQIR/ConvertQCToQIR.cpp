@@ -1,3 +1,10 @@
+// ConvertQCToQIR.cpp
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #include "qcc/Conversion/ToQIR/Constants.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"

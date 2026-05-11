@@ -1,3 +1,10 @@
+// Jasp.h
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #pragma once
 
 #include <mlir/IR/BuiltinOps.h>

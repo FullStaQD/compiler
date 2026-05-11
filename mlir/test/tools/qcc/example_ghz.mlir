@@ -1,3 +1,10 @@
+// example_ghz.mlir
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 // RUN: qcc -o - %s | FileCheck %s
 
 /// Prepare GHZ state (without loop so far).

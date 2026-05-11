@@ -1,3 +1,10 @@
+# CMakeLists.txt
+#
+# Copyright (c) 2026 FullStaQD Project
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 cmake_minimum_required(VERSION 3.24...4.2)
 
 project(

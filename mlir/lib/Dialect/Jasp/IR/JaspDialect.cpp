@@ -1,3 +1,10 @@
+// JaspDialect.cpp
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include <llvm/ADT/TypeSwitch.h>

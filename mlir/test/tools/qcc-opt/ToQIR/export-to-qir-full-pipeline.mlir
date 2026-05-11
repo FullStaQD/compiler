@@ -1,3 +1,10 @@
+// export-to-qir-full-pipeline.mlir
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 // RUN: qcc-opt %s -pass-pipeline="builtin.module(prep-to-qir,func.func(convert-arith-to-llvm,convert-qc-to-qir),convert-cf-to-llvm,finalize-to-qir)" | mlir-translate -mlir-to-llvmir | FileCheck %s
 
 func.func @simple_quantum_with_branching() -> i64 attributes { qcc.entry_point } {

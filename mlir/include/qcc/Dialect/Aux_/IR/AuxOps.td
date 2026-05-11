@@ -1,3 +1,10 @@
+// AuxOps.td
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 #ifndef INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_
 #define INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_
 

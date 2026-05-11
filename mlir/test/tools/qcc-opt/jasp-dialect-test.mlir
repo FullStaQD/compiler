@@ -1,3 +1,10 @@
+// jasp-dialect-test.mlir
+//
+// Copyright (c) 2026 FullStaQD Project
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 // RUN: qcc-opt %s | FileCheck %s
 
 func.func @test() -> tensor<i1> {
