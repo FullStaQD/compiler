@@ -5,3 +5,4 @@
 /.vscode
 /*.code-workspace
 /.devcontainer/custom
+/.devcontainer/local
