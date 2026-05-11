@@ -26,7 +26,7 @@ On the frontend, the compiler must be able to represent high-level quantum progr
 - Develop a custom end-to-end compiler infrastructure.
 - Use LLVM as backend and MLIR as the primary intermediate representation / front-end infrastructure.
 - Use LLVM as backend with a custom-designed front-end IR.
-- Use another stablished compiler backend like GCC.
+- Use another established compiler backend like GCC.
 
 ## Decision Outcome and Justification
 
