@@ -27,18 +27,20 @@ The tool that is generated is called `qcc-opt`.
 
 ### Option 1: Dev Container (Recommended)
 
-The easiest way to get started is via the provided devcontainer, which automatically installs all dependencies including LLVM/MLIR.
+The easiest way to get started is via the provided [devcontainer](https://containers.dev), which automatically installs all dependencies including LLVM/MLIR.
+This requires [docker](https://www.docker.com/) to be installed on the host.
+Various IDEs support support the standard, e.g.:
 
-**Requirements:** [Docker](https://www.docker.com/) and the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) VSCode extension.
+- vscode: via [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension.
+- jetbrains IDEs: See e.g. [here](https://www.jetbrains.com/help/idea/connect-to-devcontainer.html).
 
-1. Open the project in VSCode
-2. When prompted, click **"Reopen in Container"** — or use `Cmd+Shift+P` → `Dev Containers: Reopen in Container`
-3. Wait for the container to build and install dependencies (first time only)
-4. Run the build commands below
+There is also a [dev container cli](https://github.com/devcontainers/cli) which can be used alongside IDE integrations.
 
-For advanced users: Note that the devcontainer allows for a custom mount.
-Use it for whatever you want.
-You could for example put a checkout of LLVM in there, build it, and link against it.
+For advanced users:
+
+- The devcontainer allows for a custom mount. Use it for whatever you want.
+- If this is insufficient put your own local `devcontainer.json` under `.devcontainer/local/` (gitignored).
+  IDEs and the cli should provide you with a way to choose which config you want to use.
 
 ### Option 2: Manual Setup
 
