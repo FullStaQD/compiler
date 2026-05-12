@@ -225,16 +225,16 @@ Software.
 Third-party software used by the FullStaQD Project:
 ==============================================================================
 The FullStaQD Project is based on the LLVM Project. Software from the LLVM
-Project is typically licensed under the Apache License v2.0 with LLVM 
-Exceptions. 
+Project is typically licensed under the Apache License v2.0 with LLVM
+Exceptions.
 
 For more information on LLVM's licensing, see:
 https://llvm.org/docs/DeveloperPolicy.html#new-llvm-project-license-framework
 
-Other third-party software will be identified clearly using at least one of 
+Other third-party software will be identified clearly using at least one of
 two mechanisms:
 1) It will be in a separate directory tree with its own LICENSE.txt file.
-2) It will contain specific license and restriction terms at the top of 
+2) It will contain specific license and restriction terms at the top of
    the file.
 
 ==============================================================================
