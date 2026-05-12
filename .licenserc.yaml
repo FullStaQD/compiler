@@ -17,7 +17,6 @@ header:
     - "**/*.cpp"
     - "**/*.h"
     - "**/*.hpp"
-    - "**/*.mlir"
     - "**/*.py"
     - "**/*.td"
 
@@ -29,7 +28,6 @@ header:
         - ".cpp"
         - ".h"
         - ".hpp"
-        - ".mlir"
         - ".td"
       comment_style_id: DoubleSlash
     Python:
