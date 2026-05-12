@@ -52,20 +52,13 @@ repos:
       - id: typos
         priority: 3
 
-  ## Check license headers
-  - repo: https://github.com/emzeat/mz-lictools
-    rev: v2.9.0
-    hooks:
-      - id: license-tools
-        priority: 4
-
   ## Format C++ files with clang-format
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v22.1.3
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
-        priority: 5
+        priority: 4
 
   ## Format CMake files with cmake-format
   - repo: https://github.com/cheshirekow/cmake-format-precommit
@@ -75,7 +68,7 @@ repos:
         additional_dependencies: [pyyaml]
         types: [file]
         files: (\.cmake|CMakeLists.txt)(.in)?$
-        priority: 5
+        priority: 4
 
   ## Format configuration files with prettier
   - repo: https://github.com/rbubley/mirrors-prettier
@@ -83,4 +76,4 @@ repos:
     hooks:
       - id: prettier
         types_or: [css, html, markdown, json, json5, scss, yaml]
-        priority: 5
+        priority: 4
