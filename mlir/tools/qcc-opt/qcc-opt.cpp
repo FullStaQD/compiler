@@ -11,6 +11,7 @@
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
+#include "qcc/Dialect/PrelimHLEP/IR/PrelimHLEP.h"
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/Passes.h"
@@ -55,7 +56,8 @@ int main(int argc, char** argv) {
     mlir::LLVM::LLVMDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
-    qcc::aux::AuxDialect
+    qcc::aux::AuxDialect,
+    qcc::prelimhlep::PrelimHLEPDialect
       // clang-format on
       >();
 

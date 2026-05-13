@@ -1,0 +1,13 @@
+add_mlir_dialect_library(
+  QCCPrelimHLEPDialect
+  PrelimHLEPDialect.cpp
+  DEPENDS
+  QCCPrelimHLEPDialectIncGen
+  QCCPrelimHLEPTypesIncGen
+  QCCPrelimHLEPOpsIncGen
+  LINK_LIBS
+  PRIVATE
+  MLIRIR
+  MLIRSupport
+  MLIRInferTypeOpInterface
+  MLIRSideEffectInterfaces)
