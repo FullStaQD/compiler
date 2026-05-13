@@ -104,3 +104,18 @@ cmake --build build/dev --target test-qcc-project
 ```
 
 If everything works correctly, it should print a 100% success rate.
+
+---
+
+## License headers
+
+The license headers in this repository are managed using the [`license-eye`](https://github.com/apache/skywalking-eyes) tool.
+After installation, the tool can be invoked using the following command:
+
+```shell
+license-eye header fix
+```
+
+The license headers are checked by a GitHub Actions workflow.
+If the workflow fails in a PR, run the command above.
+Alternatively, it is of course possible to copy the license header from another file.

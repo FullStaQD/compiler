@@ -1,0 +1,36 @@
+header:
+  license:
+    spdx-id: Apache-2.0 WITH LLVM-exception
+    copyright-owner: FullStaQD Project
+    copyright-year: "2026"
+    content: |
+      ===----------------------------------------------------------------------===//
+
+      Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
+      Exceptions.
+      See <repo-root>/LICENSE.txt for license information.
+      SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+      ===----------------------------------------------------------------------===//
+
+  paths:
+    - "**/*.cpp"
+    - "**/*.h"
+    - "**/*.hpp"
+    - "**/*.py"
+    - "**/*.td"
+
+  comment: on-failure
+
+  language:
+    C++:
+      extensions:
+        - ".cpp"
+        - ".h"
+        - ".hpp"
+        - ".td"
+      comment_style_id: DoubleSlash
+    Python:
+      extensions:
+        - ".py"
+      comment_style_id: Hash
