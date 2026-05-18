@@ -31,7 +31,7 @@
 
 namespace qcc {
 
-#define GEN_PASS_DEF_STATICIZEQUBITREFS
+#define GEN_PASS_DEF_CONVERTMEMREFTOSTATICQUBITS
 #include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
 
 using namespace jasp;
@@ -40,18 +40,15 @@ using namespace mlir::qc;
 
 namespace {
 
-struct StaticizeQubitRefs final : public impl::StaticizeQubitRefsBase<StaticizeQubitRefs> {
-  using StaticizeQubitRefsBase<StaticizeQubitRefs>::StaticizeQubitRefsBase;
+struct ConvertMemrefToStaticQubits final : public impl::ConvertMemrefToStaticQubitsBase<ConvertMemrefToStaticQubits> {
+  using ConvertMemrefToStaticQubitsBase<ConvertMemrefToStaticQubits>::ConvertMemrefToStaticQubitsBase;
 
 private:
   // Identifies if a type is a MemRef containing Qubits.
-  static auto isQubitMemref(Type type) {
-    if (auto mType = dyn_cast<MemRefType>(type)) {
-      return isa<qc::QubitType>(mType.getElementType());
-    }
-
-    return false;
-  };
+  static bool isQubitMemref(Type type) {
+    auto mType = dyn_cast<MemRefType>(type);
+    return mType && isa<qc::QubitType>(mType.getElementType());
+  }
 
 protected:
   void runOnOperation() override {
@@ -64,7 +61,6 @@ protected:
 
     // A global counter to ensure every physical qubit in the circuit gets a unique hardware ID.
     int64_t nextGlobalQubitIdx = 0;
-    bool failed = false;
 
     // --- Step 1: Lower Allocations to Static Hardware Qubits ---
     // We treat every 'alloc' as a request for N physical qubits.
@@ -133,13 +129,13 @@ protected:
 
       // Replace all uses of the 'loaded' qubit with the 'static' hardware qubit.
       loadOp.getResult().replaceAllUsesWith(it->second);
-      loadOp.erase(); // The load is now redundant.
+      // loadOp.erase();
 
       return WalkResult::advance();
     });
 
     if (secondResult.wasInterrupted()) {
-      signalPassFailure();
+      return signalPassFailure();
     }
   }
 };

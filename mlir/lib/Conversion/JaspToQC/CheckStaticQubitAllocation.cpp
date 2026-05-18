@@ -1,4 +1,3 @@
-
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
@@ -47,8 +46,6 @@ struct CheckStaticQubitAllocation final : public impl::CheckStaticQubitAllocatio
 protected:
   void runOnOperation() override {
     Operation* op = getOperation();
-    bool failed = false;
-
     WalkResult result = op->walk([&](memref::AllocOp allocOp) {
       auto memrefType = dyn_cast<MemRefType>(allocOp.getType());
 
@@ -72,7 +69,7 @@ protected:
     });
 
     if (result.wasInterrupted()) {
-      signalPassFailure();
+      return signalPassFailure();
     }
   }
 };

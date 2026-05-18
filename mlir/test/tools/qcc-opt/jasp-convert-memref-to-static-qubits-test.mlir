@@ -1,10 +1,10 @@
-// RUN: qcc-opt %s --staticize-qubit-refs | FileCheck %s
+// RUN: qcc-opt %s --convert-memref-to-static-qubits | FileCheck %s
 
 // Test that the constant size `memref.alloc` are successfully converted to `qc.static` calls.
 // `memref.load` are substituted with direct accesses to the `qc.static` results.
 // The input is the result of a Canonicalization step which has successfully passed the `--check-static-qubit-allocation` test
 // After this stage, the IR is still in a intermediate step. It needs to be standardized using a Canonicalize step that remove all the `memref` dialect occurrences.
-func.func public @main() attributes {qcc.entry_point} {
+func.func public @test(){
     %c2 = arith.constant 2 : index
     %c1 = arith.constant 1 : index
     %c0 = arith.constant 0 : index
@@ -29,8 +29,7 @@ func.func public @main() attributes {qcc.entry_point} {
   }
 
 // CHECK: module {
-// CHECK-LABEL:   func.func public @main()
-// CHECK-SAME:                             attributes {qcc.entry_point} {
+// CHECK-LABEL:   func.func public @test() {
 // CHECK:     %[[C2:.*]] = arith.constant 2 : index
 // CHECK:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK:     %[[C0:.*]] = arith.constant 0 : index
@@ -38,10 +37,13 @@ func.func public @main() attributes {qcc.entry_point} {
 // CHECK:     %[[Q1:.*]] = qc.static 1 : !qc.qubit
 // CHECK:     %[[Q2:.*]] = qc.static 2 : !qc.qubit
 // CHECK:     %[[ALLOC:.*]] = memref.alloc() : memref<3x!qc.qubit>
+// CHECK:     %{{.*}} = memref.load %[[ALLOC]][%[[C0]]] : memref<3x!qc.qubit>
 // CHECK:     qc.h %[[Q0]] : !qc.qubit
+// CHECK:     %{{.*}} = memref.load %[[ALLOC]][%[[C1]]] : memref<3x!qc.qubit>
 // CHECK:     qc.ctrl(%[[Q0]]) {
 // CHECK:       qc.x %[[Q1]] : !qc.qubit
 // CHECK:     } : !qc.qubit
+// CHECK:     %{{.*}} = memref.load %[[ALLOC]][%[[C2]]] : memref<3x!qc.qubit>
 // CHECK:     qc.ctrl(%[[Q1]]) {
 // CHECK:       qc.x %[[Q2]] : !qc.qubit
 // CHECK:     } : !qc.qubit

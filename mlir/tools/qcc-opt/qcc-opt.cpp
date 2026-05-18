@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
   // Our passes
   qcc::registerJaspToQC();
   qcc::registerCheckStaticQubitAllocation();
-  qcc::registerStaticizeQubitRefs();
+  qcc::registerConvertMemrefToStaticQubits();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();

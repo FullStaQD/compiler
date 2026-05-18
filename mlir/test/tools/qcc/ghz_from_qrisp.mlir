@@ -25,6 +25,14 @@
 //                  END
 // #####################################
 
+// The snippet of python code will produce most of the `mlir` code you find pasted below here
+// The steps you need to do to go from the python output to the mlir you find here are the following.
+// - Replace all the stablehlo occurrences with arith. I simply did a find + replace
+// - Add the `tensor.extract` operations to obtain plain values from the measurements resulting tensors.
+// - Add the `aux.record_bool` instructions
+// - Add the ` attributes { qcc.entry_point } ` annotation in the function header
+
+
   func.func public @main(%arg14: !jasp.QuantumState) attributes { qcc.entry_point } {
     %0 = "arith.constant"() <{value = dense<3> : tensor<i64>}> : () -> tensor<i64>
     %1, %2 = "jasp.create_qubits"(%0, %arg14) : (tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState)
