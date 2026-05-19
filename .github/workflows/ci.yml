@@ -17,7 +17,7 @@ permissions:
 jobs:
   change-detection:
     name: 🔍 Change
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-change-detection.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-change-detection.yml@1ab3de9c2ed635f0944a3eaf3333cd3b4fcb3174 # v1.18.0
 
   cpp-tests-ubuntu:
     name: 🇨‌ Test 🐧
@@ -28,18 +28,19 @@ jobs:
       matrix:
         runs-on: [ubuntu-24.04, ubuntu-24.04-arm]
         compiler: [gcc]
-        config: [Release]
+        preset: [release]
         include:
           - runs-on: ubuntu-24.04
             compiler: gcc
-            config: Debug
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-ubuntu.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+            preset: debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-ubuntu.yml@1ab3de9c2ed635f0944a3eaf3333cd3b4fcb3174 # v1.18.0
     with:
       runs-on: ${{ matrix.runs-on }}
       compiler: ${{ matrix.compiler }}
-      config: ${{ matrix.config }}
       setup-mlir: true
       llvm-version: 22.1.0
+      use-cmake-presets: true
+      preset-name: ${{ matrix.preset }}
 
   cpp-tests-macos:
     name: 🇨‌ Test 🍎
@@ -50,19 +51,19 @@ jobs:
       matrix:
         runs-on: [macos-26, macos-26-intel]
         compiler: [clang]
-        config: [Release]
+        preset: [release]
         include:
           - runs-on: macos-26
             compiler: clang
-            config: Debug
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-macos.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+            preset: debug
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-macos.yml@1ab3de9c2ed635f0944a3eaf3333cd3b4fcb3174 # v1.18.0
     with:
       runs-on: ${{ matrix.runs-on }}
       compiler: ${{ matrix.compiler }}
-      config: ${{ matrix.config }}
-      cmake-args: -DMQT_CORE_WITH_GMP=ON
       setup-mlir: true
       llvm-version: 22.1.0
+      use-cmake-presets: true
+      preset-name: ${{ matrix.preset }}
 
   cpp-tests-windows:
     name: 🇨‌ Test 🏁
@@ -73,25 +74,26 @@ jobs:
       matrix:
         runs-on: [windows-2025, windows-11-arm]
         compiler: [msvc]
-        config: [Release]
+        preset: [release-windows]
         include:
           - runs-on: windows-2025
             compiler: msvc
-            config: Debug
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-windows.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+            preset: debug-windows
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-windows.yml@1ab3de9c2ed635f0944a3eaf3333cd3b4fcb3174 # v1.18.0
     with:
       runs-on: ${{ matrix.runs-on }}
       compiler: ${{ matrix.compiler }}
-      config: ${{ matrix.config }}
       setup-mlir: true
       llvm-version: 22.1.0
+      use-cmake-presets: true
+      preset-name: ${{ matrix.preset }}
 
   # This job runs clang-tidy and posts the results as a PR comment
   cpp-linter:
     name: 🇨‌ Lint
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-linter.yml@456e00166299c5e98dbdbc32881651c9611db9f7 # v1.18.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-linter.yml@1ab3de9c2ed635f0944a3eaf3333cd3b4fcb3174 # v1.18.0
     with:
       clang-version: 22
       build-project: true
@@ -99,6 +101,7 @@ jobs:
       cpp-linter-extra-args: "-std=c++20"
       setup-mlir: true
       llvm-version: 22.1.0
+      use-cmake-presets: true
     permissions:
       contents: read # Needed to fetch code
       pull-requests: write # Needed to post PR comments
@@ -122,10 +125,6 @@ jobs:
             ${{
               fromJSON(needs.change-detection.outputs.run-cpp-tests)
               && '' || 'cpp-tests-ubuntu,cpp-tests-macos,cpp-tests-windows,'
-            }}
-            ${{
-              fromJSON(needs.change-detection.outputs.run-cpp-tests)
-              && '' || 'cpp-coverage,'
             }}
             ${{
               fromJSON(needs.change-detection.outputs.run-cpp-linter)
