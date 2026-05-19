@@ -101,6 +101,16 @@
       "configuration": "Release"
     },
     {
+      "name": "debug-windows",
+      "configurePreset": "debug-windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release-windows",
+      "configurePreset": "release-windows",
+      "configuration": "Release"
+    },
+    {
       "name": "lint",
       "configurePreset": "lint",
       "configuration": "Debug"
