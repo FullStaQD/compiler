@@ -6,8 +6,8 @@
       "hidden": true,
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "MLIR_DIR": "$env(MLIR_DIR)",
-        "LLVM_EXTERNAL_LIT": "$env(LIT_BIN)"
+        "MLIR_DIR": "$env{MLIR_DIR}",
+        "LLVM_EXTERNAL_LIT": "$env{LIT_BIN}"
       }
     },
     {
@@ -79,7 +79,7 @@
     {
       "name": "lint",
       "inherits": "base-ninja",
-      "displayName": "Lint config",
+      "displayName": "lint config",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
