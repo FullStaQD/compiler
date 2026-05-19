@@ -1,8 +1,6 @@
 // RUN: qcc-opt %s --convert-memref-to-static-qubits | FileCheck %s
 
 // Test that the constant size `memref.alloc` are successfully converted to `qc.static` calls.
-// `memref.load` are substituted with direct accesses to the `qc.static` results.
-// The input is the result of a Canonicalization step which has successfully passed the `--check-static-qubit-allocation` test
 // After this stage, the IR is still in a intermediate step. It needs to be standardized using a Canonicalize step that remove all the `memref` dialect occurrences.
 func.func public @test(){
     %c2 = arith.constant 2 : index
@@ -22,9 +20,6 @@ func.func public @test(){
     %3 = qc.measure %0 : !qc.qubit -> i1
     %4 = qc.measure %1 : !qc.qubit -> i1
     %5 = qc.measure %2 : !qc.qubit -> i1
-    aux.record_bool %3
-    aux.record_bool %4
-    aux.record_bool %5
     return
   }
 
@@ -50,9 +45,6 @@ func.func public @test(){
 // CHECK:     %[[M0:.*]] = qc.measure %[[Q0]] : !qc.qubit -> i1
 // CHECK:     %[[M1:.*]] = qc.measure %[[Q1]] : !qc.qubit -> i1
 // CHECK:     %[[M2:.*]] = qc.measure %[[Q2]] : !qc.qubit -> i1
-// CHECK:     aux.record_bool %[[M0]]
-// CHECK:     aux.record_bool %[[M1]]
-// CHECK:     aux.record_bool %[[M2]]
 // CHECK:     return
 // CHECK:   }
 // CHECK: }

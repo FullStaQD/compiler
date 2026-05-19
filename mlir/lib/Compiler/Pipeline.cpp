@@ -29,7 +29,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   // dynamic to static allocation translation
   pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(qcc::createCheckStaticQubitAllocation());
+  pm.addPass(qcc::createJaspCheckStaticQubitAllocation());
   pm.addPass(qcc::createConvertMemrefToStaticQubits());
 
   // cleanup

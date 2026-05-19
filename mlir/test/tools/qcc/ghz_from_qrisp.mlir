@@ -25,6 +25,7 @@
 //                  END
 // #####################################
 
+// #TODO: remove all this manual transformations
 // The snippet of python code will produce most of the `mlir` code you find pasted below here
 // The steps you need to do to go from the python output to the mlir you find here are the following.
 // - Replace all the stablehlo occurrences with arith. I simply did a find + replace

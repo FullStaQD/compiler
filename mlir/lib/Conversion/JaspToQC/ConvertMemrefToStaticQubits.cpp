@@ -8,33 +8,17 @@
 // ===----------------------------------------------------------------------===//
 
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
-#include "qcc/Dialect/Jasp/IR/Jasp.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
-#include "mlir/Dialect/SCF/Transforms/Patterns.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Casting.h"
 
-#include <cassert>
 #include <utility>
 
 namespace qcc {
@@ -42,7 +26,6 @@ namespace qcc {
 #define GEN_PASS_DEF_CONVERTMEMREFTOSTATICQUBITS
 #include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
 
-using namespace jasp;
 using namespace mlir;
 using namespace mlir::qc;
 
@@ -52,7 +35,7 @@ struct ConvertMemrefToStaticQubits final : public impl::ConvertMemrefToStaticQub
   using ConvertMemrefToStaticQubitsBase<ConvertMemrefToStaticQubits>::ConvertMemrefToStaticQubitsBase;
 
 private:
-  // Identifies if a type is a MemRef containing Qubits.
+  /// Identifies if a type is a MemRef containing Qubits.
   static bool isQubitMemref(Type type) {
     auto mType = dyn_cast<MemRefType>(type);
     return mType && isa<qc::QubitType>(mType.getElementType());

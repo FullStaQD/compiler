@@ -8,49 +8,24 @@
 // ===----------------------------------------------------------------------===//
 
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
-#include "qcc/Dialect/Jasp/IR/Jasp.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
-#include "mlir/Dialect/QC/IR/QCOps.h"
-#include "mlir/Dialect/SCF/Transforms/Patterns.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Types.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/DialectConversion.h"
-
-#include "llvm/Support/Casting.h"
-
-#include <cassert>
-#include <cstddef>
-#include <optional>
-#include <utility>
 
 namespace qcc {
 
-#define GEN_PASS_DEF_CHECKSTATICQUBITALLOCATION
+#define GEN_PASS_DEF_JASPCHECKSTATICQUBITALLOCATION
 #include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
 
-using namespace jasp;
 using namespace mlir;
 using namespace mlir::qc;
 
 namespace {
 
-struct CheckStaticQubitAllocation final : public impl::CheckStaticQubitAllocationBase<CheckStaticQubitAllocation> {
-  using CheckStaticQubitAllocationBase<CheckStaticQubitAllocation>::CheckStaticQubitAllocationBase;
+struct JaspCheckStaticQubitAllocation final
+    : public impl::JaspCheckStaticQubitAllocationBase<JaspCheckStaticQubitAllocation> {
+  using JaspCheckStaticQubitAllocationBase<JaspCheckStaticQubitAllocation>::JaspCheckStaticQubitAllocationBase;
 
 protected:
   void runOnOperation() override {
