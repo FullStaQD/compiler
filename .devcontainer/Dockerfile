@@ -17,10 +17,6 @@ RUN uv tool install cmake && \
   uv tool install lit && \
   uv tool install prek
 
-ENV LIT_BIN=/usr/local/bin/lit
-
 # Downloads and installs a prebuilt LLVM/MLIR toolchain for the current OS and architecture. Uses `zstd`.
 RUN curl -LsSf https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.sh \
   | bash -s -- -v 22.1.0 -p /opt/llvm
-
-ENV MLIR_DIR=/opt/llvm/lib/cmake/mlir
