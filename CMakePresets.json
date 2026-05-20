@@ -19,7 +19,7 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       },
-      "description": "Default configuration for non-Windows builds. Uses the Ninja generator",
+      "description": "Default configuration for linux and macos builds.",
       "generator": "Ninja"
     },
     {
@@ -31,7 +31,7 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       },
-      "description": "Default configuration for Windows builds. Uses the default generator"
+      "description": "Default configuration for Windows builds."
     },
     {
       "name": "dev",
