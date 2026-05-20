@@ -11,15 +11,15 @@
       }
     },
     {
-      "name": "base-ninja",
+      "name": "base-unix",
       "hidden": true,
       "inherits": "base",
       "condition": {
-        "type": "notEquals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Windows"
+        "type": "inList",
+        "string": "${hostSystemName}",
+        "list": ["Linux", "Darwin"]
       },
-      "description": "Default configuration for linux and macos builds.",
+      "description": "Default configuration for Linux and macOS builds",
       "generator": "Ninja"
     },
     {
@@ -31,11 +31,11 @@
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
       },
-      "description": "Default configuration for Windows builds."
+      "description": "Default configuration for Windows builds"
     },
     {
       "name": "dev",
-      "inherits": "base-ninja",
+      "inherits": "base-unix",
       "displayName": "dev config",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
@@ -44,7 +44,7 @@
     },
     {
       "name": "debug",
-      "inherits": "base-ninja",
+      "inherits": "base-unix",
       "displayName": "debug config",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -53,10 +53,18 @@
     },
     {
       "name": "release",
-      "inherits": "base-ninja",
+      "inherits": "base-unix",
       "displayName": "release config",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "lint",
+      "inherits": "base-unix",
+      "displayName": "lint config",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
@@ -75,14 +83,6 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
-    },
-    {
-      "name": "lint",
-      "inherits": "base-ninja",
-      "displayName": "lint config",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
     }
   ],
   "buildPresets": [
@@ -92,13 +92,15 @@
     },
     {
       "name": "debug",
-      "configurePreset": "debug",
-      "configuration": "Debug"
+      "configurePreset": "debug"
     },
     {
       "name": "release",
-      "configurePreset": "release",
-      "configuration": "Release"
+      "configurePreset": "release"
+    },
+    {
+      "name": "lint",
+      "configurePreset": "lint"
     },
     {
       "name": "debug-windows",
@@ -109,11 +111,6 @@
       "name": "release-windows",
       "configurePreset": "release-windows",
       "configuration": "Release"
-    },
-    {
-      "name": "lint",
-      "configurePreset": "lint",
-      "configuration": "Debug"
     }
   ],
   "testPresets": [
@@ -128,14 +125,12 @@
     {
       "name": "debug",
       "inherits": "base",
-      "configurePreset": "debug",
-      "configuration": "Debug"
+      "configurePreset": "debug"
     },
     {
       "name": "release",
       "inherits": "base",
-      "configurePreset": "release",
-      "configuration": "Release"
+      "configurePreset": "release"
     },
     {
       "name": "debug-windows",
