@@ -20,6 +20,8 @@ def JaspCheckStaticQubitAllocation : Pass<"jasp-check-static-qubit-allocation"> 
       ```mlir
       func.func public @main(%arg14: !jasp.QuantumState, %s: tensor<i64>) attributes { qcc.entry_point } {
         %1, %2 = "jasp.create_qubits"(%s, %arg14) : (tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState)
+        ...
+      }
       ```
 
       the compilation process will prompt an error since the number of element that `jasp.create_qubits` needs to allocate
