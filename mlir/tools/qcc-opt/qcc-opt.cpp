@@ -7,8 +7,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
+#include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
