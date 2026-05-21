@@ -7,7 +7,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Conversion/RaiseAffine/RaiseAffine.h" // IWYU pragma: keep
+#include "qcc/Conversion/AffineRaise/AffineRaise.h" // IWYU pragma: keep
 
 #include "SimplifyAffEx.h"
 
@@ -34,7 +34,7 @@ using namespace mlir::arith;
 namespace qcc {
 
 #define GEN_PASS_DEF_AFFINERAISEFROMSCF
-#include "qcc/Conversion/RaiseAffine/RaiseAffine.h.inc"
+#include "qcc/Conversion/AffineRaise/AffineRaise.h.inc"
 
 // FIXME: remove no lint stuff at the end.
 // NOLINTBEGIN

@@ -1,10 +1,10 @@
 file(GLOB CONVERSION_SOURCES *.cpp)
 
 add_mlir_conversion_library(
-  QCCRaiseAffine
+  QCCAffineRaise
   ${CONVERSION_SOURCES}
   DEPENDS
-  QCCRaiseAffineIncGen
+  QCCAffineRaiseIncGen
   LINK_LIBS
   MLIRAffineDialect
   MLIRArithDialect
@@ -13,4 +13,4 @@ add_mlir_conversion_library(
   MLIRPass
   MLIRTransforms)
 
-mqt_mlir_target_use_project_options(QCCRaiseAffine)
+mqt_mlir_target_use_project_options(QCCAffineRaise)

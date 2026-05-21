@@ -24,7 +24,7 @@ target_link_libraries(
           MLIRBufferizationTransforms
           QCCJaspToQC
           QCCToQIR
-          QCCRaiseAffine
+          QCCAffineRaise
           # Extensions/Interfaces
           MLIRFuncInlinerExtension
           MLIRTransformUtils

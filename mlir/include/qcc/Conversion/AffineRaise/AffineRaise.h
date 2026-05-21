@@ -14,9 +14,9 @@
 namespace qcc {
 
 #define GEN_PASS_DECL
-#include "qcc/Conversion/RaiseAffine/RaiseAffine.h.inc"
+#include "qcc/Conversion/AffineRaise/AffineRaise.h.inc"
 
 #define GEN_PASS_REGISTRATION
-#include "qcc/Conversion/RaiseAffine/RaiseAffine.h.inc"
+#include "qcc/Conversion/AffineRaise/AffineRaise.h.inc"
 
 } // namespace qcc
