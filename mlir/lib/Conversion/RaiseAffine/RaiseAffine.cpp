@@ -1152,6 +1152,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
 struct AffineRaiseFromSCF final : public impl::AffineRaiseFromSCFBase<AffineRaiseFromSCF> {
   using impl::AffineRaiseFromSCFBase<AffineRaiseFromSCF>::AffineRaiseFromSCFBase;
 
+protected:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     patterns.add<ForOpRaising>(&getContext());
