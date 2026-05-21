@@ -5,6 +5,7 @@ target_link_libraries(
           MLIROptLib
           MLIRSupport
           # Dialects
+          MLIRAffineDialect
           MLIRFuncDialect
           MLIRArithDialect
           MLIRSCFDialect
@@ -23,6 +24,7 @@ target_link_libraries(
           MLIRBufferizationTransforms
           QCCJaspToQC
           QCCToQIR
+          QCCRaiseAffine
           # Extensions/Interfaces
           MLIRFuncInlinerExtension
           MLIRTransformUtils

@@ -10,7 +10,6 @@
 #include "qcc/Conversion/RaiseAffine/RaiseAffine.h" // IWYU pragma: keep
 
 #include "SimplifyAffEx.h"
-#include "fromEnzyme.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h" // IWYU pragma: keep
 #include "mlir/Dialect/Affine/Utils.h"
@@ -20,6 +19,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
@@ -1152,7 +1152,11 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
 struct AffineRaiseFromSCF final : public impl::AffineRaiseFromSCFBase<AffineRaiseFromSCF> {
   using impl::AffineRaiseFromSCFBase<AffineRaiseFromSCF>::AffineRaiseFromSCFBase;
 
-  void runOnOperation() override {}
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    patterns.add<ForOpRaising>(&getContext());
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
 };
 
 } // namespace
