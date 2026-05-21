@@ -7,6 +7,7 @@ add_mlir_conversion_library(
   QCCRaiseAffineIncGen
   LINK_LIBS
   MLIRAffineDialect
+  MLIRArithDialect
   MLIRSCFDialect
   MLIRIR
   MLIRPass)
