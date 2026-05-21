@@ -7,6 +7,8 @@
 //
 // ===----------------------------------------------------------------------===//
 
+// FIXME: acknowledge that we took this code from Enzyme-JAX
+
 #include "qcc/Conversion/AffineRaise/AffineRaise.h" // IWYU pragma: keep
 
 #include "SimplifyAffEx.h"
@@ -18,10 +20,8 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
 // FIXME: check this debug type stuff
