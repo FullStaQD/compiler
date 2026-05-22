@@ -7,20 +7,24 @@
 //
 // ===----------------------------------------------------------------------===//
 
+// FIXME: check if this stuff is builtin.
 // FIXME: acknowledge that we took this code from Enzyme-JAX
 
 #pragma once
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+
 #include "llvm/ADT/SmallVector.h"
 
 #include <type_traits>
 
 namespace qcc {
 
+// FIXME: fix lint errors
 // NOLINTBEGIN
 
 /// The matcher that matches a certain kind of Attribute and binds the value
@@ -85,11 +89,30 @@ struct constant_int_value_binder {
   /// Creates a matcher instance that binds the value to bv if match succeeds.
   constant_int_value_binder(mlir::IntegerAttr::ValueType* bv) : bind_value(bv) {}
 
-  bool match(mlir::Attribute attr);
-  bool match(mlir::Operation* op);
+  bool match(mlir::Attribute attr) {
+    attr_value_binder<mlir::IntegerAttr> matcher(bind_value);
+    if (matcher.match(attr))
+      return true;
+
+    if (auto splatAttr = mlir::dyn_cast<mlir::SplatElementsAttr>(attr))
+      return matcher.match(splatAttr.getSplatValue<mlir::Attribute>());
+
+    return false;
+  }
+
+  bool match(mlir::Operation* op) {
+    mlir::Attribute attr;
+    if (!constant_op_binder<mlir::Attribute>(&attr).match(op))
+      return false;
+
+    mlir::Type type = op->getResult(0).getType();
+    if (mlir::isa<mlir::IntegerType, mlir::IndexType, mlir::VectorType, mlir::RankedTensorType>(type))
+      return match(attr);
+
+    return false;
+  }
 };
 
-/// Copied from Enzyme-JAX
 /// Matches a constant holding a scalar/vector/tensor integer (splat) and
 /// writes the integer value to bind_value.
 inline constant_int_value_binder m_ConstantInt(mlir::IntegerAttr::ValueType* bind_value) {
