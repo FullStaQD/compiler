@@ -263,6 +263,7 @@ bool need(IntegerSet* map, SmallVectorImpl<Value>* operands, Region* scope) {
   return false;
 }
 
+/// FIXME: there might be a builtin for this
 Region* getLocalAffineScope(Operation* op) {
   auto curOp = op;
   while (auto parentOp = curOp->getParentOp()) {
@@ -371,7 +372,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     return affine::isValidSymbol(loop.getStep()) || matchPattern(loop.getStep(), m_ConstantInt(&apint));
   }
 
-  /// FIXME: bad name, getConstant?
+  /// FIXME: bad name, getConstant? Is there a builtin?
   int64_t getStep(mlir::Value value) const {
     APInt apint;
     if (matchPattern(value, m_ConstantInt(&apint)))
@@ -380,144 +381,146 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
       return 1;
   }
 
-  AffineMap getMultiSymbolIdentity(Builder& B, unsigned rank) const {
+  // FIXME: check if there is a builtin method
+  /// Creates affine_map<()[s_0, ..., s_{rank-1}] -> (s_0, ..., s_{rank-1})>
+  AffineMap getMultiSymbolIdentity(Builder& builder, unsigned rank) const {
     SmallVector<AffineExpr, 4> dimExprs;
     dimExprs.reserve(rank);
     for (unsigned i = 0; i < rank; ++i)
-      dimExprs.push_back(B.getAffineSymbolExpr(i));
-    return AffineMap::get(/*dimCount=*/0, /*symbolCount=*/rank, dimExprs, B.getContext());
+      dimExprs.push_back(builder.getAffineSymbolExpr(i));
+    return AffineMap::get(/*dimCount=*/0, /*symbolCount=*/rank, dimExprs, builder.getContext());
   }
+
   LogicalResult matchAndRewrite(scf::ForOp loop, PatternRewriter& rewriter) const final {
-    if (isAffine(loop)) {
-      auto scope = getLocalAffineScope(loop);
-      OpBuilder builder(loop);
+    if (!isAffine(loop)) // FIXME: means "if step is not a symbol"
+      return failure();
 
-      SmallVector<Value> lbs;
-      {
-        SmallVector<Value> todo = {loop.getLowerBound()};
-        while (todo.size()) {
-          auto cur = todo.back();
-          todo.pop_back();
-          if (isValidIndex(cur, scope)) {
-            lbs.push_back(cur);
-            continue;
-          } else if (auto selOp = cur.getDefiningOp<arith::SelectOp>()) {
-            // LB only has max of operands
-            if (auto cmp = selOp.getCondition().getDefiningOp<CmpIOp>()) {
-              if (cmp.getLhs() == selOp.getTrueValue() && cmp.getRhs() == selOp.getFalseValue() &&
-                  cmp.getPredicate() == CmpIPredicate::sge) {
-                todo.push_back(cmp.getLhs());
-                todo.push_back(cmp.getRhs());
-                continue;
-              }
+    auto scope = getLocalAffineScope(loop);
+    OpBuilder builder(loop);
+
+    SmallVector<Value> lbs;
+    {
+      SmallVector<Value> todo = {loop.getLowerBound()};
+      while (todo.size()) {
+        auto cur = todo.back();
+        todo.pop_back();
+        if (isValidIndex(cur, scope)) {
+          lbs.push_back(cur);
+          continue;
+        } else if (auto selOp = cur.getDefiningOp<arith::SelectOp>()) {
+          // LB only has max of operands
+          if (auto cmp = selOp.getCondition().getDefiningOp<CmpIOp>()) {
+            if (cmp.getLhs() == selOp.getTrueValue() && cmp.getRhs() == selOp.getFalseValue() &&
+                cmp.getPredicate() == CmpIPredicate::sge) {
+              todo.push_back(cmp.getLhs());
+              todo.push_back(cmp.getRhs());
+              continue;
             }
           }
-          return failure();
         }
+        return failure();
       }
-
-      SmallVector<Value> ubs;
-      {
-        SmallVector<Value> todo = {loop.getUpperBound()};
-        while (todo.size()) {
-          auto cur = todo.back();
-          todo.pop_back();
-          if (isValidIndex(cur, scope)) {
-            ubs.push_back(cur);
-            continue;
-          } else if (auto selOp = cur.getDefiningOp<arith::SelectOp>()) {
-            // UB only has min of operands
-            if (auto cmp = selOp.getCondition().getDefiningOp<CmpIOp>()) {
-              if (cmp.getLhs() == selOp.getTrueValue() && cmp.getRhs() == selOp.getFalseValue() &&
-                  cmp.getPredicate() == CmpIPredicate::sle) {
-                todo.push_back(cmp.getLhs());
-                todo.push_back(cmp.getRhs());
-                continue;
-              }
-            }
-          }
-          return failure();
-        }
-      }
-
-      bool rewrittenStep = false;
-      if (!loop.getStep().getDefiningOp<ConstantIndexOp>()) {
-        if (ubs.size() != 1 || lbs.size() != 1)
-          return failure();
-        ubs[0] = DivUIOp::create(
-            rewriter, loop.getLoc(),
-            AddIOp::create(
-                rewriter, loop.getLoc(),
-                SubIOp::create(rewriter, loop.getLoc(), loop.getStep(),
-                               isa<IndexType>(loop.getStep().getType())
-                                   ? ConstantIndexOp::create(rewriter, loop.getLoc(), 1).getResult()
-                                   : ConstantIntOp::create(rewriter, loop.getLoc(), loop.getStep().getType(), 1))
-                    .getResult(),
-                SubIOp::create(rewriter, loop.getLoc(), loop.getUpperBound(), loop.getLowerBound())),
-            loop.getStep());
-        lbs[0] = ConstantIndexOp::create(rewriter, loop.getLoc(), 0);
-        rewrittenStep = true;
-      }
-
-      auto* parentScope = scope->getParentOp();
-      DominanceInfo DI(parentScope);
-
-      AffineMap lbMap = getMultiSymbolIdentity(builder, lbs.size());
-      {
-        fully2ComposeAffineMapAndOperands(rewriter, &lbMap, &lbs, DI, scope);
-        affine::canonicalizeMapAndOperands(&lbMap, &lbs);
-        lbMap = removeDuplicateExprs(lbMap);
-        lbMap = recreateExpr(lbMap);
-      }
-      AffineMap ubMap = getMultiSymbolIdentity(builder, ubs.size());
-      {
-        fully2ComposeAffineMapAndOperands(rewriter, &ubMap, &ubs, DI, scope);
-        affine::canonicalizeMapAndOperands(&ubMap, &ubs);
-        ubMap = removeDuplicateExprs(ubMap);
-        ubMap = recreateExpr(ubMap);
-      }
-
-      affine::AffineForOp affineLoop =
-          affine::AffineForOp::create(rewriter, loop.getLoc(), lbs, lbMap, ubs, ubMap,
-                                      rewrittenStep ? 1 : getStep(loop.getStep()), loop.getInits());
-      preserveDiscardableAttributes(affineLoop, loop);
-
-      auto mergedYieldOp = cast<scf::YieldOp>(loop.getRegion().front().getTerminator());
-
-      Block& newBlock = affineLoop.getRegion().front();
-
-      // The terminator is added if the iterator args are not provided.
-      // see the ::build method.
-      if (affineLoop.getNumIterOperands() == 0) {
-        auto* affineYieldOp = newBlock.getTerminator();
-        rewriter.eraseOp(affineYieldOp);
-      }
-
-      SmallVector<Value> vals;
-      rewriter.setInsertionPointToStart(&affineLoop.getRegion().front());
-      for (Value arg : affineLoop.getRegion().front().getArguments()) {
-        bool isInduction = arg == affineLoop.getInductionVar();
-        if (isInduction && arg.getType() != loop.getInductionVar().getType()) {
-          arg = arith::IndexCastOp::create(rewriter, loop.getLoc(), loop.getInductionVar().getType(), arg);
-        }
-        if (rewrittenStep && isInduction) {
-          arg = AddIOp::create(rewriter, loop.getLoc(), loop.getLowerBound(),
-                               MulIOp::create(rewriter, loop.getLoc(), arg, loop.getStep()));
-        }
-        vals.push_back(arg);
-      }
-      assert(vals.size() == loop.getRegion().front().getNumArguments());
-      rewriter.mergeBlocks(&loop.getRegion().front(), &affineLoop.getRegion().front(), vals);
-
-      rewriter.setInsertionPoint(mergedYieldOp);
-      affine::AffineYieldOp::create(rewriter, mergedYieldOp.getLoc(), mergedYieldOp.getOperands());
-      rewriter.eraseOp(mergedYieldOp);
-
-      rewriter.replaceOp(loop, affineLoop.getResults());
-
-      return success();
     }
-    return failure();
+
+    SmallVector<Value> ubs;
+    {
+      SmallVector<Value> todo = {loop.getUpperBound()};
+      while (todo.size()) {
+        auto cur = todo.back();
+        todo.pop_back();
+        if (isValidIndex(cur, scope)) {
+          ubs.push_back(cur);
+          continue;
+        } else if (auto selOp = cur.getDefiningOp<arith::SelectOp>()) {
+          // UB only has min of operands
+          if (auto cmp = selOp.getCondition().getDefiningOp<CmpIOp>()) {
+            if (cmp.getLhs() == selOp.getTrueValue() && cmp.getRhs() == selOp.getFalseValue() &&
+                cmp.getPredicate() == CmpIPredicate::sle) {
+              todo.push_back(cmp.getLhs());
+              todo.push_back(cmp.getRhs());
+              continue;
+            }
+          }
+        }
+        return failure();
+      }
+    }
+
+    bool rewrittenStep = false;
+    if (!loop.getStep().getDefiningOp<ConstantIndexOp>()) {
+      if (ubs.size() != 1 || lbs.size() != 1)
+        return failure();
+      ubs[0] = DivUIOp::create(
+          rewriter, loop.getLoc(),
+          AddIOp::create(
+              rewriter, loop.getLoc(),
+              SubIOp::create(rewriter, loop.getLoc(), loop.getStep(),
+                             isa<IndexType>(loop.getStep().getType())
+                                 ? ConstantIndexOp::create(rewriter, loop.getLoc(), 1).getResult()
+                                 : ConstantIntOp::create(rewriter, loop.getLoc(), loop.getStep().getType(), 1))
+                  .getResult(),
+              SubIOp::create(rewriter, loop.getLoc(), loop.getUpperBound(), loop.getLowerBound())),
+          loop.getStep());
+      lbs[0] = ConstantIndexOp::create(rewriter, loop.getLoc(), 0);
+      rewrittenStep = true;
+    }
+
+    auto* parentScope = scope->getParentOp();
+    DominanceInfo DI(parentScope);
+
+    AffineMap lbMap = getMultiSymbolIdentity(builder, lbs.size());
+    {
+      fully2ComposeAffineMapAndOperands(rewriter, &lbMap, &lbs, DI, scope);
+      affine::canonicalizeMapAndOperands(&lbMap, &lbs);
+      lbMap = removeDuplicateExprs(lbMap);
+      lbMap = recreateExpr(lbMap);
+    }
+    AffineMap ubMap = getMultiSymbolIdentity(builder, ubs.size());
+    {
+      fully2ComposeAffineMapAndOperands(rewriter, &ubMap, &ubs, DI, scope);
+      affine::canonicalizeMapAndOperands(&ubMap, &ubs);
+      ubMap = removeDuplicateExprs(ubMap);
+      ubMap = recreateExpr(ubMap);
+    }
+
+    affine::AffineForOp affineLoop = affine::AffineForOp::create(
+        rewriter, loop.getLoc(), lbs, lbMap, ubs, ubMap, rewrittenStep ? 1 : getStep(loop.getStep()), loop.getInits());
+    preserveDiscardableAttributes(affineLoop, loop);
+
+    auto mergedYieldOp = cast<scf::YieldOp>(loop.getRegion().front().getTerminator());
+
+    Block& newBlock = affineLoop.getRegion().front();
+
+    // The terminator is added if the iterator args are not provided.
+    // see the ::build method.
+    if (affineLoop.getNumIterOperands() == 0) {
+      auto* affineYieldOp = newBlock.getTerminator();
+      rewriter.eraseOp(affineYieldOp);
+    }
+
+    SmallVector<Value> vals;
+    rewriter.setInsertionPointToStart(&affineLoop.getRegion().front());
+    for (Value arg : affineLoop.getRegion().front().getArguments()) {
+      bool isInduction = arg == affineLoop.getInductionVar();
+      if (isInduction && arg.getType() != loop.getInductionVar().getType()) {
+        arg = arith::IndexCastOp::create(rewriter, loop.getLoc(), loop.getInductionVar().getType(), arg);
+      }
+      if (rewrittenStep && isInduction) {
+        arg = AddIOp::create(rewriter, loop.getLoc(), loop.getLowerBound(),
+                             MulIOp::create(rewriter, loop.getLoc(), arg, loop.getStep()));
+      }
+      vals.push_back(arg);
+    }
+    assert(vals.size() == loop.getRegion().front().getNumArguments());
+    rewriter.mergeBlocks(&loop.getRegion().front(), &affineLoop.getRegion().front(), vals);
+
+    rewriter.setInsertionPoint(mergedYieldOp);
+    affine::AffineYieldOp::create(rewriter, mergedYieldOp.getLoc(), mergedYieldOp.getOperands());
+    rewriter.eraseOp(mergedYieldOp);
+
+    rewriter.replaceOp(loop, affineLoop.getResults());
+
+    return success();
   }
 };
 

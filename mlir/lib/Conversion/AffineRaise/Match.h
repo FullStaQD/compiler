@@ -113,6 +113,7 @@ struct constant_int_value_binder {
   }
 };
 
+// FIXME: splat support is actually more than we need. The scalar case is the only one used by our pass.
 /// Matches a constant holding a scalar/vector/tensor integer (splat) and
 /// writes the integer value to bind_value.
 inline constant_int_value_binder m_ConstantInt(mlir::IntegerAttr::ValueType* bind_value) {
