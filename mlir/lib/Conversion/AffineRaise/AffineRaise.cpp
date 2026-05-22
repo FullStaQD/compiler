@@ -11,6 +11,7 @@
 
 #include "qcc/Conversion/AffineRaise/AffineRaise.h" // IWYU pragma: keep
 
+#include "Match.h"
 #include "SimplifyAffEx.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h" // IWYU pragma: keep
@@ -273,109 +274,6 @@ Region* getLocalAffineScope(Operation* op) {
   return nullptr;
 }
 
-// FIXME: seems to exist in LLVM already
-/// Entry point for matching a pattern over a Value.
-// template <typename Pattern> inline bool matchPattern(Value value, const Pattern& pattern) {
-//   assert(value);
-//   // TODO: handle other cases
-//   if (auto* op = value.getDefiningOp())
-//     return const_cast<Pattern&>(pattern).match(op);
-//   return false;
-// }
-
-/// The matcher that matches a certain kind of Attribute and binds the value
-/// inside the Attribute.
-template <typename AttrClass,
-          // Require AttrClass to be a derived class from Attribute and get its
-          // value type
-          typename ValueType =
-              typename std::enable_if_t<std::is_base_of<Attribute, AttrClass>::value, AttrClass>::ValueType,
-          // Require the ValueType is not void
-          typename = std::enable_if_t<!std::is_void<ValueType>::value>>
-struct attr_value_binder {
-  ValueType* bind_value;
-
-  /// Creates a matcher instance that binds the value to bv if match succeeds.
-  attr_value_binder(ValueType* bv) : bind_value(bv) {}
-
-  bool match(Attribute attr) {
-    if (auto intAttr = llvm::dyn_cast<AttrClass>(attr)) {
-      *bind_value = intAttr.getValue();
-      return true;
-    }
-    return false;
-  }
-};
-
-/// The matcher that matches operations that have the `ConstantLike` trait, and
-/// binds the folded attribute value.
-template <typename AttrT> struct constant_op_binder {
-  AttrT* bind_value;
-
-  /// Creates a matcher instance that binds the constant attribute value to
-  /// bind_value if match succeeds.
-  constant_op_binder(AttrT* bind_value) : bind_value(bind_value) {}
-  /// Creates a matcher instance that doesn't bind if match succeeds.
-  constant_op_binder() : bind_value(nullptr) {}
-
-  bool match(Operation* op) {
-    if (!op->hasTrait<OpTrait::ConstantLike>())
-      return false;
-
-    // Fold the constant to an attribute.
-    SmallVector<OpFoldResult, 1> foldedOp;
-    LogicalResult result = op->fold(/*operands=*/{}, foldedOp);
-    (void)result;
-    assert(succeeded(result) && "expected ConstantLike op to be foldable");
-
-    if (auto attr = llvm::dyn_cast<AttrT>(cast<Attribute>(foldedOp.front()))) {
-      if (bind_value)
-        *bind_value = attr;
-      return true;
-    }
-    return false;
-  }
-};
-
-/// The matcher that matches a constant scalar / vector splat / tensor splat
-/// integer Attribute or Operation and binds the constant integer value.
-struct constant_int_value_binder {
-  IntegerAttr::ValueType* bind_value;
-
-  /// Creates a matcher instance that binds the value to bv if match succeeds.
-  constant_int_value_binder(IntegerAttr::ValueType* bv) : bind_value(bv) {}
-
-  bool match(Attribute attr) {
-    attr_value_binder<IntegerAttr> matcher(bind_value);
-    if (matcher.match(attr))
-      return true;
-
-    if (auto splatAttr = dyn_cast<SplatElementsAttr>(attr))
-      return matcher.match(splatAttr.getSplatValue<Attribute>());
-
-    return false;
-  }
-
-  bool match(Operation* op) {
-    Attribute attr;
-    if (!constant_op_binder<Attribute>(&attr).match(op))
-      return false;
-
-    Type type = op->getResult(0).getType();
-    if (isa<IntegerType, IndexType, VectorType, RankedTensorType>(type))
-      return match(attr);
-
-    return false;
-  }
-};
-
-/// Copied from Enzyme-JAX
-/// Matches a constant holding a scalar/vector/tensor integer (splat) and
-/// writes the integer value to bind_value.
-inline constant_int_value_binder m_ConstantInt(IntegerAttr::ValueType* bind_value) {
-  return constant_int_value_binder(bind_value);
-}
-
 void fully2ComposeAffineMapAndOperands(PatternRewriter* builder, AffineMap* map, SmallVectorImpl<Value>* operands,
                                        DominanceInfo* DI, Region* scope,
                                        SmallVectorImpl<Operation*>* insertedOps = nullptr) {
@@ -458,14 +356,22 @@ static void preserveDiscardableAttributes(Operation* newOp, Operation* oldOp) {
 struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
   using OpRewritePattern<scf::ForOp>::OpRewritePattern;
 
-  // TODO: remove me or rename me.
+  // FIXME: remove me or rename me.
   bool isAffine(scf::ForOp loop) const {
     // return true;
     // enforce step to be a ConstantIndexOp (maybe too restrictive).
     APInt apint;
+
+    llvm::errs() << " *** isAffine *** \n";
+    llvm::errs() << "!!! isValidSymbol: " << affine::isValidSymbol(loop.getStep()) << "\n";
+    llvm::errs() << "!!! matchPattern : " << matchPattern(loop.getStep(), m_ConstantInt(&apint)) << "\n";
+
+    // FIXME: might be equivalent to
+    // return affine::isValidSymbol(loop.getStep());
     return affine::isValidSymbol(loop.getStep()) || matchPattern(loop.getStep(), m_ConstantInt(&apint));
   }
 
+  /// FIXME: bad name, getConstant?
   int64_t getStep(mlir::Value value) const {
     APInt apint;
     if (matchPattern(value, m_ConstantInt(&apint)))
