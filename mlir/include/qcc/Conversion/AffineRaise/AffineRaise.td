@@ -21,3 +21,16 @@ def AffineRaiseFromSCF : Pass<"affine-raise-from-scf"> {
     "mlir::affine::AffineDialect"
   ];
 }
+
+def WhileToFor : Pass<"while-to-for"> {
+  let summary = "Convert scf.while loops to scf.for loops using uplift patterns.";
+
+  let description = [{
+      Applies the SCF uplift patterns to rewrite eligible `scf.while` loops as
+      `scf.for` loops.
+   }];
+
+  let dependentDialects = [
+    "mlir::scf::SCFDialect"
+  ];
+}

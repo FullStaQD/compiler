@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
 
   // Our passes
   qcc::registerAffineRaiseFromSCF();
+  qcc::registerWhileToFor();
   qcc::registerJaspToQC();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
