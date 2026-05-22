@@ -13,7 +13,7 @@ func.func public @main() -> memref<?x!qc.qubit> {
   %0 = memref.load %alloc[%c0] : memref<5x!qc.qubit>
   qc.h %0 : !qc.qubit
   %1 = scf.while (%arg0 = %c1_i64) : (i64) -> i64 {
-    %2 = arith.cmpi slt, %arg0, %c4_i64 : i64
+    %2 = arith.cmpi sle, %arg0, %c4_i64 : i64
     scf.condition(%2) %arg0 : i64
   } do {
   ^bb0(%arg0: i64):
