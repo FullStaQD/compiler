@@ -14,6 +14,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/AffineMap.h"
+#include "mlir/IR/IntegerSet.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 
 #include "llvm/Support/Debug.h"
@@ -35,7 +37,7 @@ bool isDisjoint(Value v) {
   return false;
 }
 
-// forward declaration: Operation* overload calls this
+// forward declaration
 bool isValidSymbolInt(Value value, bool recur, Region* scope);
 
 bool isValidSymbolInt(Operation* defOp, bool recur, Region* scope) {
@@ -241,7 +243,6 @@ bool need(IntegerSet* map, llvm::SmallVectorImpl<Value>* operands, Region* scope
   return false;
 }
 
-/// FIXME: there might be a builtin for this
 Region* getLocalAffineScope(Operation* op) {
   auto curOp = op;
   while (auto parentOp = curOp->getParentOp()) {

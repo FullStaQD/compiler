@@ -9,23 +9,17 @@
 
 #pragma once
 
-#include "mlir/IR/AffineMap.h"
-#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 
-#include "llvm/ADT/SmallVector.h"
-
 namespace qcc {
 
-bool isDisjoint(mlir::Value v);
-bool isValidSymbolInt(mlir::Operation* defOp, bool recur, mlir::Region* scope);
-bool isValidSymbolInt(mlir::Value value, bool recur, mlir::Region* scope);
+// FIXME: impl of this contains alot of code.
+/// Whether this is a valid affine index, but slightly relaxed. E.g. allows non-index types.
 bool isValidIndex(mlir::Value val, mlir::Region* scope);
-bool legalCondition(mlir::Value en, bool dim, mlir::Region* scope);
-bool need(mlir::AffineMap* map, llvm::SmallVectorImpl<mlir::Value>* operands, mlir::Region* scope);
-bool need(mlir::IntegerSet* map, llvm::SmallVectorImpl<mlir::Value>* operands, mlir::Region* scope);
+
+/// FIXME: there might be a builtin for this
 mlir::Region* getLocalAffineScope(mlir::Operation* op);
 
 } // namespace qcc
