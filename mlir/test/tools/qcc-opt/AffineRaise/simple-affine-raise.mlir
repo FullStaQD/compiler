@@ -3,6 +3,7 @@
 // FIXME: slightly better test coverage (not necessarily just this particular pass)
 // - Iterate with non index type (e.g. i32, i64)
 // - Non-const LB, UB, STEP.
+// - arith.select of cmpi to affine.max rewrite (dedicated pass)
 
 // CHECK-LABEL: func.func @simple_loop
 func.func @simple_loop(%mem: memref<10xi32>) {

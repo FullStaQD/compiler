@@ -159,6 +159,13 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     auto scope = getLocalAffineScope(loop);
     OpBuilder builder(loop);
 
+    /// NOTE: %r = arith.select (cmpi sge, a, b), a, b   // a >= b ? a : b  (sge)
+
+    // FIXME: This matches LB = max(a, b, c, ...) *implemented* as arith.select
+    // (cmpi sge, a, b), a, b. In principle this info could be used to always
+    // translate this into affine.max (in a dedicated pass). In that case we
+    // could simplify the code here to require that the lbs is a valid index
+    // already.
     SmallVector<Value> lbs;
     {
       SmallVector<Value> todo = {loop.getLowerBound()};
@@ -183,6 +190,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
       }
     }
 
+    // FIXME: same as for lbs.
     SmallVector<Value> ubs;
     {
       SmallVector<Value> todo = {loop.getUpperBound()};
