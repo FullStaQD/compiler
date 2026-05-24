@@ -101,6 +101,15 @@ void fully2ComposeAffineMapAndOperands(PatternRewriter* builder, AffineMap* map,
     }
 }
 
+/// FIXME: this is what affine::composeAffineMapAndOperands does. This thing
+/// here does more apparently. One job is to insert index casts (affine.for works
+/// only on index types).
+///
+/// Takes map(operand) and *moves* affine.apply from operands into map.
+///
+/// E.g. this map = affine_map<()[s0] -> (s0)> operands = [affine.apply
+/// affine_map<()[s0] -> (s0 + 4)>()[%n]] Becomes map = affine_map<()[s0] -> (s0
+/// + 4)> operands = [%n]
 void fully2ComposeAffineMapAndOperands(PatternRewriter& builder, AffineMap* map, SmallVectorImpl<Value>* operands,
                                        DominanceInfo& DI, Region* scope,
                                        SmallVectorImpl<Operation*>* insertedOps = nullptr) {
@@ -139,10 +148,10 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     if (matchPattern(value, m_ConstantInt(&apint)))
       return apint.getZExtValue();
     else
-      return 1;
+      return 1; // due to step normalization
   }
 
-  // FIXME: check if there is a builtin method
+  // FIXME: check if there is a builtin method.
   /// Creates affine_map<()[s_0, ..., s_{rank-1}] -> (s_0, ..., s_{rank-1})>
   AffineMap getMultiSymbolIdentity(Builder& builder, unsigned rank) const {
     SmallVector<AffineExpr, 4> dimExprs;
@@ -162,10 +171,14 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     /// NOTE: %r = arith.select (cmpi sge, a, b), a, b   // a >= b ? a : b  (sge)
 
     // FIXME: This matches LB = max(a, b, c, ...) *implemented* as arith.select
-    // (cmpi sge, a, b), a, b. In principle this info could be used to always
-    // translate this into affine.max (in a dedicated pass). In that case we
-    // could simplify the code here to require that the lbs is a valid index
-    // already.
+    // (cmpi sge, a, b), a, b - SOMETIMES!
+    //
+    // SOMETIMES: It matches if the select itself is *not* provably a valid index.
+    //
+    // In principle this info could be used to always translate this into
+    // affine.max (in a dedicated pass). In that case we could simplify the code
+    // here to require that the lbs is a valid index already. But the
+    // "sometimes" might hint that we do not want to do this always.
     SmallVector<Value> lbs;
     {
       SmallVector<Value> todo = {loop.getLowerBound()};
@@ -215,9 +228,26 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
       }
     }
 
+    // GO ON HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    // FIXME: this is super implicit, it is not at all clear when the max/min
+    // patterns fire. This code here depends on it and hence is equally
+    // unpredictable. Disentangle the stuff and precisely say what should be
+    // raised and what not.
+    //
+    // Step normalization (affine.for needs constant step): If the step is not a
+    // constant it gets normalized to 1 by scaling LB and UB. This fails however
+    // if LB or UB is a max/min.
+    //
+    // If the step size is not a constant of index type: Rewrite step as follows
+    // - assert that the max or min pattern above did not match (FIXME: this is
+    //   brittle)
+    // - (indirectly via size of ubs / lbs)
+    // - set ubs[0] = ((STEP - 1) + (UB - LB)) / STEP = ceil((UB - LB) / STEP)
+    // - set lbs[0] = 0
     bool rewrittenStep = false;
     if (!loop.getStep().getDefiningOp<ConstantIndexOp>()) {
-      if (ubs.size() != 1 || lbs.size() != 1)
+      if (ubs.size() != 1 || lbs.size() != 1) // FIXME: why?
         return failure();
       ubs[0] = DivUIOp::create(
           rewriter, loop.getLoc(),
@@ -237,6 +267,8 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     auto* parentScope = scope->getParentOp();
     DominanceInfo DI(parentScope);
 
+    // Best effort to bring affine maps for lb and ub into some canonical form.
+    // But: also inserts index casts (necessary correctness).
     AffineMap lbMap = getMultiSymbolIdentity(builder, lbs.size());
     {
       fully2ComposeAffineMapAndOperands(rewriter, &lbMap, &lbs, DI, scope);
