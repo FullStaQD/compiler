@@ -1,5 +1,9 @@
 // RUN: qcc-opt %s -affine-raise-from-scf | FileCheck %s
 
+// FIXME: slightly better test coverage (not necessarily just this particular pass)
+// - Iterate with non index type (e.g. i32, i64)
+// - Non-const LB, UB, STEP.
+
 // CHECK-LABEL: func.func @simple_loop
 func.func @simple_loop(%mem: memref<10xi32>) {
   %c0 = arith.constant 0 : index
