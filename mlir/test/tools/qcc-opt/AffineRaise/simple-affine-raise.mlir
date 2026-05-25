@@ -81,8 +81,8 @@ func.func private @some_func_index(%arg: index)
 
 // FIXME: add @min_ub?
 //
-// FIXME: This pattern is a bit special, should the pass really be responsible 
-// for this behaviour. Moreover, should it behave *exactly* like this or would 
+// FIXME: This pattern is a bit special, should the pass really be responsible
+// for this behaviour. Moreover, should it behave *exactly* like this or would
 // it be better to always do the max?
 //
 // The select((cmpi sge, a, b), a, b) pattern fires here because %i is an
