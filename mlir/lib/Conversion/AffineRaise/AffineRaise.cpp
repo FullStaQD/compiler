@@ -116,6 +116,7 @@ void fully2ComposeAffineMapAndOperands(PatternRewriter& builder, AffineMap* map,
   fully2ComposeAffineMapAndOperands(&builder, map, operands, &DI, scope, insertedOps);
 }
 
+/// FIXME: is there a builtin for this?
 static void preserveDiscardableAttributes(Operation* newOp, Operation* oldOp) {
   for (auto attr : oldOp->getDiscardableAttrs()) {
     newOp->setAttr(attr.getName(), attr.getValue());
@@ -142,7 +143,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     return affine::isValidSymbol(loop.getStep()) || matchPattern(loop.getStep(), m_ConstantInt(&apint));
   }
 
-  /// FIXME: bad name, getConstant? Is there a builtin?
+  /// FIXME: bad name, getConstant? Is there a builtin? It is only used once refactor that.
   int64_t getStep(mlir::Value value) const {
     APInt apint;
     if (matchPattern(value, m_ConstantInt(&apint)))
@@ -228,8 +229,6 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
       }
     }
 
-    // GO ON HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
     // FIXME: this is super implicit, it is not at all clear when the max/min
     // patterns fire. This code here depends on it and hence is equally
     // unpredictable. Disentangle the stuff and precisely say what should be
@@ -245,9 +244,9 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     // - (indirectly via size of ubs / lbs)
     // - set ubs[0] = ((STEP - 1) + (UB - LB)) / STEP = ceil((UB - LB) / STEP)
     // - set lbs[0] = 0
-    bool rewrittenStep = false;
+    bool rewrittenStep = false; // NOTE: `false` implies step is constant index op.
     if (!loop.getStep().getDefiningOp<ConstantIndexOp>()) {
-      if (ubs.size() != 1 || lbs.size() != 1) // FIXME: why?
+      if (ubs.size() != 1 || lbs.size() != 1) // FIXME: very indirect (means max/min pattern did not fire)
         return failure();
       ubs[0] = DivUIOp::create(
           rewriter, loop.getLoc(),
@@ -292,9 +291,9 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
 
     Block& newBlock = affineLoop.getRegion().front();
 
-    // The terminator is added if the iterator args are not provided.
-    // see the ::build method.
     if (affineLoop.getNumIterOperands() == 0) {
+      // AffineFor::create adds its own yield op (only) in this case. We have to delete it as we create it ourselves
+      // below.
       auto* affineYieldOp = newBlock.getTerminator();
       rewriter.eraseOp(affineYieldOp);
     }
@@ -303,10 +302,12 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     rewriter.setInsertionPointToStart(&affineLoop.getRegion().front());
     for (Value arg : affineLoop.getRegion().front().getArguments()) {
       bool isInduction = arg == affineLoop.getInductionVar();
+      // Cast IV from index to whatever integer type the loop body expects:
       if (isInduction && arg.getType() != loop.getInductionVar().getType()) {
         arg = arith::IndexCastOp::create(rewriter, loop.getLoc(), loop.getInductionVar().getType(), arg);
       }
-      if (rewrittenStep && isInduction) {
+      // In case of rewritten step: Old_IV = New_IV * Old_Step + Old_LB
+      if (isInduction && rewrittenStep) {
         arg = AddIOp::create(rewriter, loop.getLoc(), loop.getLowerBound(),
                              MulIOp::create(rewriter, loop.getLoc(), arg, loop.getStep()));
       }
