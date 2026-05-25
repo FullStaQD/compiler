@@ -1,4 +1,4 @@
-// RUN: qcc-opt %s -affine-raise-from-scf | FileCheck %s
+// RUN: qcc-opt %s -affine-raise-from-scf -split-input-file | FileCheck %s
 
 // FIXME: things to consider to test:
 // - arith.select of cmpi to affine.max rewrite (dedicated pass) - actually: when does this make sense?
@@ -70,6 +70,48 @@ func.func @iv_is_not_index(%lb: i32, %ub: i32) {
 // CHECK:             %[[IV_1:.*]] = arith.index_cast %[[IV]] : index to i32
 // CHECK:             %[[IV_2:.*]] = arith.addi %[[LB]], %[[IV_1]] : i32
 // CHECK:             func.call @some_func_i32(%[[IV_2]]) : (i32) -> ()
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
+// -----
+// NOTE: split input file because affine maps are hoisted to the top of module.
+
+func.func private @some_func_index(%arg: index)
+
+// FIXME: add @min_ub?
+//
+// FIXME: This pattern is a bit special, should the pass really be responsible 
+// for this behaviour. Moreover, should it behave *exactly* like this or would 
+// it be better to always do the max?
+//
+// The select((cmpi sge, a, b), a, b) pattern fires here because %i is an
+// affine.for IV: not a valid symbol, so isValidIndex fails on the select
+// result and the worklist splits it into two LBs: %i and %lb_min.
+func.func @max_lb(%ub: index, %lb_min: index) {
+  %c1 = arith.constant 1 : index
+
+  affine.for %i = 0 to %ub {
+    %cond = arith.cmpi sge, %i, %lb_min : index
+    %lb = arith.select %cond, %i, %lb_min : index  // lb = max(%i, 0)
+
+    scf.for %j = %lb to %ub step %c1 {
+      func.call @some_func_index(%j) : (index) -> ()
+      scf.yield
+    }
+  }
+
+  return
+}
+
+// CHECK: #[[$MAP:.+]] = affine_map<(d0)[s0] -> (s0, d0)>
+// CHECK-LABEL:   func.func @max_lb(
+// CHECK-SAME:                      %[[UB:.*]]: index,
+// CHECK-SAME:                      %[[LB_MIN:.*]]: index) {
+// CHECK:           affine.for %[[IV_OUTER:.*]] = 0 to %[[UB]] {
+// CHECK:             affine.for %[[IV_INNER:.*]] = max #[[$MAP]](%[[IV_OUTER]]){{\[}}%[[LB_MIN]]] to %[[UB]] {
+// CHECK:               func.call @some_func_index(%[[IV_INNER]]) : (index) -> ()
+// CHECK:             }
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }

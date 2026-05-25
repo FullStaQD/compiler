@@ -134,10 +134,6 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
     // enforce step to be a ConstantIndexOp (maybe too restrictive).
     APInt apint;
 
-    llvm::errs() << " *** isAffine *** \n";
-    llvm::errs() << "!!! isValidSymbol: " << affine::isValidSymbol(loop.getStep()) << "\n";
-    llvm::errs() << "!!! matchPattern : " << matchPattern(loop.getStep(), m_ConstantInt(&apint)) << "\n";
-
     // FIXME: might be equivalent to
     // return affine::isValidSymbol(loop.getStep());
     return affine::isValidSymbol(loop.getStep()) || matchPattern(loop.getStep(), m_ConstantInt(&apint));
