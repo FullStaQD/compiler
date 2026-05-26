@@ -287,6 +287,7 @@ struct ForOpRaising : public OpRewritePattern<scf::ForOp> {
 
     Block& newBlock = affineLoop.getRegion().front();
 
+    // FIXME: can we make this more explicit?
     if (affineLoop.getNumIterOperands() == 0) {
       // AffineFor::create adds its own yield op (only) in this case. We have to delete it as we create it ourselves
       // below.
