@@ -22,6 +22,7 @@ Checks: |
   -cppcoreguidelines-avoid-do-while,
   google-*,
   -google-readability-todo,
+  -google-readability-braces-around-statements,
   -google-build-using-namespace,
   llvm-*,
   -llvm-header-guard,
@@ -44,6 +45,7 @@ Checks: |
   -readability-magic-numbers,
   -readability-function-cognitive-complexity,
   -readability-prefer-static-over-anonymous-namespace,
+  -readability-braces-around-statements,
   -readability-const-correctness
 
 CheckOptions:

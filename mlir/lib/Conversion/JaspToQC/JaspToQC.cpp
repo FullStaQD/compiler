@@ -74,9 +74,8 @@ public:
     });
 
     addConversion([](mlir::RankedTensorType type) -> std::optional<mlir::Type> {
-      if (type.getRank() == 0) {
+      if (type.getRank() == 0)
         return type.getElementType();
-      }
       return std::nullopt; // Leave multi-dimensional tensors alone
     });
 
