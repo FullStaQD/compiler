@@ -107,8 +107,6 @@ cmake --build build/dev --target test-qcc-project
 lit build/dev/mlir/test/ -v --filter "qir"
 ```
 
-If everything works correctly, it should print a 100% success rate.
-
 ---
 
 ## License headers
