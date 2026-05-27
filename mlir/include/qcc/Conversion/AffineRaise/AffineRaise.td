@@ -34,3 +34,18 @@ def WhileToFor : Pass<"while-to-for"> {
     "mlir::scf::SCFDialect"
   ];
 }
+
+def PrepareAffineRaising : Pass<"prepare-affine-raising"> {
+  let summary = "Prepare SCF loops for affine raising.";
+
+  let description = [{
+      Performs preparatory rewrites for affine raising:
+      - Convert `arith.select` patterns implementing min/max into explicit `arith.max`/`arith.min` ops.
+      - Cast bounds and indices of `scf.for` loops to `index` type.
+   }];
+
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::scf::SCFDialect"
+  ];
+}
