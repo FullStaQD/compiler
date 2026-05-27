@@ -97,7 +97,7 @@ and it should output some plain MLIR source.
 
 ## Testing
 
-Once the project has been built, it is possible to run the tests like so:
+Run the tests like so:
 
 ```shell
 # Rebuilds and runs all tests:
