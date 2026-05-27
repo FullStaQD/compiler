@@ -104,7 +104,7 @@ Once the project has been built, it is possible to run the tests like so:
 cmake --build build/dev --target test-qcc-project
 
 # Run specific tests (here: filter for test files containing "qir"):
-lit build/my-dev/mlir/test/ --filter "qir"
+lit build/my-dev/mlir/test/ -v --filter "qir"
 ```
 
 If everything works correctly, it should print a 100% success rate.
