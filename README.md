@@ -104,7 +104,7 @@ Run the tests like so:
 cmake --build build/dev --target test-qcc-project
 
 # Run specific tests (filters by filename):
-lit build/dev/mlir/test/ -v --filter "qir"
+lit build/dev/mlir/test/ -v --filter "convert"
 ```
 
 ---
