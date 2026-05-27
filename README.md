@@ -103,7 +103,7 @@ Once the project has been built, it is possible to run the tests like so:
 # Rebuilds and runs all tests:
 cmake --build build/dev --target test-qcc-project
 
-# Run specific tests (here: filter for test files containing "qir"):
+# Run specific tests (filters by filename):
 lit build/dev/mlir/test/ -v --filter "qir"
 ```
 
