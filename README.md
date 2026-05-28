@@ -97,13 +97,15 @@ and it should output some plain MLIR source.
 
 ## Testing
 
-Once the project has been built, it is possible to run the tests using the following command:
+Run the tests like so:
 
 ```shell
+# Rebuilds and runs all tests:
 cmake --build build/dev --target test-qcc-project
-```
 
-If everything works correctly, it should print a 100% success rate.
+# Run specific tests (filters by filename):
+lit build/dev/mlir/test/ -v --filter "convert"
+```
 
 ---
 
