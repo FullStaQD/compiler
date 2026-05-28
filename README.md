@@ -36,11 +36,8 @@ Various IDEs support support the standard, e.g.:
 
 There is also a [dev container cli](https://github.com/devcontainers/cli) which can be used alongside IDE integrations.
 
-For advanced users:
-
-- The devcontainer allows for a custom mount. Use it for whatever you want.
-- If this is insufficient put your own local `devcontainer.json` under `.devcontainer/local/` (gitignored).
-  IDEs and the cli should provide you with a way to choose which config you want to use.
+For advanced users: put your own local `devcontainer.json` under `.devcontainer/local/` (gitignored).
+IDEs and the cli should provide you with a way to choose which config you want to use.
 
 ### Option 2: Manual Setup
 
