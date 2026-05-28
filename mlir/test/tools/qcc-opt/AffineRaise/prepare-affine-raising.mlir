@@ -65,3 +65,50 @@ func.func @prepare_nested_bounds(%ub1: index, %ub2: index, %ub3: index, %lb1: in
 // CHECK-DAG: [[LB12:%.*]] = arith.maxsi [[LB1]], [[LB2]] : index
 // CHECK-DAG: [[LB:%.*]] = arith.maxsi [[LB12]], [[LB3]] : index
 // CHECK: scf.for [[IV:%.+]] = [[LB]] to [[UB]] step [[STEP:%.+]] {
+
+// Test that i32 bounds are converted to index when used as bounds, without min/max patterns
+func.func @prepare_non_index_bounds_no_pattern(%ub: i32, %lb: i32) {
+  %step = arith.constant 1 : i32
+  scf.for unsigned %i = %lb to %ub step %step : i32 {
+    func.call @some_func_i32(%i) : (i32) -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @prepare_non_index_bounds_no_pattern
+// CHECK-SAME: ([[UB:%.+]]: i32, [[LB:%.+]]: i32)
+// CHECK-DAG: [[STEP:%.*]] = arith.constant 1 : index
+// CHECK-DAG: [[UB_C:%.*]] = arith.index_cast [[UB]] : i32 to index
+// CHECK-DAG: [[LB_C:%.*]] = arith.index_cast [[LB]] : i32 to index
+// CHECK: scf.for [[IV:%.+]] = [[LB_C]] to [[UB_C]] step [[STEP]] {
+// CHECK: [[IV_I32:%.*]] = arith.index_cast [[IV]] : index to i32
+// CHECK: func.call @some_func_i32([[IV_I32]]) : (i32) -> ()
+// CHECK: return
+
+
+// Test that i32 bounds are converted to index when used as bounds, including min/max patterns
+func.func @prepare_non_index_bounds(%ub1: i32, %ub2: i32, %lb1: i32, %lb2: i32) {
+  %cmp1 = arith.cmpi sle, %ub1, %ub2 : i32
+  %ub = arith.select %cmp1, %ub1, %ub2 : i32
+  %cmp2 = arith.cmpi sge, %lb1, %lb2 : i32
+  %lb = arith.select %cmp2, %lb1, %lb2 : i32
+  %step = arith.constant 1 : i32
+  scf.for %i = %lb to %ub step %step : i32 {
+    func.call @some_func_i32(%i) : (i32) -> ()
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @prepare_non_index_bounds
+// CHECK-SAME: ([[UB1:%.+]]: i32, [[UB2:%.+]]: i32, [[LB1:%.+]]: i32, [[LB2:%.+]]: i32)
+// CHECK-DAG: [[STEP:%.*]] = arith.constant 1 : index
+// CHECK-DAG: [[LBMAX:%.*]] = arith.maxsi [[LB1]], [[LB2]] : i32
+// CHECK-DAG: [[UBMIN:%.*]] = arith.minsi [[UB1]], [[UB2]] : i32
+// CHECK-DAG: [[LB_C:%.*]] = arith.index_cast [[LBMAX]] : i32 to index
+// CHECK-DAG: [[UB_C:%.*]] = arith.index_cast [[UBMIN]] : i32 to index
+// CHECK: scf.for [[IV:%.+]] = [[LB_C]] to [[UB_C]] step [[STEP]] {
+// CHECK: [[IV_I32:%.*]] = arith.index_cast [[IV]] : index to i32
+// CHECK: func.call @some_func_i32([[IV_I32]]) : (i32) -> ()
+// CHECK: return
