@@ -13,6 +13,8 @@ pip install git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e
 pip install xdsl==0.55.4
 ```
 
+The above command is pinpointing to this a specific version of [Qrisp](https://github.com/eclipse-qrisp/Qrisp/pull/528) which mostly solved the dependencies from `stablehlo` dialect.
+
 ## **Troubleshooting**: If you encounter any problems, check the official [Qrisp setup documentation](https://qrisp.eu/general/setup.html) for detailed instructions.
 
 ## Step 1 — Write Your Qrisp Program
@@ -62,6 +64,6 @@ func.func @main(...) -> ... attributes { qcc.entry_point } {
 
 ---
 
-## TODOs
+## Remark
 
-Document all manual tweaks you have to do to run any test correctly within `qcc` in a TODO comment within the tests themselves.
+Despite this guide, remember to always document all manual tweaks you have to do to run any test correctly within `qcc` in a TODO comment within the tests themselves.
