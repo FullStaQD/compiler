@@ -15,6 +15,8 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include <optional>
+
 using namespace mlir;
 
 namespace qcc {
@@ -27,48 +29,66 @@ namespace {
 struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  static Value getMinMaxBound(Value bound, bool isLower, PatternRewriter& rewriter) {
+  static std::optional<Value> replaceMinMaxBound(Value bound, const bool isLower, PatternRewriter& rewriter) {
     auto selOp = bound.getDefiningOp<arith::SelectOp>();
     if (!selOp) {
-      return nullptr;
+      return std::nullopt;
     }
 
     auto cmp = selOp.getCondition().getDefiningOp<arith::CmpIOp>();
     if (!cmp) {
-      return nullptr;
+      return std::nullopt;
     }
 
-    if (!(cmp.getLhs() == selOp.getTrueValue() && cmp.getRhs() == selOp.getFalseValue())) {
-      return nullptr;
+    auto selectLeft = cmp.getLhs() == selOp.getTrueValue() && cmp.getRhs() == selOp.getFalseValue();
+    auto selectRight = cmp.getLhs() == selOp.getFalseValue() && cmp.getRhs() == selOp.getTrueValue();
+
+    // For this purpose, it doesn't matter whether the comparison is strict or not, or signed or not.
+    auto leftSmaller =
+        cmp.getPredicate() == arith::CmpIPredicate::slt || cmp.getPredicate() == arith::CmpIPredicate::sle ||
+        cmp.getPredicate() == arith::CmpIPredicate::ult || cmp.getPredicate() == arith::CmpIPredicate::ule;
+    auto leftLarger =
+        cmp.getPredicate() == arith::CmpIPredicate::sgt || cmp.getPredicate() == arith::CmpIPredicate::sge ||
+        cmp.getPredicate() == arith::CmpIPredicate::ugt || cmp.getPredicate() == arith::CmpIPredicate::uge;
+
+    auto signedComparison =
+        cmp.getPredicate() == arith::CmpIPredicate::slt || cmp.getPredicate() == arith::CmpIPredicate::sle ||
+        cmp.getPredicate() == arith::CmpIPredicate::sgt || cmp.getPredicate() == arith::CmpIPredicate::sge;
+
+    auto isLegalMin = !isLower && (selectLeft && leftSmaller) || (selectRight && leftLarger);
+    auto isLegalMax = isLower && (selectLeft && leftLarger) || (selectRight && leftSmaller);
+
+    if (!isLegalMin && !isLegalMax) {
+      return std::nullopt;
     }
 
-    if (isLower) {
-      if (cmp.getPredicate() != arith::CmpIPredicate::sge) {
-        return nullptr;
+    // Traverse the select operands to check for nested min/max patterns.
+    auto leftMaxValue = replaceMinMaxBound(selOp.getTrueValue(), isLower, rewriter).value_or(selOp.getTrueValue());
+    auto rightMaxValue = replaceMinMaxBound(selOp.getFalseValue(), isLower, rewriter).value_or(selOp.getFalseValue());
+
+    if (isLegalMax) {
+      if (signedComparison) {
+        return arith::MaxSIOp::create(rewriter, selOp.getLoc(), selOp.getType(), leftMaxValue, rightMaxValue);
       }
-      return arith::MaxSIOp::create(rewriter, selOp.getLoc(), selOp.getType(), selOp.getTrueValue(),
-                                    selOp.getFalseValue());
+      return arith::MaxUIOp::create(rewriter, selOp.getLoc(), selOp.getType(), leftMaxValue, rightMaxValue);
+    }
+    if (isLegalMin) {
+      if (signedComparison) {
+        return arith::MinSIOp::create(rewriter, selOp.getLoc(), selOp.getType(), leftMaxValue, rightMaxValue);
+      }
+      return arith::MinUIOp::create(rewriter, selOp.getLoc(), selOp.getType(), leftMaxValue, rightMaxValue);
     }
 
-    if (cmp.getPredicate() != arith::CmpIPredicate::sle) {
-      return nullptr;
-    }
-    return arith::MinSIOp::create(rewriter, selOp.getLoc(), selOp.getType(), selOp.getTrueValue(),
-                                  selOp.getFalseValue());
+    llvm_unreachable("should have been legal min or max");
   }
 
   LogicalResult matchAndRewrite(scf::ForOp loop, PatternRewriter& rewriter) const override {
-    Value newLb = getMinMaxBound(loop.getLowerBound(), /*isLower=*/true, rewriter);
-    Value newUb = getMinMaxBound(loop.getUpperBound(), /*isLower=*/false, rewriter);
-    if (!newLb && !newUb) {
-      return failure();
-    }
+    auto newLb = replaceMinMaxBound(loop.getLowerBound(), /*isLower=*/true, rewriter).value_or(loop.getLowerBound());
+    auto newUb = replaceMinMaxBound(loop.getUpperBound(), /*isLower=*/false, rewriter).value_or(loop.getUpperBound());
 
-    if (!newLb) {
-      newLb = loop.getLowerBound();
-    }
-    if (!newUb) {
-      newUb = loop.getUpperBound();
+    auto noChange = newLb == loop.getLowerBound() && newUb == loop.getUpperBound();
+    if (noChange) {
+      return failure();
     }
 
     Location loc = loop.getLoc();
