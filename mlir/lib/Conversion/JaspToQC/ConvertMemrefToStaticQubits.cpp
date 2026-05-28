@@ -72,9 +72,7 @@ protected:
 
       // Create a unique 'static' op for every slot in the memref.
       for (int64_t i = 0; i < size; i++) {
-        auto staticQubit = qc::StaticOp::create(builder, allocOp->getLoc(), qc::QubitType::get(op->getContext()),
-        auto staticQubit = qc::StaticOp::create(builder, allocOp->getLoc(),
-                                                nextGlobalQubitIdx++);
+        auto staticQubit = qc::StaticOp::create(builder, allocOp->getLoc(), nextGlobalQubitIdx++);
         qubitMap[{allocOp.getResult(), i}] = staticQubit.getResult();
       }
 
@@ -119,15 +117,43 @@ protected:
         return WalkResult::interrupt();
       }
 
-      // Replace all uses of the 'loaded' qubit with the 'static' hardware qubit.
+      // Replace all uses of the 'loaded' qubit with the 'static' hardware qubit. It deletes the loadOp as well.
       loadOp.getResult().replaceAllUsesWith(it->second);
-      // loadOp.erase();
+      loadOp.erase();
 
       return WalkResult::advance();
     });
 
     if (secondResult.wasInterrupted()) {
       return signalPassFailure();
+    }
+
+    // --- Step 3: Deletes Dangling Memref Usages ---
+    // Applies a third walk and removes all the memref instances that deal with qubit type.
+    WalkResult thirdResult = op->walk([&](Operation* memrefOp) {
+      if (auto allocOp = dyn_cast<memref::AllocOp>(memrefOp)) {
+        if (isQubitMemref(allocOp.getType())) {
+          allocOp->erase();
+          return WalkResult::advance();
+        }
+      } else if (auto deallocOp = dyn_cast<memref::DeallocOp>(memrefOp)) {
+        auto memrefType = dyn_cast<MemRefType>(deallocOp.getMemref().getType());
+        if (memrefType && isQubitMemref(memrefType)) {
+          deallocOp->erase();
+          return WalkResult::advance();
+        }
+      } else if (auto castOp = dyn_cast<memref::CastOp>(memrefOp)) {
+        auto memrefType = dyn_cast<MemRefType>(castOp.getType());
+        if (memrefType && isQubitMemref(memrefType)) {
+          castOp->erase();
+          return WalkResult::advance();
+        }
+      }
+      return WalkResult::advance();
+    });
+
+    if (thirdResult.wasInterrupted()) {
+      signalPassFailure();
     }
   }
 };

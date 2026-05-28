@@ -49,8 +49,7 @@ def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {
   let summary = "Replace dynamic qubit array loads with static qubits.";
   let description = [{ First, substitutes `memref.alloc` with  a list of `qc.static` allocation. Subsequently,
       transforms `memref.load` on qubit arrays into direct `qc.static` references. Requires compile-time constant indices
-      (should be called after a `check-static-qubit-allocation` step). At the end of the step the `qc` and the `memref` dialect live together in the same IR.
-      The latter is actually dangling and it should be cleaned up via further `mlir::Canonicalization`.
+      (should be called after a `check-static-qubit-allocation` step).
 
       Providing as input the following IR:
 
@@ -65,11 +64,9 @@ def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {
       %0 = qc.static 0 : !qc.qubit
       %1 = qc.static 1 : !qc.qubit
       %2 = qc.static 2 : !qc.qubit
-      %alloc = memref.alloc() : memref<3x!qc.qubit>
       ```
 
-      in which the allocation of three qubits has been turned into 3 separate static allocations, while the `memref.alloc` is dangling
-      and will be cleaned up via `mlir::Canonicalization`.
+      in which the allocation of three qubits has been turned into 3 separate static allocations.
 
 }];
 let dependentDialects = ["mlir::qc::QCDialect"];
