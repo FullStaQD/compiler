@@ -88,35 +88,11 @@ struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
 
     auto noChange = newLb == loop.getLowerBound() && newUb == loop.getUpperBound();
     if (noChange) {
-      return failure();
+      return rewriter.notifyMatchFailure(loop, "bounds are not min/max select patterns");
     }
 
-    Location loc = loop.getLoc();
-    scf::ForOp newLoop = scf::ForOp::create(rewriter, loc, newLb, newUb, loop.getStep(), loop.getInits());
-    for (auto attr : loop.getOperation()->getDiscardableAttrs()) {
-      newLoop.getOperation()->setAttr(attr.getName(), attr.getValue());
-    }
-
-    rewriter.eraseOp(newLoop.getRegion().front().getTerminator());
-
-    SmallVector<Value> vals;
-    rewriter.setInsertionPointToStart(&newLoop.getRegion().front());
-    for (Value arg : newLoop.getRegion().front().getArguments()) {
-      bool isInduction = arg == newLoop.getInductionVar();
-      if (isInduction && arg.getType() != loop.getInductionVar().getType()) {
-        arg = arith::IndexCastOp::create(rewriter, loc, loop.getInductionVar().getType(), arg);
-      }
-      vals.push_back(arg);
-    }
-
-    rewriter.mergeBlocks(&loop.getRegion().front(), &newLoop.getRegion().front(), vals);
-
-    auto mergedYieldOp = cast<scf::YieldOp>(newLoop.getRegion().front().getTerminator());
-    rewriter.setInsertionPoint(mergedYieldOp);
-    scf::YieldOp newYieldOp = scf::YieldOp::create(rewriter, mergedYieldOp.getLoc(), mergedYieldOp.getOperands());
-    rewriter.eraseOp(mergedYieldOp);
-
-    rewriter.replaceOp(loop, newLoop.getResults());
+    loop.setLowerBound(newLb);
+    loop.setUpperBound(newUb);
     return success();
   }
 };
