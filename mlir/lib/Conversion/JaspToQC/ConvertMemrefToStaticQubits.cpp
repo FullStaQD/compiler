@@ -73,7 +73,7 @@ protected:
       // Create a unique 'static' op for every slot in the memref.
       for (int64_t i = 0; i < size; i++) {
         auto staticQubit = qc::StaticOp::create(builder, allocOp->getLoc(), qc::QubitType::get(op->getContext()),
-        auto staticQubit = qc::StaticOp::create(builder, allocOp->getLoc(), 
+        auto staticQubit = qc::StaticOp::create(builder, allocOp->getLoc(),
                                                 nextGlobalQubitIdx++);
         qubitMap[{allocOp.getResult(), i}] = staticQubit.getResult();
       }
