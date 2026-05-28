@@ -44,6 +44,8 @@ struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
     auto selectRight = cmp.getLhs() == selOp.getFalseValue() && cmp.getRhs() == selOp.getTrueValue();
 
     // For this purpose, it doesn't matter whether the comparison is strict or not, or signed or not.
+    // FIXME: The for loop treats its bounds as unsigned, so it doesn't really make sense to have signed comparisons
+    //  beforehand. Figure out how to handle this properly.
     auto leftSmaller =
         cmp.getPredicate() == arith::CmpIPredicate::slt || cmp.getPredicate() == arith::CmpIPredicate::sle ||
         cmp.getPredicate() == arith::CmpIPredicate::ult || cmp.getPredicate() == arith::CmpIPredicate::ule;
@@ -106,54 +108,29 @@ struct ForBoundsIndexCast : public OpRewritePattern<scf::ForOp> {
     Value lb = loop.getLowerBound();
     Value ub = loop.getUpperBound();
     Value step = loop.getStep();
+    Type originalBoundsType = step.getType();
 
-    bool needCast = !isa<IndexType>(lb.getType()) || !isa<IndexType>(ub.getType()) || !isa<IndexType>(step.getType());
-    if (!needCast) {
-      return failure();
+    assert(lb.getType() == originalBoundsType && ub.getType() == originalBoundsType &&
+           "expected all bounds and step to have the same type");
+    bool needCasts = !isa<IndexType>(lb.getType());
+    if (!needCasts) {
+      return rewriter.notifyMatchFailure(loop, "bounds and step are already index-typed");
     }
 
-    // Create index-typed bounds as needed.
-    Value newLb =
-        isa<IndexType>(lb.getType()) ? lb : arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), lb);
-    Value newUb =
-        isa<IndexType>(ub.getType()) ? ub : arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), ub);
-    Value newStep = isa<IndexType>(step.getType())
-                        ? step
-                        : arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), step);
+    Value newLb = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), lb);
+    Value newUb = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), ub);
+    Value newStep = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), step);
 
-    // Create new scf.for with index-typed bounds.
-    scf::ForOp newLoop = scf::ForOp::create(rewriter, loc, newLb, newUb, newStep, loop.getInits());
-    // Copy discardable attributes from the old loop to the new loop.
-    for (auto attr : loop.getOperation()->getDiscardableAttrs()) {
-      newLoop.getOperation()->setAttr(attr.getName(), attr.getValue());
-    }
+    loop.setLowerBound(newLb);
+    loop.setUpperBound(newUb);
+    loop.setStep(newStep);
 
-    // If the new loop has no iter operands, remove the automatically inserted yield
-    // so we can materialize the original one later.
-    rewriter.eraseOp(newLoop.getRegion().front().getTerminator());
+    Value iv = loop.getInductionVar();
+    iv.setType(rewriter.getIndexType());
+    rewriter.setInsertionPointToStart(loop.getBody());
+    Value castIv = arith::IndexCastOp::create(rewriter, loc, originalBoundsType, iv);
+    iv.replaceAllUsesWith(castIv);
 
-    // Prepare values to replace the new loop region arguments with. Cast the
-    // induction variable back to the original type if necessary.
-    SmallVector<Value> vals;
-    rewriter.setInsertionPointToStart(&newLoop.getRegion().front());
-    for (Value arg : newLoop.getRegion().front().getArguments()) {
-      bool isInduction = arg == newLoop.getInductionVar();
-      if (isInduction && arg.getType() != loop.getInductionVar().getType()) {
-        arg = arith::IndexCastOp::create(rewriter, loc, loop.getInductionVar().getType(), arg);
-      }
-      vals.push_back(arg);
-    }
-
-    // Merge the original loop body into the new loop region.
-    rewriter.mergeBlocks(&loop.getRegion().front(), &newLoop.getRegion().front(), vals);
-
-    // Move the original yield into the new loop and erase the old loop.
-    auto mergedYieldOp = cast<scf::YieldOp>(newLoop.getRegion().front().getTerminator());
-    rewriter.setInsertionPoint(mergedYieldOp);
-    auto newYieldOp = scf::YieldOp::create(rewriter, mergedYieldOp.getLoc(), mergedYieldOp.getOperands());
-    rewriter.eraseOp(mergedYieldOp);
-
-    rewriter.replaceOp(loop, newLoop.getResults());
     return success();
   }
 };
