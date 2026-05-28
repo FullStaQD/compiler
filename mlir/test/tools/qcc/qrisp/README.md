@@ -10,6 +10,7 @@ This project requires a Python environment with `qrisp` installed. You can insta
 
 ```bash
 pip install git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
+pip install xdsl==0.55.4
 ```
 
 ## **Troubleshooting**: If you encounter any problems, check the official [Qrisp setup documentation](https://qrisp.eu/general/setup.html) for detailed instructions.
@@ -42,8 +43,6 @@ python your_script.py
 ```
 
 The output will be a block of MLIR text. Copy it — this is your **raw MLIR**, which will require a few manual transformations before it is ready to use.
-
-> **Note:** At this stage the output uses the `stablehlo` dialect for arithmetic and tensor operations. The next steps normalize it into a more standard form.
 
 ---
 
