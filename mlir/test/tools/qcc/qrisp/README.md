@@ -10,7 +10,7 @@ This project requires a Python environment with `qrisp` installed. You can insta
 
 ```bash
 pip install git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
-pip install xdsl==0.55.4
+pip install xdsl==0.59.0
 ```
 
 The above command is pinpointing to this a specific version of [Qrisp](https://github.com/eclipse-qrisp/Qrisp/pull/528) which mostly solved the dependencies from `stablehlo` dialect.
