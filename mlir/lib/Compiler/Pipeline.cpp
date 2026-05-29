@@ -35,9 +35,10 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // whenever possible.
   pm.addPass(qcc::createJaspToQC());
 
-  // Initial cleanup
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
+  // Dynamic to static allocation translation
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(qcc::createJaspCheckStaticQubitAllocation());
+  pm.addPass(qcc::createConvertMemrefToStaticQubits());
 
   // Convert `tensor.empty` to `bufferization.alloc_tensor`, which is expected by
   // bufferization.
