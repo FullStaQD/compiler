@@ -28,6 +28,7 @@ namespace {
 
 /// Replace min/max select trees in loop bounds with actual min/max trees, which are easier to recognize for affine
 /// raising.
+/// FIXME: This will not match if indices have been cast beforehand.
 struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -48,9 +49,6 @@ struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
     auto selectRight = cmp.getLhs() == selOp.getFalseValue() && cmp.getRhs() == selOp.getTrueValue();
 
     // For this purpose, it doesn't matter whether the comparison is strict or not, or signed or not.
-    // FIXME: The for loop treats its bounds as unsigned, so it doesn't really make sense to have signed comparisons
-    //  beforehand. Figure out how to handle this properly.
-    // RESOLVED by difference between unsigned and signless!
     auto leftSmaller =
         cmp.getPredicate() == arith::CmpIPredicate::slt || cmp.getPredicate() == arith::CmpIPredicate::sle ||
         cmp.getPredicate() == arith::CmpIPredicate::ult || cmp.getPredicate() == arith::CmpIPredicate::ule;
@@ -95,6 +93,7 @@ struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
 
     auto noChange = newLb == loop.getLowerBound() && newUb == loop.getUpperBound();
     if (noChange) {
+      // FIXME: is it appropriate to include the message in this case, or should we simply return failure?
       return rewriter.notifyMatchFailure(loop, "bounds are not min/max select patterns");
     }
 
@@ -115,6 +114,13 @@ struct ForBoundsIndexCast : public OpRewritePattern<scf::ForOp> {
     Value step = loop.getStep();
     Type originalBoundsType = step.getType();
 
+    auto createIndexCast = [&](Value v, Type targetType) -> Value {
+      if (loop.getUnsignedCmp()) {
+        return arith::IndexCastUIOp::create(rewriter, loc, targetType, v);
+      }
+      return arith::IndexCastOp::create(rewriter, loc, targetType, v);
+    };
+
     assert(lb.getType() == originalBoundsType && ub.getType() == originalBoundsType &&
            "expected all bounds and step to have the same type");
     bool needCasts = !isa<IndexType>(lb.getType());
@@ -122,9 +128,9 @@ struct ForBoundsIndexCast : public OpRewritePattern<scf::ForOp> {
       return rewriter.notifyMatchFailure(loop, "bounds and step are already index-typed");
     }
 
-    Value newLb = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), lb);
-    Value newUb = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), ub);
-    Value newStep = arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), step);
+    Value newLb = createIndexCast(lb, rewriter.getIndexType());
+    Value newUb = createIndexCast(ub, rewriter.getIndexType());
+    Value newStep = createIndexCast(step, rewriter.getIndexType());
 
     loop.setLowerBound(newLb);
     loop.setUpperBound(newUb);
@@ -133,7 +139,7 @@ struct ForBoundsIndexCast : public OpRewritePattern<scf::ForOp> {
     Value iv = loop.getInductionVar();
     iv.setType(rewriter.getIndexType());
     rewriter.setInsertionPointToStart(loop.getBody());
-    Value castIv = arith::IndexCastOp::create(rewriter, loc, originalBoundsType, iv);
+    Value castIv = createIndexCast(iv, originalBoundsType);
 
     iv.replaceAllUsesExcept(castIv, castIv.getDefiningOp());
 
