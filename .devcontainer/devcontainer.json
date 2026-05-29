@@ -6,7 +6,9 @@
   },
   "postCreateCommand": "prek install",
   "remoteEnv": {
-    "UV_PYTHON": "3.14"
+    "UV_PYTHON": "3.14",
+    "LIT_BIN": "/usr/local/bin/lit",
+    "MLIR_DIR": "/opt/llvm/lib/cmake/mlir"
   },
   "customizations": {
     "vscode": {
@@ -22,12 +24,5 @@
         "clangd.path": "clangd"
       }
     }
-  },
-  "mounts": [
-    {
-      "source": "${localEnv:QCC_PROJECT_DEVCONTAINER_CUSTOM_MOUNT:./.devcontainer/custom}",
-      "target": "/home/vscode/external",
-      "type": "bind"
-    }
-  ]
+  }
 }

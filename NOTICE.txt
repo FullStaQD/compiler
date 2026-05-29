@@ -1,0 +1,6 @@
+NOTICE
+
+FullStaQD Project
+Copyright (c) 2026 FullStaQD Contributors
+
+This product includes software developed as part of the FullStaQD Project.
