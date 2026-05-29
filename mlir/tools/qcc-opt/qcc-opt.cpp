@@ -54,6 +54,7 @@ int main(int argc, char** argv) {
     mlir::cf::ControlFlowDialect,
     mlir::scf::SCFDialect,
     mlir::LLVM::LLVMDialect,
+    mlir::memref::MemRefDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
     qcc::aux::AuxDialect,
@@ -78,6 +79,8 @@ int main(int argc, char** argv) {
 
   // Our passes
   qcc::registerJaspToQC();
+  qcc::registerJaspCheckStaticQubitAllocation();
+  qcc::registerConvertMemrefToStaticQubits();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
