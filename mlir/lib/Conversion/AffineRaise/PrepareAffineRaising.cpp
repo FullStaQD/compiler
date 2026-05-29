@@ -26,9 +26,13 @@ namespace qcc {
 
 namespace {
 
+/// Replace min/max select trees in loop bounds with actual min/max trees, which are easier to recognize for affine
+/// raising.
 struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
   using OpRewritePattern::OpRewritePattern;
 
+  /// Recursively traverse select patterns to find min/max patterns and replace them with actual min/max ops. Returns
+  /// the new value if a replacement was made, or `std::nullopt` if the pattern doesn't match.
   static std::optional<Value> replaceMinMaxBound(Value bound, const bool isLower, PatternRewriter& rewriter) {
     auto selOp = bound.getDefiningOp<arith::SelectOp>();
     if (!selOp) {
@@ -46,6 +50,7 @@ struct SelectToMinMax : public OpRewritePattern<scf::ForOp> {
     // For this purpose, it doesn't matter whether the comparison is strict or not, or signed or not.
     // FIXME: The for loop treats its bounds as unsigned, so it doesn't really make sense to have signed comparisons
     //  beforehand. Figure out how to handle this properly.
+    // RESOLVED by difference between unsigned and signless!
     auto leftSmaller =
         cmp.getPredicate() == arith::CmpIPredicate::slt || cmp.getPredicate() == arith::CmpIPredicate::sle ||
         cmp.getPredicate() == arith::CmpIPredicate::ult || cmp.getPredicate() == arith::CmpIPredicate::ule;
@@ -129,7 +134,8 @@ struct ForBoundsIndexCast : public OpRewritePattern<scf::ForOp> {
     iv.setType(rewriter.getIndexType());
     rewriter.setInsertionPointToStart(loop.getBody());
     Value castIv = arith::IndexCastOp::create(rewriter, loc, originalBoundsType, iv);
-    iv.replaceAllUsesWith(castIv);
+
+    iv.replaceAllUsesExcept(castIv, castIv.getDefiningOp());
 
     return success();
   }

@@ -69,6 +69,8 @@ func.func @prepare_nested_bounds(%ub1: index, %ub2: index, %ub3: index, %lb1: in
 // Test that i32 bounds are converted to index when used as bounds, without min/max patterns
 func.func @prepare_non_index_bounds_no_pattern(%ub: i32, %lb: i32) {
   %step = arith.constant 1 : i32
+  // FIXME: What is the significance of the unsigned attribute? Should it be in this test,
+  //  or should the pass remove it?
   scf.for unsigned %i = %lb to %ub step %step : i32 {
     func.call @some_func_i32(%i) : (i32) -> ()
     scf.yield
@@ -81,7 +83,7 @@ func.func @prepare_non_index_bounds_no_pattern(%ub: i32, %lb: i32) {
 // CHECK-DAG: [[STEP:%.*]] = arith.constant 1 : index
 // CHECK-DAG: [[UB_C:%.*]] = arith.index_cast [[UB]] : i32 to index
 // CHECK-DAG: [[LB_C:%.*]] = arith.index_cast [[LB]] : i32 to index
-// CHECK: scf.for [[IV:%.+]] = [[LB_C]] to [[UB_C]] step [[STEP]] {
+// CHECK: scf.for unsigned [[IV:%.+]] = [[LB_C]] to [[UB_C]] step [[STEP]] {
 // CHECK: [[IV_I32:%.*]] = arith.index_cast [[IV]] : index to i32
 // CHECK: func.call @some_func_i32([[IV_I32]]) : (i32) -> ()
 // CHECK: return
