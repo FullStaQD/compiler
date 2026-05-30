@@ -106,6 +106,17 @@ lit build/dev/mlir/test/ -v --filter "convert"
 
 ---
 
+## Language server
+
+If you use VSCode and would like to enable the custom MLIR LSP server including quantum dialects, add this line to your
+settings:
+
+```
+"mlir.server_path": "build/dev/bin/qcc-lsp-server"
+```
+
+---
+
 ## License headers
 
 The license headers in this repository are managed using the [`license-eye`](https://github.com/apache/skywalking-eyes) tool.
