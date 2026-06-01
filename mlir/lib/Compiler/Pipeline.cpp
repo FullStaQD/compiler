@@ -85,7 +85,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
 
   // conversion to QIR
-  pm.addPass(qcc::createAuxAddIntegerOutputRecording());
+  pm.addPass(qcc::createAuxOutputRecording());
   pm.addPass(qcc::createPrepToQIR());
   mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();
   fpm.addPass(mlir::createArithToLLVMConversionPass());
