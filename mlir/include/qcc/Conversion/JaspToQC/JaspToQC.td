@@ -56,27 +56,62 @@ let dependentDialects = ["mlir::qc::QCDialect", "mlir::tensor::TensorDialect", "
 
 def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {
   let summary = "Replace dynamic qubit array loads with static qubits.";
-  let description = [{ First, substitutes `memref.alloc` with  a list of `qc.static` allocation. Subsequently,
-      transforms `memref.load` on qubit arrays into direct `qc.static` references. Requires compile-time constant indices
-      (should be called after a `check-static-qubit-allocation` step).
+  let description = [{ Fir st,
+      substitutes `memref.alloc` with a list of `qc.static` allocation.Subsequently,
+      transforms `memref.load` on qubit arrays into direct `qc.static` references.Requires compile -
+          time constant indices(should be called after a `check - static - qubit - allocation` step)
+                  .
 
-      Providing as input the following IR:
+              Providing as input the following IR :
 
-      ```mlir
-      %0 = "arith.constant"() <{value = dense<3> : tensor<i64>}> : () -> tensor<i64>
-      %1, %2 = "jasp.create_qubits"(%0, %arg14) : (tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState)
+      ```mlir %
+              0 = "arith.constant"()<{value = dense<3>: tensor<i64>}> : ()->tensor<i64> % 1,
+      % 2 = "jasp.create_qubits"(% 0, % arg14)
+      : (tensor<i64>, !jasp.QuantumState)
+            ->(!jasp.QubitArray, !jasp.QuantumState)
       ```
 
-      the pass will translate it into:
+        the pass will translate it into :
 
-      ```mlir
-      %0 = qc.static 0 : !qc.qubit
-      %1 = qc.static 1 : !qc.qubit
-      %2 = qc.static 2 : !qc.qubit
+      ```mlir %
+            0 = qc.static 0 : !qc.qubit % 1 = qc.static 1 : !qc.qubit % 2 = qc.static 2
+      : !qc.qubit
       ```
 
-      in which the allocation of three qubits has been turned into 3 separate static allocations.
-
+        in which the allocation of three qubits has been turned into 3 separate static allocations.
 }];
 let dependentDialects = ["mlir::qc::QCDialect"];
+}
+
+def AddEntrypointToMain : Pass<"add-entrypoint-to-main", "mlir::ModuleOp"> {
+  let summary = "Marks the entry-point function with the `qcc.entry_point` attribute.";
+  let description = [{
+      The QIR conversion pipeline relies on the `qcc.entry_point` attribute to
+      identify the function from which a quantum program starts.
+
+      This pass first checks whether *any* function in the module already
+      carries the `qcc.entry_point` attribute. If so, the pass does nothing --
+      the existing entry-point is respected, whether it is `@main` or any other
+      function annotated elsewhere.
+
+      Otherwise, the pass looks up the function whose name matches the
+      configured entry-point name (`main` by default) and attaches the
+      `qcc.entry_point` unit attribute to it. This targets the convention used
+      by frontends such as qrisp, which name the entry-point `@main` but do not
+      attach the attribute themselves.
+
+      The pass emits an error only if no entry-point exists *and* no function
+      with the configured name can be found.
+
+      TODO: This convention will likely have to evolve once the program input
+      becomes more complex (multiple kernels, a separate classical entry-point,
+      etc.).
+  }];
+
+  let options = [
+    Option<"entryPointName", "entry-point-name", "std::string", /*default=*/"\"main\"",
+           "Name of the function to be marked as the entry-point.">
+  ];
+
+  let dependentDialects = ["mlir::func::FuncDialect"];
 }
