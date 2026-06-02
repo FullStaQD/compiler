@@ -16,9 +16,10 @@ def AuxOutputRecording : Pass<"integer-output-recording"> {
     }];
     let summary = "Adds recording of integer outputs following the QIR recipe for output recording.";
     let description = [{
-      This pass adds `aux.record_integer` operations after every operation that returns an integer value, following the QIR recipe for output recording. This allows us to record integer outputs in a way that can be translated to the corresponding QIR runtime function calls during code generation.
+      This pass replaces integer returns of the entry point function with `aux.record_integer` and `aux.record_bool` and
+      changes the return to void.
 
-      For example, if we have an operation that produces an integer result:
+      For example, if we have an entry point function like this:
 
       ```mlir
       %result = some_operation() : () -> i64
