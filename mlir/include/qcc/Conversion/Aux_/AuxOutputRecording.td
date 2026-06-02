@@ -22,6 +22,7 @@ def AuxOutputRecording : Pass<"integer-output-recording"> {
 
       ```mlir
       %result = some_operation() : () -> i64
+      return %result : i64
       ```
 
       After applying this pass, it will be transformed to:
@@ -29,9 +30,10 @@ def AuxOutputRecording : Pass<"integer-output-recording"> {
       ```mlir
       %result = some_operation() : () -> i64
       aux.record_integer %result : i64
+      return
       ```
-
-      This ensures that the integer output is properly recorded for later use in the QIR runtime.
+    This pass is a workaround to enable output recording for integer values, as our principal
+    dialects do not have a direct way to represent the necessary functionality for recording outputs.
    }];
     let dependentDialects = [
     "mlir::func::FuncDialect",
