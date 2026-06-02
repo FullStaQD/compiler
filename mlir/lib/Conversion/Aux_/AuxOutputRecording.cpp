@@ -68,7 +68,6 @@ protected:
       auto& body = funcOp.getBody().front();
       auto* returnOp = body.getTerminator();
 
-      // We expect a return op with the same number of operands as the old results
       auto retOp = cast<func::ReturnOp>(returnOp);
       auto oldReturnOperands = retOp.getOperands();
 
