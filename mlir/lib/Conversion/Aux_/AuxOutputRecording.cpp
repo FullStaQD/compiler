@@ -20,6 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 #include <llvm/Support/Casting.h>
+#include <mlir/Support/WalkResult.h>
 
 namespace qcc {
 
@@ -42,18 +43,20 @@ protected:
 
     auto module = cast<mlir::ModuleOp>(getOperation());
 
-    module.walk([&](func::FuncOp funcOp) {
-      if (!funcOp) {
-        return;
-      }
+    auto walkResult = module.walk([&](func::FuncOp funcOp) {
       // Only transform functions marked as entry points
       if (!funcOp->hasAttr("qcc.entry_point")) {
-        return;
+        return WalkResult::advance();
       }
 
       // We only care if there are results to record
       if (funcOp.getNumResults() == 0) {
-        return;
+        return WalkResult::advance();
+      }
+
+      if (funcOp.getBody().getBlocks().size() != 1) {
+        funcOp.emitError("Expected exactly one block in the function.");
+        return WalkResult::interrupt();
       }
 
       // Build a new function type with void return type
@@ -66,19 +69,10 @@ protected:
 
       // Work on the first block
       auto& body = funcOp.getBody().front();
-      auto* returnOp = body.getTerminator();
-
-      auto retOp = cast<func::ReturnOp>(returnOp);
+      auto retOp = cast<func::ReturnOp>(body.getTerminator());
       auto oldReturnOperands = retOp.getOperands();
 
       OpBuilder builder(retOp);
-      // If there are no return operands, nothing to record
-      if (oldReturnOperands.empty()) {
-        retOp.erase();
-        builder.setInsertionPointToEnd(&body);
-        func::ReturnOp::create(builder, retOp.getLoc());
-        return;
-      }
 
       auto loc = retOp.getLoc();
       // Record each return value according to its type
@@ -93,14 +87,20 @@ protected:
           ::qcc::aux::RecordBoolOp::create(builder, loc, v);
         } else {
           // TODO: Handle other types as needed. For now, we only support i64 and i1.
-          return signalPassFailure();
+          funcOp.emitError("Non-integer return types are not supported.");
+          return WalkResult::interrupt();
         }
       }
       // Remove the old return with values and replace with a void return
       retOp.erase();
       builder.setInsertionPointToEnd(&body);
       func::ReturnOp::create(builder, loc);
+      return WalkResult::advance();
     });
+
+    if (walkResult.wasInterrupted()) {
+      signalPassFailure();
+    }
   };
 };
 } // namespace
