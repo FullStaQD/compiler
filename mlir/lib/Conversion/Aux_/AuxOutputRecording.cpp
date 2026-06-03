@@ -37,10 +37,6 @@ struct AuxOutputRecording final : public impl::AuxOutputRecordingBase<AuxOutputR
 
 protected:
   void runOnOperation() override {
-    // Load the aux dialect into the context
-    auto* context = &getContext();
-    context->loadDialect<::qcc::aux::AuxDialect>();
-
     auto module = cast<mlir::ModuleOp>(getOperation());
 
     auto walkResult = module.walk([&](func::FuncOp funcOp) {
