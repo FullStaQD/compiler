@@ -29,7 +29,6 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
 
-  // Attach the `qcc.entry_point` attribute. Add it before anything else runs.
   pm.addPass(qcc::createAddEntrypointToMain());
 
   // Lowering from JASP to QC
