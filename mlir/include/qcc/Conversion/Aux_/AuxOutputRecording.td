@@ -9,11 +9,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AuxOutputRecording : Pass<"integer-output-recording"> {
-    let summary = "Add recording of integer outputs.";
-    let description = [{
-        This pass adds `aux.record_integer` operations after every operation that returns an integer value.
-    }];
+def AuxOutputRecording : Pass<"convert-return-to-output-recording"> {
     let summary = "Adds recording of integer outputs following the QIR recipe for output recording.";
     let description = [{
       This pass replaces integer returns of the entry point function with `aux.record_integer` and `aux.record_bool` and
