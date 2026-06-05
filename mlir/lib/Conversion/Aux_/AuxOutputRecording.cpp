@@ -7,7 +7,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Conversion/Aux_/AuxOutputRecording.h"
+#include "qcc/Conversion/Aux_/AuxOutputRecording.h" // IWYU pragma: keep
 
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 
