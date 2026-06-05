@@ -74,13 +74,8 @@ protected:
       // Record each return value according to its type
       for (Value v : oldReturnOperands) {
         Type ty = v.getType();
-
-        if (ty.isInteger(64)) {
-          // aux.record_integer %a : i64
+        if (ty.isInteger()) {
           aux::RecordIntOp::create(builder, loc, v);
-        } else if (ty.isInteger(1)) {
-          // aux.record_bool %b : i1
-          aux::RecordBoolOp::create(builder, loc, v);
         } else {
           // TODO: Handle other types as needed. For now, we only support i64 and i1.
           funcOp.emitError("Non-integer return types are not supported.");

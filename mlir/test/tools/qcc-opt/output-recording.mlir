@@ -81,7 +81,7 @@ func.func @test_multiple_returns() -> (i64, i1) attributes { qcc.entry_point } {
 // CHECK:     %[[constant0:.*]] = arith.constant 2 : i64
 // CHECK:     %[[constant1:.*]] = arith.constant true
 // CHECK:     aux.record_integer %[[constant0]]
-// CHECK:     aux.record_bool %[[constant1]]
+// CHECK:     aux.record_integer %[[constant1]]
 // CHECK:     return
 // CHECK:   }
 

@@ -77,10 +77,10 @@ def RecordIntOp : AuxOp<"record_integer"> {
         the QIR function.
     }];
 
-    let arguments = (ins I64:$value);
+    let arguments = (ins AnyTypeOf<[Builtin_Integer]>:$value);
     let results = (outs);
 
-    let assemblyFormat = "$value attr-dict";
+    let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
 #endif // INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_
