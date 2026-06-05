@@ -62,16 +62,16 @@ def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {
       Providing as input the following IR :
 
       ```mlir
-        %0 = "arith.constant"()<{value = dense<3>: tensor<i64>}> : ()->tensor<i64>
-        %1, %2 = "jasp.create_qubits"(%0, %arg14) : (tensor<i64>, !jasp.QuantumState) ->(!jasp.QubitArray, !jasp.QuantumState)
+      %0 = "arith.constant"()<{value = dense<3>: tensor<i64>}> : () -> tensor<i64>
+      %1, %2 = "jasp.create_qubits"(%0, %arg14) : (tensor<i64>, !jasp.QuantumState) ->(!jasp.QubitArray, !jasp.QuantumState)
       ```
 
       the pass will translate it into:
 
       ```mlir
-        %0 = qc.static 0 : !qc.qubit
-        %1 = qc.static 1 : !qc.qubit
-        %2 = qc.static 2 : !qc.qubit
+      %0 = qc.static 0 : !qc.qubit
+      %1 = qc.static 1 : !qc.qubit
+      %2 = qc.static 2 : !qc.qubit
       ```
 
       in which the allocation of three qubits has been turned into 3 separate static allocations.
