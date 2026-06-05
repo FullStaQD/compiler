@@ -77,10 +77,10 @@ protected:
 
         if (ty.isInteger(64)) {
           // aux.record_integer %a : i64
-          ::qcc::aux::RecordIntOp::create(builder, loc, v);
+          aux::RecordIntOp::create(builder, loc, v);
         } else if (ty.isInteger(1)) {
           // aux.record_bool %b : i1
-          ::qcc::aux::RecordBoolOp::create(builder, loc, v);
+          aux::RecordBoolOp::create(builder, loc, v);
         } else {
           // TODO: Handle other types as needed. For now, we only support i64 and i1.
           funcOp.emitError("Non-integer return types are not supported.");
@@ -95,7 +95,7 @@ protected:
     });
 
     if (walkResult.wasInterrupted()) {
-      signalPassFailure();
+      return signalPassFailure();
     }
   };
 };
