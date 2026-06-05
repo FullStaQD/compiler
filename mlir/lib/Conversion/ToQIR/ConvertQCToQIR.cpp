@@ -34,6 +34,7 @@
 #include "llvm/Support/Casting.h"
 
 #include <cstdint>
+#include <llvm/ADT/StringRef.h>
 
 using namespace mlir;
 using namespace qcc;
@@ -151,17 +152,27 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   }
 };
 
-struct RecordBoolLowering : public OpConversionPattern<aux::RecordBoolOp> {
-  using OpConversionPattern<aux::RecordBoolOp>::OpConversionPattern;
+struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
+  using OpConversionPattern<aux::RecordIntOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(aux::RecordBoolOp op, OpAdaptor adaptor,
+  LogicalResult matchAndRewrite(aux::RecordIntOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     auto loc = op.getLoc();
     StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
 
     auto addressOf =
         LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
-    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtBoolRecordOutput, ValueRange{adaptor.getValue(), addressOf});
+
+    auto operand = op->getOperand(0);
+    Type ty = operand.getType();
+
+    llvm::StringRef callee;
+    if (ty.isInteger(1)) {
+      callee = qirRtBoolRecordOutput;
+    } else {
+      callee = qirRtIntRecordOutput;
+    }
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), callee, ValueRange{adaptor.getValue(), addressOf});
 
     rewriter.eraseOp(op);
     return success();
@@ -236,7 +247,7 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, RecordBoolLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
