@@ -10,7 +10,7 @@
 include "mlir/Pass/PassBase.td"
 
 def AuxOutputRecording : Pass<"convert-return-to-output-recording"> {
-    let summary = "Adds recording of integer outputs following the QIR recipe for output recording.";
+    let summary = "Replaces return values of entry point function by record ops.";
     let description = [{
       This pass replaces integer returns of the entry point function with `aux.record_integer` and `aux.record_bool` and
       changes the return to void. We assume that the entry point function has exactly one block and that all return
@@ -32,6 +32,8 @@ def AuxOutputRecording : Pass<"convert-return-to-output-recording"> {
       ```
     This pass is a workaround to enable output recording for integer values, as our principal
     dialects do not have a direct way to represent the necessary functionality for recording outputs.
+    TODO: In the future we want to extend the output recording to more complex types such as tuples
+    and arrays.
    }];
     let dependentDialects = [
     "mlir::func::FuncDialect",

@@ -40,12 +40,10 @@ protected:
     auto module = cast<mlir::ModuleOp>(getOperation());
 
     auto walkResult = module.walk([&](func::FuncOp funcOp) {
-      // Only transform functions marked as entry points
       if (!funcOp->hasAttr("qcc.entry_point")) {
         return WalkResult::advance();
       }
 
-      // We only care if there are results to record
       if (funcOp.getNumResults() == 0) {
         return WalkResult::advance();
       }
@@ -60,10 +58,8 @@ protected:
       auto oldType = funcOp.getFunctionType();
       auto newType = FunctionType::get(funcOp->getContext(), oldType.getInputs(), {});
 
-      // Update the function type
       funcOp.setType(newType);
 
-      // Work on the first block
       auto& body = funcOp.getBody().front();
       auto retOp = cast<func::ReturnOp>(body.getTerminator());
       auto oldReturnOperands = retOp.getOperands();
@@ -71,15 +67,12 @@ protected:
       OpBuilder builder(retOp);
 
       auto loc = retOp.getLoc();
-      // Record each return value according to its type
       for (Value v : oldReturnOperands) {
         Type ty = v.getType();
 
         if (ty.isInteger(64)) {
-          // aux.record_integer %a : i64
           aux::RecordIntOp::create(builder, loc, v);
         } else if (ty.isInteger(1)) {
-          // aux.record_bool %b : i1
           aux::RecordBoolOp::create(builder, loc, v);
         } else {
           // TODO: Handle other types as needed. For now, we only support i64 and i1.
