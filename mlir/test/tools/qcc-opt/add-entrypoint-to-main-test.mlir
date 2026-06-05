@@ -22,8 +22,8 @@ func.func @main() -> i64 attributes { qcc.entry_point } {
 
 // -----
 
-// An entry-point annotated on a non-`@main` function is respected: @main is
-// NOT given the attribute.
+// An entry-point already annotated on another function does NOT prevent
+// @main from being marked: both end up with the attribute.
 module {
   func.func @main() {
     return
@@ -33,6 +33,5 @@ module {
   }
 }
 
-// CHECK-LABEL: func.func @main() {
-// CHECK-NOT:     qcc.entry_point
+// CHECK-LABEL: func.func @main() attributes {qcc.entry_point}
 // CHECK:       func.func @other() attributes {qcc.entry_point}

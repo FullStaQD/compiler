@@ -80,24 +80,22 @@ def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {
 }
 
 def AddEntrypointToMain : Pass<"add-entrypoint-to-main", "mlir::ModuleOp"> {
-  let summary = "Add the entry-point function with the `qcc.entry_point` attribute.";
+  let summary = "Add the `qcc.entry_point` attribute to the entry-point function.";
   let description = [{
       The QIR conversion pipeline relies on the `qcc.entry_point` attribute to
-      identify the function from which a quantum program starts.
+      identify the function from which a quantum program starts. Frontends such
+      as qrisp follow the convention of naming the entry-point function `@main`
+      in the generated MLIR but do not attach the attribute themselves.
 
-      This pass first checks whether *any* function in the module already
-      carries the `qcc.entry_point` attribute. If so, the pass does nothing --
-      the existing entry-point is respected, whether it is `@main` or any other
-      function annotated elsewhere.
+      This pass looks up the function whose name matches the configured
+      entry-point name (`main` by default) and attaches the `qcc.entry_point`
+      unit attribute to it. If the function already carries the attribute, the
+      pass is a no-op. If no function with the configured name can be found,
+      the pass emits an error and fails.
 
-      Otherwise, the pass looks up the function whose name matches the
-      configured entry-point name (`main` by default) and attaches the
-      `qcc.entry_point` unit attribute to it. This targets the convention used
-      by frontends such as qrisp, which name the entry-point `@main` but do not
-      attach the attribute themselves.
-
-      The pass emits an error only if no entry-point exists *and* no function
-      with the configured name can be found.
+      Note that the pass does not inspect other functions in the module: any
+      pre-existing `qcc.entry_point` annotation on a different function is left
+      untouched.
 
       TODO: This convention will likely have to evolve once the program input
       becomes more complex (multiple kernels, a separate classical entry-point,

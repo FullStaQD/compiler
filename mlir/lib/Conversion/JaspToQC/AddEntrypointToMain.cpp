@@ -32,24 +32,15 @@ protected:
   void runOnOperation() override {
     ModuleOp moduleOp = getOperation();
 
-    // If any function already carries the entry-point attribute, there is
-    // nothing to do -- regardless of whether it is `@main` or some other
-    // function annotated elsewhere (e.g. by hand or a previous pass).
-    auto walkResult = moduleOp.walk([](func::FuncOp funcOp) {
-      return funcOp->hasAttr(qcc::entryPointAttrName) ? WalkResult::interrupt() : WalkResult::advance();
-    });
-
-    if (walkResult.wasInterrupted()) {
-      return;
-    }
-
-    // No entry-point yet: mark the function with the configured name.
+    // Find the function with the configured name. Fail if it does not exist.
     auto funcOp = moduleOp.lookupSymbol<func::FuncOp>(entryPointName);
     if (!funcOp) {
       moduleOp.emitError("could not find entry-point function '") << entryPointName << "'";
       return signalPassFailure();
     }
 
+    // Mark it as entry-point. setAttr is idempotent: if the attribute is
+    // already present with the same value, this is a no-op.
     OpBuilder builder(funcOp.getContext());
     funcOp->setAttr(qcc::entryPointAttrName, builder.getUnitAttr());
   }
