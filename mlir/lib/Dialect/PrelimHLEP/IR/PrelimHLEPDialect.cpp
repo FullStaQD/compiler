@@ -20,6 +20,7 @@ void PrelimHLEPDialect::initialize() {
 #include "qcc/Dialect/PrelimHLEP/IR/PrelimHLEPTypes.cpp.inc"
       >();
 
+  // test comment
   addOperations<
 #define GET_OP_LIST
 #include "qcc/Dialect/PrelimHLEP/IR/PrelimHLEPOps.cpp.inc"
