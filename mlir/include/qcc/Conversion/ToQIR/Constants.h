@@ -68,4 +68,7 @@ static constexpr llvm::StringLiteral qirQisX = "__quantum__qis__x__body";
 /// CX gate controlled on first qubit/ptr.
 static constexpr llvm::StringLiteral qirQisCX = "__quantum__qis__cx__body";
 
+/// Rotation around the Z-axis where the first parameter (a double-precision float) is the angle.
+static constexpr llvm::StringLiteral qirQisRZ = "__quantum__qis__rz__body";
+
 } // namespace qcc

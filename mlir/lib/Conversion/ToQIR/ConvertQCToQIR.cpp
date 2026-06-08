@@ -48,6 +48,7 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
     return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
         .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
         .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
+        .Case<qc::RZOp>([](auto) { return qcc::qirQisRZ; })
         .Default([](auto) { return ""; });
   }
 
@@ -188,11 +189,22 @@ struct UnitaryLowering : public ConversionPattern {
       return emitMissingQIRDeclError(unitaryOp, qisName);
     }
 
-    auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
-    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
-    allPtrs.append(targetPtrs);
+    // Per QIR convention, non-qubit parameters (e.g. rotation angles) come first,
+    // followed by qubit pointers. For non-parametric gates (X, H, CX) there are no
+    // non-qubit operands so behaviour is identical to before.
+    SmallVector<Value> args;
+    for (Value operand : op->getOperands()) {
+      if (!isa<qc::QubitType>(operand.getType())) {
+        args.push_back(operand);
+      }
+    }
 
-    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
+    auto controlPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
+    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
+    args.append(controlPtrs);
+    args.append(targetPtrs);
+
+    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, args);
     rewriter.eraseOp(op);
 
     return success();
