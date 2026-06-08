@@ -80,7 +80,7 @@ def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {
 }
 
 def AddEntrypointToMain : Pass<"add-entrypoint-to-main", "mlir::ModuleOp"> {
-  let summary = "Add the `qcc.entry_point` attribute to the entry-point function.";
+  let summary = "Adds the `qcc.entry_point` attribute to any function called `@main`.";
   let description = [{
       The QIR conversion pipeline relies on the `qcc.entry_point` attribute to
       identify the function from which a quantum program starts. Frontends such
