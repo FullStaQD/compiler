@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   mlir::registerDefaultTimingManagerCLOptions();
 
   const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
-  const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"),
+  const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
                                             cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
