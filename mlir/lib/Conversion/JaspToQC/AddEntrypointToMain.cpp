@@ -38,10 +38,7 @@ protected:
       return signalPassFailure();
     }
 
-    // NOTE: setAttr is idempotent: if the attribute is
-    // already present with the same value, this is a no-op.
-    OpBuilder builder(funcOp.getContext());
-    funcOp->setAttr(qcc::entryPointAttrName, builder.getUnitAttr());
+    funcOp->setAttr(qcc::entryPointAttrName, UnitAttr::get(funcOp.getContext()));
   }
 };
 
