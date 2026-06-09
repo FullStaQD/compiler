@@ -164,10 +164,10 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
     Type ty = operand.getType();
 
     llvm::StringRef callee;
-    if (ty.isInteger(1)) {
-      callee = qirRtBoolRecordOutput;
-    } else {
+    if (!ty.isInteger(1)) {
       callee = qirRtIntRecordOutput;
+    } else {
+      callee = qirRtBoolRecordOutput;
     }
     LLVM::CallOp::create(rewriter, loc, TypeRange(), callee, ValueRange{adaptor.getValue(), addressOf});
 
