@@ -89,6 +89,9 @@ int main(int argc, char** argv) {
   }
 
   mlir::PassManager pm(&context);
+  if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
+    return 1;
+  }
   qcc::buildQuantumPipeline(pm);
 
   if (mlir::failed(pm.run(*module))) {
