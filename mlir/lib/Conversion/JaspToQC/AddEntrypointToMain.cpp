@@ -32,14 +32,13 @@ protected:
   void runOnOperation() override {
     ModuleOp moduleOp = getOperation();
 
-    // Find the function with the configured name. Fail if it does not exist.
     auto funcOp = moduleOp.lookupSymbol<func::FuncOp>(entryPointName);
     if (!funcOp) {
       moduleOp.emitError("could not find entry-point function '") << entryPointName << "'";
       return signalPassFailure();
     }
 
-    // Mark it as entry-point. setAttr is idempotent: if the attribute is
+    // NOTE: setAttr is idempotent: if the attribute is
     // already present with the same value, this is a no-op.
     OpBuilder builder(funcOp.getContext());
     funcOp->setAttr(qcc::entryPointAttrName, builder.getUnitAttr());
