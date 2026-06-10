@@ -30,6 +30,8 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
 
+  pm.addPass(qcc::createAddEntrypointToMain());
+
   // Lowering from JASP to QC
   // In addition to the obvious conversions, the rank-0 tensors
   // are converted to plain values (e.g. tensor<i64> becomes i64)
