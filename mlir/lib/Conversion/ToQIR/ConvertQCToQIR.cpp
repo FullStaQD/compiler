@@ -28,10 +28,10 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <cstdint>
-#include <llvm/ADT/StringRef.h>
 
 using namespace mlir;
 using namespace qcc;
