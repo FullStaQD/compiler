@@ -168,8 +168,10 @@ private:
 
     auto f64Type = builder.getF64Type();
     auto ptrType = LLVM::LLVMPointerType::get(ctx);
-    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), {f64Type, ptrType});
 
+    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx),
+                                              {mlir::Type::getFromOpaquePointer(f64Type.getAsOpaquePointer()),
+                                               mlir::Type::getFromOpaquePointer(ptrType.getAsOpaquePointer())});
     LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
   }
 };

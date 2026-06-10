@@ -189,15 +189,7 @@ struct UnitaryLowering : public ConversionPattern {
       return emitMissingQIRDeclError(unitaryOp, qisName);
     }
 
-    // Per QIR convention, non-qubit parameters (e.g. rotation angles) come first,
-    // followed by qubit pointers. For non-parametric gates (X, H, CX) there are no
-    // non-qubit operands so behaviour is identical to before.
-    SmallVector<Value> args;
-    for (Value operand : op->getOperands()) {
-      if (!isa<qc::QubitType>(operand.getType())) {
-        args.push_back(operand);
-      }
-    }
+    SmallVector<Value> args(unitaryOp.getParameters().begin(), unitaryOp.getParameters().end());
 
     auto controlPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
     auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
