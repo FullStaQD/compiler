@@ -35,7 +35,6 @@ builtin.module @jasp_module {
 // CHECK:    %[[CONSTANT_0:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:    %[[ZERO:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK:    llvm.call @__quantum__rt__initialize(%[[ZERO]]) : (!llvm.ptr) -> ()
-
 // CHECK:    %[[INTTOPTR_0:.*]] = llvm.inttoptr %[[CONSTANT_0]] : i64 to !llvm.ptr
 // CHECK:    llvm.call @__quantum__qis__h__body(%[[INTTOPTR_0]]) : (!llvm.ptr) -> ()
 // CHECK:    llvm.call @__quantum__qis__t__body(%[[INTTOPTR_0]]) : (!llvm.ptr) -> ()
