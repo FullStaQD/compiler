@@ -38,7 +38,7 @@ jobs:
       runs-on: ${{ matrix.runs-on }}
       compiler: ${{ matrix.compiler }}
       setup-mlir: true
-      llvm-version: 22.1.7
+      llvm-version: 22.1.5
       preset-name: ${{ matrix.preset }}
 
   cpp-tests-macos:
@@ -60,7 +60,7 @@ jobs:
       runs-on: ${{ matrix.runs-on }}
       compiler: ${{ matrix.compiler }}
       setup-mlir: true
-      llvm-version: 22.1.7
+      llvm-version: 22.1.5
       preset-name: ${{ matrix.preset }}
 
   cpp-tests-windows:
@@ -70,11 +70,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runs-on: [windows-2022, windows-11-arm]
+        runs-on: [windows-2025, windows-11-arm]
         compiler: [msvc]
         preset: [release-windows]
         include:
-          - runs-on: windows-2022
+          - runs-on: windows-2025
             compiler: msvc
             preset: debug-windows
     uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-tests-windows.yml@eeea704310e1f9753ce49ac9a276145121f4713c # v2.1.0
@@ -82,7 +82,7 @@ jobs:
       runs-on: ${{ matrix.runs-on }}
       compiler: ${{ matrix.compiler }}
       setup-mlir: true
-      llvm-version: 22.1.7
+      llvm-version: 22.1.5
       mlir-debug: ${{ matrix.preset == 'debug-windows' }}
       preset-name: ${{ matrix.preset }}
 
@@ -98,7 +98,7 @@ jobs:
       files-changed-only: true
       cpp-linter-extra-args: "-std=c++20"
       setup-mlir: true
-      llvm-version: 22.1.7
+      llvm-version: 22.1.5
     permissions:
       contents: read # Needed to fetch code
       pull-requests: write # Needed to post PR comments
