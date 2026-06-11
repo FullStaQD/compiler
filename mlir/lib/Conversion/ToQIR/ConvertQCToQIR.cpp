@@ -189,7 +189,7 @@ struct UnitaryLowering : public ConversionPattern {
       return emitMissingQIRDeclError(unitaryOp, qisName);
     }
 
-    SmallVector<Value> args(unitaryOp.getParameters().begin(), unitaryOp.getParameters().end());
+    auto args = llvm::to_vector(unitaryOp.getParameters());
 
     auto controlPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
     auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
