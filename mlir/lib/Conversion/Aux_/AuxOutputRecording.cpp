@@ -69,13 +69,10 @@ protected:
       auto loc = retOp.getLoc();
       for (Value v : oldReturnOperands) {
         Type ty = v.getType();
-
-        if (ty.isInteger(64)) {
+        if (ty.isInteger()) {
           aux::RecordIntOp::create(builder, loc, v);
-        } else if (ty.isInteger(1)) {
-          aux::RecordBoolOp::create(builder, loc, v);
         } else {
-          // TODO: Handle other types as needed. For now, we only support i64 and i1.
+          // TODO: Add support for other types as needed.
           funcOp.emitError("Non-integer return types are not supported.");
           return WalkResult::interrupt();
         }
