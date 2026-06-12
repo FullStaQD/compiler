@@ -10,9 +10,9 @@
 include "mlir/Pass/PassBase.td"
 
 def AuxOutputRecording : Pass<"convert-return-to-output-recording"> {
-    let summary = "Replaces return values of entry point function by record ops.";
-    let description = [{
-      This pass replaces integer returns of the entry point function with `aux.record_integer` and `aux.record_bool` and
+  let summary = "Replaces return values of entry point function by record ops.";
+  let description = [{
+      This pass replaces integer returns of the entry point function with `aux.record_int` and `aux.record_bool` and
       changes the return to void. We assume that the entry point function has exactly one block and that all return
       operations in that block return integer values.
 
@@ -27,7 +27,7 @@ def AuxOutputRecording : Pass<"convert-return-to-output-recording"> {
 
       ```mlir
       %result = some_operation() : () -> i64
-      aux.record_integer %result : i64
+      aux.record_int %result : i64
       return
       ```
     This pass is a workaround to enable output recording for integer values, as our principal
