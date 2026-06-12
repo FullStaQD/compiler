@@ -168,7 +168,7 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
     } else if (ty.isInteger(64)) {
       callee = qirRtIntRecordOutput;
     } else {
-      return op.emitError("unsupported type for recording output: ") << ty;
+      return failure();
     }
 
     LLVM::CallOp::create(rewriter, loc, TypeRange(), callee, ValueRange{adaptor.getValue(), addressOf});
