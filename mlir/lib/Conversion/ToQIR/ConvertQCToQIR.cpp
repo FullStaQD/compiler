@@ -160,8 +160,7 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
     auto addressOf =
         LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
 
-    auto operand = op->getOperand(0);
-    Type ty = operand.getType();
+    Type ty = op.getValue().getType();
 
     llvm::StringRef callee;
     if (ty.isInteger(1)) {
