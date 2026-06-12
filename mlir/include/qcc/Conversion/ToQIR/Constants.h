@@ -50,6 +50,11 @@ static constexpr llvm::StringLiteral qirRtResultRecordOutput = "__quantum__rt__r
 /// on the output schema, the label is included in the output or omitted.
 static constexpr llvm::StringLiteral qirRtBoolRecordOutput = "__quantum__rt__bool_record_output";
 
+/// Adds an integer value to the generated output.
+///
+/// Signature: `void(i64,ptr)`.
+static constexpr llvm::StringLiteral qirRtIntRecordOutput = "__quantum__rt__int_record_output";
+
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)
 //===----------------------------------------------------------------------===//

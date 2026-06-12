@@ -9,6 +9,7 @@ add_mlir_conversion_library(
   MLIRQCDialect
   QCCJaspDialect
   MLIRArithDialect
+  MLIRSCFDialect
   MLIRSCFTransforms
   MLIRTensorDialect
   MLIRMemRefDialect
