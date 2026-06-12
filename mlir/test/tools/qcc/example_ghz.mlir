@@ -19,11 +19,11 @@ func.func @ghz_manual_with_int_record_output() attributes { qcc.entry_point } {
     %m2 = qc.measure %2 : !qc.qubit -> i1
 
     %a = arith.constant 42 : i64
-    aux.record_integer %a : i64
+    aux.record_int %a : i64
 
-    aux.record_integer %m0 : i1
-    aux.record_integer %m1 : i1
-    aux.record_integer %m2 : i1
+    aux.record_int %m0 : i1
+    aux.record_int %m1 : i1
+    aux.record_int %m2 : i1
 
     return
 }

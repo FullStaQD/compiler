@@ -54,9 +54,9 @@
     %m1 = tensor.extract %14[] : tensor<i1>
     %m2 = tensor.extract %16[] : tensor<i1>
 
-    aux.record_integer %m0 : i1
-    aux.record_integer %m1 : i1
-    aux.record_integer %m2 : i1
+    aux.record_int %m0 : i1
+    aux.record_int %m1 : i1
+    aux.record_int %m2 : i1
 
     func.return
   }

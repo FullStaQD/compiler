@@ -18,17 +18,16 @@ include "AuxDialect.td"
 // Aux operations
 //===----------------------------------------------------------------------===//
 
-class AuxOp<string mnemonic, list<Trait> traits = []> :
-        Op<AuxDialect, mnemonic, traits>;
+class AuxOp<string mnemonic, list<Trait> traits = []> : Op<AuxDialect, mnemonic, traits>;
 
-def RecordIntOp : AuxOp<"record_integer"> {
-    let summary = "Records an integer value.";
+def RecordIntOp : AuxOp<"record_int"> {
+  let summary = "Records an integer value.";
 
-    let description = [{
+  let description = [{
         This corresponds to the following QIR runtime function:
 
         ```llvm
-        llvm.func @__quantum__rt__integer_record_output(i64, !llvm.ptr)
+        llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
         ```
 
         Our principal dialects have nothing in it which can be translated to it. Hence we use this as a workaround.
@@ -37,7 +36,7 @@ def RecordIntOp : AuxOp<"record_integer"> {
         ```mlir
         func.func @main() -> i64 attributes { qcc.entry_point } {
           ...
-          aux.record_integer %m7
+          aux.record_int %m7
           ...
         }
         ```
