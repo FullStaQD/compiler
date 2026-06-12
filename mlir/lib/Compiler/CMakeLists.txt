@@ -1,7 +1,8 @@
 add_mlir_library(
   QCCPipeline
   Pipeline.cpp
-  DEPENDS # FIXME: What's the proper place to put these dependencies? Why do only I need them?
+  DEPENDS
+  AuxOutputRecordingIncGen
   JaspToQCIncGen
   QCCToQIRIncGen
   LINK_LIBS
