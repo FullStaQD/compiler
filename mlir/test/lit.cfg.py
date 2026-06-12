@@ -45,7 +45,7 @@ config.name = "QCC_MLIR_COMPILER"
 config.test_format = lit.formats.ShTest(execute_external=False)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".mlir"]
+config.suffixes = [".mlir", ".test.py"]
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = Path(__file__).parent
@@ -59,7 +59,7 @@ llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
 llvm_config.use_default_substitutions()
 
 # excludes: A list of directories and filenames to exclude from the testsuite.
-config.excludes = []
+config.excludes = [".venv"]
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = Path(config.project_binary_dir) / "test"
