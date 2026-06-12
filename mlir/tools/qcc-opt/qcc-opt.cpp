@@ -77,6 +77,7 @@ int main(int argc, char** argv) {
   mlir::registerInlinerPass();
 
   // Our passes
+  qcc::registerAddEntrypointToMain();
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();
   qcc::registerConvertMemrefToStaticQubits();
