@@ -72,7 +72,7 @@ protected:
         if (ty.isInteger()) {
           aux::RecordIntOp::create(builder, loc, v);
         } else {
-          // TODO: Handle other types as needed. For now, we only support i64 and i1.
+          // TODO: Add support for other types as needed.
           funcOp.emitError("Non-integer return types are not supported.");
           return WalkResult::interrupt();
         }
