@@ -1,3 +1,11 @@
+#  ===----------------------------------------------------------------------===//
+
+#  Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
+#  Exceptions.
+#  See <repo-root>/LICENSE.txt for license information.
+#  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+#  ===----------------------------------------------------------------------===//
 # RUN: not %S/integration_run.sh -r 42 %s | FileCheck %s
 
 from qrisp import QuantumVariable, h, cx, measure, q_fori_loop
