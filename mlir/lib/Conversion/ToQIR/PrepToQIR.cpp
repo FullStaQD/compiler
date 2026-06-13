@@ -37,6 +37,7 @@ protected:
     // Runtime functions:
     createVoidFnDecl(qcc::qirRtInit, 1);
     createRtBoolRecordOutputDecl();
+    createRtIntegerRecordOutputDecl();
     createRtReadResultDecl();
 
     // QIS:
@@ -97,6 +98,21 @@ private:
     auto fnType = LLVM::LLVMFunctionType::get(voidType, {i1Type, ptrType});
 
     LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
+  }
+
+  /// Inserts `llvm.func` with signature `__quantum__rt__integer_record_output(i64, ptr) -> void`.
+  void createRtIntegerRecordOutputDecl() {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+
+    auto voidType = LLVM::LLVMVoidType::get(ctx);
+    auto i64Type = IntegerType::get(ctx, 64);
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto fnType = LLVM::LLVMFunctionType::get(voidType, {i64Type, ptrType});
+
+    LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtIntRecordOutput, fnType);
   }
 
   /// Creates the module flags which specify the capabilities which the backend needs to support.

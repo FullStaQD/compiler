@@ -168,6 +168,23 @@ struct RecordBoolLowering : public OpConversionPattern<aux::RecordBoolOp> {
   }
 };
 
+struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
+  using OpConversionPattern<aux::RecordIntOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(aux::RecordIntOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
+
+    auto addressOf =
+        LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtIntRecordOutput, ValueRange{adaptor.getValue(), addressOf});
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
@@ -236,7 +253,7 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, RecordBoolLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordBoolLowering, RecordIntLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();

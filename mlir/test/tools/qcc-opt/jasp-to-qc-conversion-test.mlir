@@ -1,6 +1,7 @@
 // RUN: qcc-opt %s -jasp-to-qc | FileCheck %s
 
-func.func @test() -> tensor<i1> {
+// CHECK-LABEL: func @test_simple_circuit
+func.func @test_simple_circuit() -> tensor<i1> {
     %state0 = jasp.create_quantum_kernel -> !jasp.QuantumState
     // Quantum State management leaves no trace in QC IR.
 
@@ -37,4 +38,42 @@ func.func @test() -> tensor<i1> {
 
     return %random_bit : tensor<i1>
     // CHECK: return [[random_bit]] : i1
+}
+
+// -----
+
+/// Test that measuring a qubit array returns a packed i64 with individual
+/// bits unrolled to static indices when the array size is a compile-time
+/// constant.
+// CHECK-LABEL: func @test_arr_measure
+func.func @test_arr_measure() -> tensor<i64> {
+    %state0 = jasp.create_quantum_kernel -> !jasp.QuantumState
+    %num_qubits = arith.constant dense<2> : tensor<i64>
+    // CHECK: [[c0_i64:%.+]] = arith.constant 0 : i64
+
+    %q_arr, %state1 = jasp.create_qubits %num_qubits, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
+    // The qubit array measurement is unrolled: each qubit is loaded,
+    // measured, zero-extended to i64, shifted by its index, and OR-ed
+    // into the accumulator.
+    %result, %state2 = jasp.measure %q_arr, %state1 : !jasp.QubitArray, !jasp.QuantumState -> tensor<i64>, !jasp.QuantumState
+    // CHECK: [[q0:%.+]] = memref.load %{{.+}}[%c0]
+    // CHECK: [[b0:%.+]] = qc.measure [[q0]]
+    // CHECK: [[x0:%.+]] = arith.extui [[b0]] : i1 to i64
+    // CHECK: arith.shli [[x0]], %c0_i64_0
+    // CHECK: arith.ori [[c0_i64]], {{%.+}}
+
+    // CHECK: [[q1:%.+]] = memref.load %{{.+}}[%c1]
+    // CHECK: [[b1:%.+]] = qc.measure [[q1]]
+    // CHECK: [[x1:%.+]] = arith.extui [[b1]] : i1 to i64
+    // CHECK: [[s1:%.+]] = arith.shli [[x1]], %c1_i64
+    // CHECK: [[r:%.+]] = arith.ori {{%.+}}, [[s1]]
+
+    %state3 = jasp.delete_qubits %q_arr, %state2 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
+    // CHECK: memref.dealloc
+
+    %success = jasp.consume_quantum_kernel %state3 : !jasp.QuantumState -> tensor<i1>
+    // CHECK: arith.constant true
+
+    return %result : tensor<i64>
+    // CHECK: return [[r]] : i64
 }

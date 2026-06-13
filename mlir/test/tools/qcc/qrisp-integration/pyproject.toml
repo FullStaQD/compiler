@@ -1,0 +1,14 @@
+[project]
+name = "qrisp-integration"
+version = "0.1.0"
+description = "Tools to test the qrisp integration as a frontend for qcc"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "qirrunner>=0.9.4",
+    "qrisp",
+    "xdsl==0.55.4",
+]
+
+[tool.uv.sources]
+qrisp = { git = "https://github.com/eclipse-qrisp/Qrisp", rev = "b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b" }
