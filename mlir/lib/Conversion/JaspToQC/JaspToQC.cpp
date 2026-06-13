@@ -381,7 +381,7 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
             arith::ConstantOp::create(rewriter, loc, i64Type, cast<TypedAttr>(rewriter.getI64IntegerAttr(0)));
 
         for (int64_t i = 0; i < staticSize; ++i) {
-          Value idx = arith::ConstantIndexOp::create(rewriter, loc, static_cast<int64_t>(i));
+          Value idx = arith::ConstantIndexOp::create(rewriter, loc, i);
           Value qubit = memref::LoadOp::create(rewriter, loc, measQOperand, ValueRange{idx});
           auto measOp = qc::MeasureOp::create(rewriter, loc, qubit);
           Value bit = measOp.getResult();
