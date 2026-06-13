@@ -5,6 +5,9 @@ add_mlir_conversion_library(
   ${CONVERSION_SOURCES}
   DEPENDS
   JaspToQCIncGen
+  QCCJaspDialectIncGen
+  QCCJaspTypesIncGen
+  QCCJaspOpsIncGen
   LINK_LIBS
   MLIRQCDialect
   QCCJaspDialect
