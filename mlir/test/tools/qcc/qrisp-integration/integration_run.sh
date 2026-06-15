@@ -35,12 +35,6 @@ uv sync >/dev/null 2>&1
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# Add tool paths:
-#   qcc and qcc-opt are built into the project's CMake output directory
-export PATH="/workspaces/compiler/build/julian-dev/bin:$PATH"
-#   mlir-translate comes from the LLVM/MLIR dependency build
-export PATH="/home/vscode/external/llvm-project/build/mlir-debug/bin:$PATH"
-
 # Generate MLIR from the Qrisp Python test file
 "$VENV_DIR/bin/python3" "$1" > "$TMP_DIR/qcc_input.mlir"
 
