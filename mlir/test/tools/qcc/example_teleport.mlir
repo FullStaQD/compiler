@@ -1,6 +1,6 @@
 // RUN: qcc -o - %s | FileCheck %s
 
-// A simple teleportation program, written in jasp and compiled to mlir.
+// A simple teleportation program, written in qrisp and compiled to mlir.
 // Tests the lowering of control flow to llvm.
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i1>, !jasp.QuantumState) attributes {qcc.entry_point} {
