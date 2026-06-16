@@ -4,20 +4,29 @@ exec 2>&1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Parse arguments: optional seed (-r <value>), optional shots (-n <value>), then the mlir test file
+# Parse arguments: optional seed (-r <value>), optional shots (-n <value>), optional qcc path (-c <path>), optional mlir-translate path (-t <path>), then the mlir test file
 RNG_SEED=""
 SHOTS="1"
-while getopts "r:n:" opt; do
+QCC_PATH="qcc"
+MLIR_TRANSLATE_PATH="mlir-translate"
+while getopts "r:n:c:t:" opt; do
   case $opt in
     r) RNG_SEED="$OPTARG" ;;
     n) SHOTS="$OPTARG" ;;
-    \?) echo "Usage: $0 [-r <seed>] [-n <shots>] <mlir_test_file>"; exit 1 ;;
+    c) QCC_PATH="$OPTARG" ;;
+    t) MLIR_TRANSLATE_PATH="$OPTARG" ;;
+    \?) echo "Invalid Argument Specified.\nUsage: $0 [-r <seed>] [-n <shots>] [-c <path>] [-t <path>] <mlir_test_file>"; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
 
+echo "Using qcc at: $QCC_PATH"
+echo "Using mlir-translate at: $MLIR_TRANSLATE_PATH"
+echo "Target MLIR test file: $1"
+
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-r <seed>] [-n <shots>] <mlir_test_file>"
+    echo "Error: exactly one MLIR test file must be provided"
+    echo "Usage: $0 [-r <seed>] [-n <shots>] [-c <path>] [-t <path>] <mlir_test_file>"
     exit 1
 fi
 if [ ! -f "$1" ]; then
@@ -36,10 +45,6 @@ which qir-runner >/dev/null 2>&1 || {
     fi
 }
 
-# Ensure qcc and mlir-translate are available.
-which qcc >/dev/null 2>&1 || { echo "qcc not found. Please ensure qcc is built and in your PATH." >&2; exit 1; }
-which mlir-translate >/dev/null 2>&1 || { echo "mlir-translate not found. Please ensure mlir-translate is built and in your PATH." >&2; exit 1; }
-
 # Create a unique temporary directory for this invocation.
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -50,8 +55,8 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 set +e
 (
   set -e
-  qcc "$1" -o "$TMP_DIR/qcc_output.mlir"
-  mlir-translate "$TMP_DIR/qcc_output.mlir" -mlir-to-llvmir -o "$TMP_DIR/qcc_output.ll"
+  $QCC_PATH "$1" -o "$TMP_DIR/qcc_output.mlir"
+  $MLIR_TRANSLATE_PATH "$TMP_DIR/qcc_output.mlir" -mlir-to-llvmir -o "$TMP_DIR/qcc_output.ll"
   echo "---QIR---"
   cat "$TMP_DIR/qcc_output.ll"
 )

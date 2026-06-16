@@ -1,5 +1,5 @@
 
-// RUN: not %S/integration_run.sh -r 42 -n 1 %s | FileCheck %s
+// RUN: not %S/integration_run.sh -r 42 -n 1 -c qcc %s | FileCheck %s
 
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {

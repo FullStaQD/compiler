@@ -24,7 +24,7 @@ def prepare_bell_state():
 mlir = str(make_jaspr(prepare_bell_state)().to_mlir(lower_stablehlo=True))
 print(
 f"""
-// RUN: %S/integration_run.sh -n 5 %s | FileCheck %s
+// RUN: %S/integration_run.sh -n 5 -c qcc  %s | FileCheck %s
 
 {mlir}
 

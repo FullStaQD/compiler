@@ -1,5 +1,5 @@
 
-// RUN: echo $(which qcc) && %S/integration_run.sh -n 5 %s | FileCheck %s
+// RUN: %S/integration_run.sh -n 5 -c qcc  %s | FileCheck %s
 
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {
