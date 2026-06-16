@@ -23,6 +23,7 @@ target_link_libraries(
           MLIRBufferizationTransforms
           QCCJaspToQC
           QCCToQIR
+          QCCAuxOutputRecording
           # Extensions/Interfaces
           MLIRFuncInlinerExtension
           MLIRTransformUtils

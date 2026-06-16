@@ -7,6 +7,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
+#include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
@@ -76,12 +77,14 @@ int main(int argc, char** argv) {
   mlir::registerInlinerPass();
 
   // Our passes
+  qcc::registerAddEntrypointToMain();
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();
   qcc::registerConvertMemrefToStaticQubits();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
+  qcc::registerAuxOutputRecording();
 
   // Extension registration
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);
