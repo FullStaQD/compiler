@@ -30,7 +30,7 @@ fi
 which qir-runner >/dev/null 2>&1 || {
     echo "qir-runner not found, attempting to install via uv..."
     if which uv >/dev/null 2>&1; then
-        uv tool install --global qirrunner
+        uv tool install qirrunner
     else
         echo "uv not found, please install uv to run qrisp integration tests" >&2
         exit 1
