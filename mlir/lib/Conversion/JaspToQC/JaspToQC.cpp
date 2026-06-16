@@ -357,8 +357,6 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
       return convertSingleQubitMeasurement(op, rewriter, loc, measQOperand);
     }
 
-    auto i64Type = rewriter.getI64Type();
-
     // TODO: Once loop unrolling is in the pipeline, we can eliminate the static case here.
     // Determine the number of qubits to measure.
     // Try to find a compile-time constant from the original IR.
