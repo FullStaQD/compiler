@@ -3,22 +3,21 @@ set -euo pipefail
 exec 2>&1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="$SCRIPT_DIR/.venv"
 
-# Parse arguments: optional seed (-r <value>), optional shots (-n <value>), then the python test file
+# Parse arguments: optional seed (-r <value>), optional shots (-n <value>), then the mlir test file
 RNG_SEED=""
 SHOTS="1"
 while getopts "r:n:" opt; do
   case $opt in
     r) RNG_SEED="$OPTARG" ;;
     n) SHOTS="$OPTARG" ;;
-    \?) echo "Usage: $0 [-r <seed>] [-n <shots>] <python_test_file>"; exit 1 ;;
+    \?) echo "Usage: $0 [-r <seed>] [-n <shots>] <mlir_test_file>"; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-r <seed>] [-n <shots>] <python_test_file>"
+    echo "Usage: $0 [-r <seed>] [-n <shots>] <mlir_test_file>"
     exit 1
 fi
 if [ ! -f "$1" ]; then
@@ -32,10 +31,14 @@ which qir-runner >/dev/null 2>&1 || {
     if which uv >/dev/null 2>&1; then
         uv tool install qirrunner
     else
-        echo "uv not found, please install uv to run qrisp integration tests" >&2
+        echo "uv not found, please install uv or qir-runner to run qrisp integration tests" >&2
         exit 1
     fi
 }
+
+# Ensure qcc and mlir-translate are available.
+which qcc >/dev/null 2>&1 || { echo "qcc not found. Please ensure qcc is built and in your PATH." >&2; exit 1; }
+which mlir-translate >/dev/null 2>&1 || { echo "mlir-translate not found. Please ensure mlir-translate is built and in your PATH." >&2; exit 1; }
 
 # Create a unique temporary directory for this invocation.
 TMP_DIR="$(mktemp -d)"
