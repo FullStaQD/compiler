@@ -4,7 +4,7 @@
 ///
 /// TODO: This must be replaced by a test starting from jasp. Currently the frontend and the
 /// backend do not fit together.
-func.func @ghz_manual() attributes { qcc.entry_point } {
+func.func @main() attributes { qcc.entry_point } {
     %0 = qc.static 0 : !qc.qubit
     %1 = qc.static 1 : !qc.qubit
     %2 = qc.static 2 : !qc.qubit
@@ -25,7 +25,7 @@ func.func @ghz_manual() attributes { qcc.entry_point } {
     return
 }
 
-// CHECK-LABEL:   llvm.func @ghz_manual() attributes
+// CHECK-LABEL:   llvm.func @main() attributes
 // CHECK:           %[[LABEL_ADDR:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
 
 // CHECK-DAG:       %[[STATIC_2:.*]] = llvm.mlir.constant(2 : i64) : i64

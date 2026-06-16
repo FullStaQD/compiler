@@ -1,6 +1,10 @@
 add_mlir_library(
   QCCPipeline
   Pipeline.cpp
+  DEPENDS
+  AuxOutputRecordingIncGen
+  JaspToQCIncGen
+  QCCToQIRIncGen
   LINK_LIBS
   MLIRPass
   MLIRTransforms
