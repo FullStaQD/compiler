@@ -45,7 +45,7 @@ config.name = "QCC_MLIR_COMPILER"
 config.test_format = lit.formats.ShTest(execute_external=False)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".mlir", ".test.py"]
+config.suffixes = [".mlir"]
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = Path(__file__).parent

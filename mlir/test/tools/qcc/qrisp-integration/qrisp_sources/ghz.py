@@ -6,7 +6,6 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #  ===----------------------------------------------------------------------===//
-# RUN: not %S/integration_run.sh -r 42 %s | FileCheck %s
 
 from qrisp import QuantumVariable, h, cx, measure, q_fori_loop
 from qrisp.jasp import make_jaspr
@@ -24,8 +23,15 @@ def prepare_ghz():
 
     return m
 
-jaspr = make_jaspr(prepare_ghz)()
-print(jaspr.to_mlir(lower_stablehlo=True))
+mlir = str(make_jaspr(prepare_ghz)().to_mlir(lower_stablehlo=True))
 
-# TODO: Once loop unrolling is in place, add proper checks
-# CHECK: qubit index must be a constant; unroll loops before this pass
+print(
+f"""
+// RUN: not %S/integration_run.sh -r 42 -n 1 %s | FileCheck %s
+
+{mlir}
+
+// TODO: Once loop unrolling is in place, add proper checks
+// CHECK: qubit index must be a constant; unroll loops before this pass
+"""
+)

@@ -5,18 +5,20 @@ exec 2>&1
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="$SCRIPT_DIR/.venv"
 
-# Parse arguments: optional seed (-r <value>), then the python test file
+# Parse arguments: optional seed (-r <value>), optional shots (-n <value>), then the python test file
 RNG_SEED=""
-while getopts "r:" opt; do
+SHOTS="1"
+while getopts "r:n:" opt; do
   case $opt in
     r) RNG_SEED="$OPTARG" ;;
-    \?) echo "Usage: $0 [-r <seed>] <python_test_file>"; exit 1 ;;
+    n) SHOTS="$OPTARG" ;;
+    \?) echo "Usage: $0 [-r <seed>] [-n <shots>] <python_test_file>"; exit 1 ;;
   esac
 done
 shift $((OPTIND-1))
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 [-r <seed>] <python_test_file>"
+    echo "Usage: $0 [-r <seed>] [-n <shots>] <python_test_file>"
     exit 1
 fi
 if [ ! -f "$1" ]; then
@@ -24,19 +26,20 @@ if [ ! -f "$1" ]; then
     exit 1
 fi
 
-# Ensure uv is installed (stderr only so stdout stays clean for FileCheck)
-which uv >/dev/null 2>&1 || { echo "uv not found, please install uv to run qrisp integration tests" >&2; exit 1; }
-
-# Ensure uv dependencies are synced from the script directory
-cd "$SCRIPT_DIR"
-uv sync >/dev/null 2>&1
+# Ensure qir-runner is installed. If not, attempt to install it as a uv tool.
+which qir-runner >/dev/null 2>&1 || {
+    echo "qir-runner not found, attempting to install via uv..."
+    if which uv >/dev/null 2>&1; then
+        uv tool install --global qirrunner
+    else
+        echo "uv not found, please install uv to run qrisp integration tests" >&2
+        exit 1
+    fi
+}
 
 # Create a unique temporary directory for this invocation.
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
-
-# Generate MLIR from the Qrisp Python test file
-"$VENV_DIR/bin/python3" "$1" > "$TMP_DIR/qcc_input.mlir"
 
 # Run our pipeline, lower to LLVM/QIR.
 # Use a subshell to capture errors without triggering set -e, so
@@ -44,8 +47,10 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 set +e
 (
   set -e
-  qcc "$TMP_DIR/qcc_input.mlir" -o "$TMP_DIR/qcc_output.mlir"
+  qcc "$1" -o "$TMP_DIR/qcc_output.mlir"
   mlir-translate "$TMP_DIR/qcc_output.mlir" -mlir-to-llvmir -o "$TMP_DIR/qcc_output.ll"
+  echo "---QIR---"
+  cat "$TMP_DIR/qcc_output.ll"
 )
 PIPELINE_EXIT=$?
 set -e
@@ -53,10 +58,11 @@ set -e
 # Simulate via qir-runner (with optional seed for reproducibility)
 # Only run if the pipeline succeeded; otherwise we just print the errors.
 if [ "$PIPELINE_EXIT" -eq 0 ]; then
+  echo "---OUTPUT-RECORDING---"
   if [ -n "$RNG_SEED" ]; then
-    "$VENV_DIR/bin/qir-runner" -f "$TMP_DIR/qcc_output.ll" -s 2 -r "$RNG_SEED"
+    qir-runner -f "$TMP_DIR/qcc_output.ll" -s "$SHOTS" -r "$RNG_SEED"
   else
-    "$VENV_DIR/bin/qir-runner" -f "$TMP_DIR/qcc_output.ll" -s 2
+    qir-runner -f "$TMP_DIR/qcc_output.ll" -s "$SHOTS"
   fi
 else
   # In case of pipeline failure, stderr messages from the subshell have
