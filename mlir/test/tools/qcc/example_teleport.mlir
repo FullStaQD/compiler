@@ -2,6 +2,7 @@
 
 // A simple teleportation program, written in qrisp and compiled to mlir.
 // Tests the lowering of control flow to llvm.
+// TODO: modify once qrisp integration test framework is merged.
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i1>, !jasp.QuantumState) attributes {qcc.entry_point} {
     %0 = arith.constant dense<2> : tensor<i64>
