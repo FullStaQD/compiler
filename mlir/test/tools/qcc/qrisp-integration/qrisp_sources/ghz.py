@@ -27,7 +27,7 @@ mlir = str(make_jaspr(prepare_ghz)().to_mlir(lower_stablehlo=True))
 
 print(
 f"""
-// RUN: not %S/integration_run.sh -r 42 -n 1 -c qcc %s | FileCheck %s
+// RUN: not %python %S/integration_run.py -r 42 -n 1 -c qcc %s | FileCheck %s
 
 {mlir}
 
