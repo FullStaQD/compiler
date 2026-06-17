@@ -37,7 +37,7 @@ protected:
     // Runtime functions:
     createVoidFnDecl(qcc::qirRtInit, 1);
     createRtBoolRecordOutputDecl();
-    createRtIntegerRecordOutputDecl();
+    createRtIntRecordOutputDecl();
     createRtReadResultDecl();
 
     // QIS:
@@ -104,8 +104,8 @@ private:
     LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
   }
 
-  /// Inserts `llvm.func` with signature `__quantum__rt__integer_record_output(i64, ptr) -> void`.
-  void createRtIntegerRecordOutputDecl() {
+  /// Inserts `llvm.func` with signature `__quantum__rt__int_record_output(i64, ptr) -> void`.
+  void createRtIntRecordOutputDecl() {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
     OpBuilder builder(ctx);

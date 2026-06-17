@@ -23,15 +23,13 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/WalkResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Casting.h"
 
 #include <cstdint>
 
@@ -155,23 +153,6 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   }
 };
 
-struct RecordBoolLowering : public OpConversionPattern<aux::RecordBoolOp> {
-  using OpConversionPattern<aux::RecordBoolOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(aux::RecordBoolOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto loc = op.getLoc();
-    StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
-
-    auto addressOf =
-        LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
-    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtBoolRecordOutput, ValueRange{adaptor.getValue(), addressOf});
-
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
   using OpConversionPattern<aux::RecordIntOp>::OpConversionPattern;
 
@@ -182,7 +163,19 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
 
     auto addressOf =
         LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
-    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtIntRecordOutput, ValueRange{adaptor.getValue(), addressOf});
+
+    Type ty = op.getValue().getType();
+
+    llvm::StringRef callee;
+    if (ty.isInteger(1)) {
+      callee = qirRtBoolRecordOutput;
+    } else if (ty.isInteger(64)) {
+      callee = qirRtIntRecordOutput;
+    } else {
+      return failure();
+    }
+
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), callee, ValueRange{adaptor.getValue(), addressOf});
 
     rewriter.eraseOp(op);
     return success();
@@ -253,11 +246,12 @@ protected:
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addIllegalDialect<qc::QCDialect>();
+    target.addIllegalDialect<qcc::aux::AuxDialect>();
     target.addLegalOp<qc::StaticOp>(); // take care of slightly later.
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, RecordBoolLowering, RecordIntLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
