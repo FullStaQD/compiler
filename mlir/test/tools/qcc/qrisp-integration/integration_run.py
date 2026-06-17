@@ -45,53 +45,6 @@ def _find_qir_runner() -> str | None:
         if uvx_path is not None:
             return "uvx"
 
-        # Fall back to "uv tool install" then search known install dirs
-        print("qir-runner not found, attempting to install via uv...", file=sys.stderr)
-        result = subprocess.run(
-            [uv_path, "tool", "install", "qirrunner"],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            print("Error: failed to install qir-runner", file=sys.stderr)
-            print(result.stderr, file=sys.stderr)
-            return None
-
-        # Re-check PATH; uv may have installed to a directory not yet visible
-        # on the current process's PATH.  Search known install directories.
-        found = shutil.which("qir-runner")
-        if found is not None:
-            return found
-
-        install_dirs = [
-            os.path.expanduser("~/.local/bin"),
-            os.path.expanduser("~/.cargo/bin"),
-        ]
-        if sys.platform == "win32":
-            localappdata = os.environ.get("LOCALAPPDATA", "")
-            if localappdata:
-                install_dirs.append(os.path.join(localappdata, "uv", "bin"))
-
-        for install_dir in install_dirs:
-            candidate = os.path.join(install_dir, "qir-runner")
-            if sys.platform == "win32":
-                for ext in ("", ".exe", ".cmd", ".bat", ".ps1"):
-                    candidate_ext = candidate + ext
-                    if os.path.isfile(candidate_ext):
-                        os.environ["PATH"] = (
-                            f"{install_dir}{os.pathsep}{os.environ['PATH']}"
-                        )
-                        return shutil.which("qir-runner")
-            elif os.path.isfile(candidate):
-                os.environ["PATH"] = (
-                    f"{install_dir}{os.pathsep}{os.environ['PATH']}"
-                )
-                return shutil.which("qir-runner")
-
-        # Last resort: if uv is available but we couldn't find the tool,
-        # return "uvx" – it will cause the caller to run via uvx, which
-        # will auto-install and run on first use.
-        return "uvx"
-
     print(
         "Error: uv not found, please install uv or qir-runner "
         "to run qrisp integration tests",
