@@ -16,6 +16,9 @@ namespace qcc {
 #define GEN_PASS_DECL
 #include "qcc/Conversion/AffineRaise/AffineRaise.h.inc"
 
+/// Collect a set of patterns to convert SCF operations to Affine operations.
+void populateSCFToAffineConversionPatterns(mlir::RewritePatternSet& patterns);
+
 #define GEN_PASS_REGISTRATION
 #include "qcc/Conversion/AffineRaise/AffineRaise.h.inc"
 
