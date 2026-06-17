@@ -183,7 +183,7 @@ def main() -> None:
                 if qir_runner == "uvx":
                     # uvx auto-installs and runs the tool without needing PATH entry
                     qir_runner_args = [
-                        qir_runner, "qir-runner", "-f", llvm_output,
+                        qir_runner, "qirrunner", "-f", llvm_output,
                         "-s", str(args.n)
                     ]
                 else:
