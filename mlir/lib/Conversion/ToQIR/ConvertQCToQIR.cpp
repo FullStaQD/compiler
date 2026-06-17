@@ -48,6 +48,10 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
     return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
         .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
         .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
+        .Case<qc::TOp>([](auto) { return qcc::qirQisT; })
+        .Case<qc::TdgOp>([](auto) { return qcc::qirQisTdg; })
+        .Case<qc::SOp>([](auto) { return qcc::qirQisS; })
+        .Case<qc::SdgOp>([](auto) { return qcc::qirQisSdg; })
         .Default([](auto) { return ""; });
   }
 

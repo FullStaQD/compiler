@@ -263,7 +263,9 @@ struct ConvertJaspQuantumGateOp final : OpConversionPattern<jasp::QuantumGateOp>
     TRY_CONVERT_GATE("rz", qc::RZOp, 0, 1, 1);
     TRY_CONVERT_GATE("crz", qc::RZOp, 1, 1, 1);
     TRY_CONVERT_GATE("s", qc::SOp, 0, 1, 0);
+    TRY_CONVERT_GATE("s_dg", qc::SdgOp, 0, 1, 0);
     TRY_CONVERT_GATE("t", qc::TOp, 0, 1, 0);
+    TRY_CONVERT_GATE("t_dg", qc::TdgOp, 0, 1, 0);
     TRY_CONVERT_GATE("sx", qc::SXOp, 0, 1, 0);
     TRY_CONVERT_GATE("swap", qc::SWAPOp, 0, 2, 0);
     TRY_CONVERT_GATE("rxx", qc::RXXOp, 0, 2, 1);

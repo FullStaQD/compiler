@@ -46,6 +46,10 @@ protected:
     fnMZ->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
     createVoidFnDecl(qcc::qirQisH, 1);
     createVoidFnDecl(qcc::qirQisX, 1);
+    createVoidFnDecl(qcc::qirQisS, 1);
+    createVoidFnDecl(qcc::qirQisSdg, 1);
+    createVoidFnDecl(qcc::qirQisT, 1);
+    createVoidFnDecl(qcc::qirQisTdg, 1);
     createVoidFnDecl(qcc::qirQisCX, 2);
 
     addQIRModuleFlags();

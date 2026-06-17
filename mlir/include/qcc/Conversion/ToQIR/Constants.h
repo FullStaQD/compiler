@@ -73,4 +73,16 @@ static constexpr llvm::StringLiteral qirQisX = "__quantum__qis__x__body";
 /// CX gate controlled on first qubit/ptr.
 static constexpr llvm::StringLiteral qirQisCX = "__quantum__qis__cx__body";
 
+/// Single target S gate.
+static constexpr llvm::StringLiteral qirQisS = "__quantum__qis__s__body";
+
+/// Single target S† gate.
+static constexpr llvm::StringLiteral qirQisSdg = "__quantum__qis__sdg__body";
+
+/// Single target T gate.
+static constexpr llvm::StringLiteral qirQisT = "__quantum__qis__t__body";
+
+/// Single target T† gate.
+static constexpr llvm::StringLiteral qirQisTdg = "__quantum__qis__tdg__body";
+
 } // namespace qcc
