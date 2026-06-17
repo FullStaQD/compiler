@@ -37,6 +37,7 @@ protected:
     // Runtime functions:
     createVoidFnDecl(qcc::qirRtInit, 1);
     createRtBoolRecordOutputDecl();
+    createRtIntRecordOutputDecl();
     createRtReadResultDecl();
 
     // QIS:
@@ -45,6 +46,10 @@ protected:
     fnMZ->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
     createVoidFnDecl(qcc::qirQisH, 1);
     createVoidFnDecl(qcc::qirQisX, 1);
+    createVoidFnDecl(qcc::qirQisS, 1);
+    createVoidFnDecl(qcc::qirQisSdg, 1);
+    createVoidFnDecl(qcc::qirQisT, 1);
+    createVoidFnDecl(qcc::qirQisTdg, 1);
     createVoidFnDecl(qcc::qirQisCX, 2);
 
     addQIRModuleFlags();
@@ -97,6 +102,21 @@ private:
     auto fnType = LLVM::LLVMFunctionType::get(voidType, {i1Type, ptrType});
 
     LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtBoolRecordOutput, fnType);
+  }
+
+  /// Inserts `llvm.func` with signature `__quantum__rt__int_record_output(i64, ptr) -> void`.
+  void createRtIntRecordOutputDecl() {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+
+    auto voidType = LLVM::LLVMVoidType::get(ctx);
+    auto i64Type = IntegerType::get(ctx, 64);
+    auto ptrType = LLVM::LLVMPointerType::get(ctx);
+    auto fnType = LLVM::LLVMFunctionType::get(voidType, {i64Type, ptrType});
+
+    LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtIntRecordOutput, fnType);
   }
 
   /// Creates the module flags which specify the capabilities which the backend needs to support.

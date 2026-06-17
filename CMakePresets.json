@@ -4,17 +4,38 @@
     {
       "name": "base",
       "hidden": true,
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
-        "MLIR_DIR": "/opt/llvm/lib/cmake/mlir",
-        "LLVM_DIR": "/opt/llvm/lib/cmake/llvm",
-        "LLVM_EXTERNAL_LIT": "/usr/local/bin/lit"
+        "MLIR_DIR": "$env{MLIR_DIR}",
+        "LLVM_EXTERNAL_LIT": "$env{LIT_BIN}"
       }
     },
     {
-      "name": "dev",
+      "name": "base-unix",
+      "hidden": true,
       "inherits": "base",
+      "condition": {
+        "type": "inList",
+        "string": "${hostSystemName}",
+        "list": ["Linux", "Darwin"]
+      },
+      "description": "Default configuration for Linux and macOS builds",
+      "generator": "Ninja"
+    },
+    {
+      "name": "base-windows",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "description": "Default configuration for Windows builds"
+    },
+    {
+      "name": "dev",
+      "inherits": "base-unix",
       "displayName": "dev config",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
@@ -23,7 +44,7 @@
     },
     {
       "name": "debug",
-      "inherits": "base",
+      "inherits": "base-unix",
       "displayName": "debug config",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -32,8 +53,33 @@
     },
     {
       "name": "release",
-      "inherits": "base",
+      "inherits": "base-unix",
       "displayName": "release config",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "lint",
+      "inherits": "base-unix",
+      "displayName": "lint config",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "debug-windows",
+      "inherits": "base-windows",
+      "displayName": "debug config (Windows)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LLVM_ENABLE_ASSERTIONS": "ON"
+      }
+    },
+    {
+      "name": "release-windows",
+      "inherits": "base-windows",
+      "displayName": "release config (Windows)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -51,6 +97,52 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "lint",
+      "configurePreset": "lint"
+    },
+    {
+      "name": "debug-windows",
+      "configurePreset": "debug-windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release-windows",
+      "configurePreset": "release-windows",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "output": { "outputOnFailure": true },
+      "execution": {
+        "timeout": 600
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug-windows",
+      "inherits": "base",
+      "configurePreset": "debug-windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release-windows",
+      "inherits": "base",
+      "configurePreset": "release-windows",
+      "configuration": "Release"
     }
   ]
 }

@@ -8,6 +8,7 @@
 // ===----------------------------------------------------------------------===//
 
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
+#include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
@@ -58,6 +59,7 @@ int main(int argc, char** argv) {
     mlir::scf::SCFDialect,
     mlir::memref::MemRefDialect,
     mlir::LLVM::LLVMDialect,
+    mlir::memref::MemRefDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
     qcc::aux::AuxDialect
@@ -80,13 +82,17 @@ int main(int argc, char** argv) {
   mlir::registerInlinerPass();
 
   // Our passes
+  qcc::registerAddEntrypointToMain();
   qcc::registerAffineRaiseFromSCF();
   qcc::registerWhileToFor();
   qcc::registerPrepareAffineRaising();
   qcc::registerJaspToQC();
+  qcc::registerJaspCheckStaticQubitAllocation();
+  qcc::registerConvertMemrefToStaticQubits();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
+  qcc::registerAuxOutputRecording();
 
   // Extension registration
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);

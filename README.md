@@ -36,11 +36,8 @@ Various IDEs support support the standard, e.g.:
 
 There is also a [dev container cli](https://github.com/devcontainers/cli) which can be used alongside IDE integrations.
 
-For advanced users:
-
-- The devcontainer allows for a custom mount. Use it for whatever you want.
-- If this is insufficient put your own local `devcontainer.json` under `.devcontainer/local/` (gitignored).
-  IDEs and the cli should provide you with a way to choose which config you want to use.
+For advanced users: put your own local `devcontainer.json` under `.devcontainer/local/` (gitignored).
+IDEs and the cli should provide you with a way to choose which config you want to use.
 
 ### Option 2: Manual Setup
 
@@ -97,13 +94,26 @@ and it should output some plain MLIR source.
 
 ## Testing
 
-Once the project has been built, it is possible to run the tests using the following command:
+Run the tests like so:
 
 ```shell
+# Rebuilds and runs all tests:
 cmake --build build/dev --target test-qcc-project
+
+# Run specific tests (filters by filename):
+lit build/dev/mlir/test/ -v --filter "convert"
 ```
 
-If everything works correctly, it should print a 100% success rate.
+---
+
+## Language server
+
+If you use VSCode and would like to enable the custom MLIR LSP server including quantum dialects, add this line to your
+settings:
+
+```
+"mlir.server_path": "build/dev/bin/qcc-lsp-server"
+```
 
 ---
 

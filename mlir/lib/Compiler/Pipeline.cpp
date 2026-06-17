@@ -9,6 +9,7 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
+#include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
@@ -29,15 +30,18 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
 
+  pm.addPass(qcc::createAddEntrypointToMain());
+
   // Lowering from JASP to QC
   // In addition to the obvious conversions, the rank-0 tensors
   // are converted to plain values (e.g. tensor<i64> becomes i64)
   // whenever possible.
   pm.addPass(qcc::createJaspToQC());
 
-  // Initial cleanup
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
+  // Dynamic to static allocation translation
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(qcc::createJaspCheckStaticQubitAllocation());
+  pm.addPass(qcc::createConvertMemrefToStaticQubits());
 
   // Convert `tensor.empty` to `bufferization.alloc_tensor`, which is expected by
   // bufferization.
@@ -83,6 +87,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
 
   // conversion to QIR
+  pm.addPass(qcc::createAuxOutputRecording());
   pm.addPass(qcc::createPrepToQIR());
   mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();
   fpm.addPass(mlir::createArithToLLVMConversionPass());

@@ -13,8 +13,8 @@
 
 namespace qcc {
 #define GEN_PASS_DECL
-#include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
+#include "qcc/Conversion/Aux_/AuxOutputRecording.h.inc"
 
 #define GEN_PASS_REGISTRATION
-#include "qcc/Conversion/JaspToQC/JaspToQC.h.inc"
+#include "qcc/Conversion/Aux_/AuxOutputRecording.h.inc"
 } // namespace qcc
