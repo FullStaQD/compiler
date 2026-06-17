@@ -83,9 +83,7 @@ int main(int argc, char** argv) {
 
   // Our passes
   qcc::registerAddEntrypointToMain();
-  qcc::registerAffineRaiseFromSCF();
   qcc::registerWhileToFor();
-  qcc::registerPrepareAffineRaising();
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();
   qcc::registerConvertMemrefToStaticQubits();

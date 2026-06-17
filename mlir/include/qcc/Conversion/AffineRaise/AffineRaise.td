@@ -9,18 +9,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AffineRaiseFromSCF : Pass<"affine-raise-from-scf"> {
-  let summary = "Raise SCF loops to Affine loops where possible.";
-
-  let description = [{
-      Attempts to convert `scf.for` loops into `affine.for` loops when the
-      loop bounds and step are affine expressions.
-   }];
-
-  let dependentDialects = [
-    "mlir::affine::AffineDialect"
-  ];
-}
 
 def WhileToFor : Pass<"while-to-for"> {
   let summary = "Convert scf.while loops to scf.for loops using uplift patterns.";
@@ -31,21 +19,6 @@ def WhileToFor : Pass<"while-to-for"> {
    }];
 
   let dependentDialects = [
-    "mlir::scf::SCFDialect"
-  ];
-}
-
-def PrepareAffineRaising : Pass<"prepare-affine-raising"> {
-  let summary = "Prepare SCF loops for affine raising.";
-
-  let description = [{
-      Performs preparatory rewrites for affine raising:
-      - Convert `arith.select` patterns implementing min/max into explicit `arith.max`/`arith.min` ops.
-      - Cast bounds and indices of `scf.for` loops to `index` type.
-   }];
-
-  let dependentDialects = [
-    "mlir::arith::ArithDialect",
     "mlir::scf::SCFDialect"
   ];
 }
