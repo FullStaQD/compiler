@@ -41,8 +41,8 @@ def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
     to convert `memref.load` / `memref.store`.
   }];
   let dependentDialects = [
-    "affine::AffineDialect",
-    "arith::ArithDialect",
+    "mlir::affine::AffineDialect",
+    "mlir::arith::ArithDialect",
   ];
 }
 

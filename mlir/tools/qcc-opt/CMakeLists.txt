@@ -13,6 +13,7 @@ target_link_libraries(
           MLIRLinalgDialect
           MLIRMemRefDialect
           MLIRBufferizationDialect
+          MLIRDLTIDialect
           QCCJaspDialect
           QCCAuxDialect
           # Passes

@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -60,6 +61,7 @@ int main(int argc, char** argv) {
     mlir::memref::MemRefDialect,
     mlir::LLVM::LLVMDialect,
     mlir::memref::MemRefDialect,
+    mlir::DLTIDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
     qcc::aux::AuxDialect
@@ -83,6 +85,7 @@ int main(int argc, char** argv) {
 
   // Our passes
   qcc::registerAddEntrypointToMain();
+  qcc::registerRaiseSCFToAffinePass();
   qcc::registerWhileToFor();
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();
