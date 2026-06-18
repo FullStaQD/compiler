@@ -1,72 +1,49 @@
-# From Qrisp to MLIR: Step-by-Step Guide
+# Generation of Test Cases from Qrisp
 
 This guide documents the process of converting a [Qrisp](https://qrisp.eu/) quantum program into an MLIR test case for `qcc`.
 
 ---
 
-## Prerequisites
+## Instructions
 
-This project requires a Python environment set up by the `requirements.txt` in this folder. You can install it via pip:
+- Setup a python environment and run:
 
-```bash
-pip install -r requirements.txt
-```
+  ```bash
+  pip install -r requirements.txt
+  ```
 
-## Step 1 — Write Your Qrisp Program
+- Generate MLIR in the `jasp` dialect:
 
-Start by writing your quantum algorithm as a standard Python function using the Qrisp API. For example:
+  ```bash
+  python mlir/utils/generate_qrisp_mlir.py my_program.py > my_program.mlir
+  ```
 
-```python
-from qrisp import QuantumVariable, h, cx, measure
-from qrisp.jasp import make_jaspr
+- Add `lit` and `FileCheck` directives as usual.
 
-def bell():
-    qv = QuantumVariable(2)
-    h(qv[0])
-    cx(qv[0], qv[1])
-    mes0 = measure(qv[0])
-    mes1 = measure(qv[1])
-    return
+## Notes on qrisp programs
 
-jaspr = make_jaspr(bell)()
-print(jaspr.to_mlir(lower_stablehlo=True))
-```
+- Qrisp programs used to generate test cases should contain a single function definition. For example:
 
-This example creates a bell state state and measures all the qubits.
-Run the script:
+  ```python
+  from qrisp import QuantumVariable, h, cx, measure
 
-```bash
-python my_program.test.py > my_program.generated_test.mlir
-```
+  def bell():
+      qv = QuantumVariable(2)
+      h(qv[0])
+      cx(qv[0], qv[1])
+      mes0 = measure(qv[0])
+      mes1 = measure(qv[1])
+      return
+  ```
 
----
+- Do not use `jrange` or `with control(classical condition)`. Instead use `q_cond` or `q_fori_loop`.
 
-## Step 2 - Add lit RUN commands
+## Notes on checks
 
-For example, these `RUN` commands enable checking against `QIR` and `qirrunner` simulation output:
-
-```
-// Test 1: Check QIR output.
-// RUN: qcc  %s | mlir-translate -mlir-to-llvmir | FileCheck %s --check-prefix=CHECK-QIR
-// Test 2: Check output recording from qir-runner simulation.
-// qir-runner requires a .ll file (it checks the extension and does not accept
-// stdin), so we first emit the LLVM IR to a temporary .ll file and then invoke
-// qir-runner on it.
-// RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
-// RUN: uvx --from qirrunner qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
-```
-
----
-
-## Step 3 - Add FileCheck directives
-
-Add checks for the different outputs:
-
-```
-// CHECK-QIR-DAG: ... for QIR output ...
-// CHECK-SIM:     ... for qirrunner output ...
-```
-
-## Remark
-
-Despite this guide, remember to always document all manual tweaks you have to do to run any test correctly within `qcc` in a TODO comment within the tests themselves.
+- You may want to check both `QIR` and `qirrunner` simulation output:
+  ```
+  // RUN: qcc  %s | mlir-translate -mlir-to-llvmir | FileCheck %s --check-prefix=CHECK-QIR
+  // RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
+  // RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
+  ```
+- Do not run simulations if the program involves more than **4** qubits.

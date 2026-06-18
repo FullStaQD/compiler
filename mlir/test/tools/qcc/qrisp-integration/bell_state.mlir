@@ -1,11 +1,8 @@
-// Test 1: Check QIR output.
 // RUN: qcc  %s | mlir-translate -mlir-to-llvmir | FileCheck %s --check-prefix=CHECK-QIR
-// Test 2: Check output recording from qir-runner simulation.
-// qir-runner requires a .ll file (it checks the extension and does not accept
-// stdin), so we first emit the LLVM IR to a temporary .ll file and then invoke
-// qir-runner on it.
 // RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
 // RUN: uvx --from qirrunner qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
+
+// GENERATED FROM QRISP VERSION  git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
 
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {

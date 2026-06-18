@@ -1,5 +1,6 @@
 // RUN: not qcc %s 2>&1 | FileCheck %s --check-prefix=CHECK-QIR
 
+// GENERATED FROM QRISP VERSION  git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
 
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {

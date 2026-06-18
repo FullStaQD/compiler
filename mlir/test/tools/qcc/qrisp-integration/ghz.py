@@ -7,25 +7,17 @@
 
 #  ===----------------------------------------------------------------------===//
 
-from qrisp import QuantumVariable, h, cx, measure
-from qrisp.jasp import make_jaspr
+from qrisp import QuantumVariable, h, cx, measure, q_fori_loop
 
-def prepare_bell_state():
-    n = 2
+def prepare_ghz():
+    n = 3
     qv = QuantumVariable(n)
 
     h(qv[0])
-    cx(qv[0], qv[1])
+
+    # For now OK to just unroll this loop:
+    q_fori_loop(1, n, lambda i, qv: (cx(qv[i-1], qv[i]), qv)[1], qv)
 
     m = measure(qv)
 
     return m
-
-mlir = str(make_jaspr(prepare_bell_state)().to_mlir(lower_stablehlo=True))
-print(
-f"""
-// GENERATED FROM QRISP.
-
-{mlir}
-"""
-)
