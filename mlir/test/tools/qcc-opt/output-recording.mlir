@@ -46,8 +46,8 @@ func.func @test_multiple_i64() -> (i64, i64) attributes { qcc.entry_point } {
 // CHECK-LABEL:   func.func @test_multiple_i64() attributes {qcc.entry_point} {
 // CHECK:     %[[constant0:.*]] = arith.constant 1 : i64
 // CHECK:     %[[constant1:.*]] = arith.constant 2 : i64
-// CHECK:     aux.record_integer %[[constant0]]
-// CHECK:     aux.record_integer %[[constant1]]
+// CHECK:     aux.record_int %[[constant0]] : i64
+// CHECK:     aux.record_int %[[constant1]] : i64
 // CHECK:     return
 // CHECK:   }
 
@@ -80,8 +80,8 @@ func.func @test_multiple_returns() -> (i64, i1) attributes { qcc.entry_point } {
 // CHECK-LABEL:   func.func @test_multiple_returns() attributes {qcc.entry_point} {
 // CHECK:     %[[constant0:.*]] = arith.constant 2 : i64
 // CHECK:     %[[constant1:.*]] = arith.constant true
-// CHECK:     aux.record_integer %[[constant0]]
-// CHECK:     aux.record_bool %[[constant1]]
+// CHECK:     aux.record_int %[[constant0]] : i64
+// CHECK:     aux.record_int %[[constant1]] : i1
 // CHECK:     return
 // CHECK:   }
 

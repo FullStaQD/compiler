@@ -27,7 +27,7 @@ def AuxOutputRecording : Pass<"convert-return-to-output-recording"> {
 
       ```mlir
       %result = some_operation() : () -> i64
-      aux.record_integer %result : i64
+      aux.record_int %result : i64
       return
       ```
     This pass is a workaround to enable output recording for integer values, as our principal
