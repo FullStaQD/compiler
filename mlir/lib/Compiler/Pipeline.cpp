@@ -9,12 +9,15 @@
 
 #include "qcc/Compiler/Pipeline.h"
 
+#include "qcc/Conversion/AffineRaise/AffineRaise.h"
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -67,8 +70,21 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // To facilitate data flow analysis, memory allocation is "hoisted out of loops" whenever possible.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::bufferization::createBufferLoopHoistingPass());
 
-  // Leftover `linalg` operations are converted to `scf` loops.
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::createConvertLinalgToLoopsPass());
+  // Leftover `linalg` operations are converted to `affine` loops.
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::createConvertLinalgToAffineLoopsPass());
+
+  // Convert `scf.while` loops into `scf.for` loops where possible, so that
+  // they can subsequently be raised to `affine.for`.
+  pm.addNestedPass<mlir::func::FuncOp>(qcc::createWhileToFor());
+
+  // Raise `scf.for` loops to `affine.for` where the bounds and step permit it.
+  pm.addNestedPass<mlir::func::FuncOp>(qcc::createTmpRaiseSCFToAffinePass());
+
+  // Unroll affine loops.
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::affine::createLoopUnrollPass());
+
+  // Lower leftover affine ops to scf.
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::createLowerAffinePass());
 
   // Second cleanup
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
