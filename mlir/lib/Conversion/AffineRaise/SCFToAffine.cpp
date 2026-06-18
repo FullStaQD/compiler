@@ -28,13 +28,12 @@ namespace qcc {
 
 using namespace mlir;
 
-namespace {
-
 //===----------------------------------------------------------------------===//
 // SCFToAffine
 //===----------------------------------------------------------------------===//
 
 struct TmpSCFToAffine : public impl::TmpRaiseSCFToAffinePassBase<TmpSCFToAffine> {
+protected:
   void runOnOperation() override;
 };
 
@@ -94,7 +93,9 @@ private:
   static std::pair<affine::AffineForOp, Value> createAffineForWithDynamicStep(scf::ForOp op, PatternRewriter& rewriter);
 };
 
-bool indexBoundsRaisable(scf::ForOp op) {
+namespace {
+
+static bool indexBoundsRaisable(scf::ForOp op) {
   Value lb = op.getLowerBound();
   Value ub = op.getUpperBound();
   IntegerAttr constAttr;
@@ -114,7 +115,7 @@ bool indexBoundsRaisable(scf::ForOp op) {
 /// bounds (lb, ub, step) to `index`. Requires the cast to be lossless under
 /// affine's *signed* `index` interpretation, and every bound to be available at
 /// the top level of the affine scope (so the inserted casts are valid symbols).
-bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
+static bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
   uint64_t indexWidth = DataLayout::closest(op).getTypeSizeInBits(IndexType::get(op.getContext())).getFixedValue();
   // Lossless under signed index: sign-extend needs width <= indexWidth;
   // zero-extend (unsigned) needs a spare sign bit, i.e. width < indexWidth.
@@ -132,6 +133,8 @@ bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
   return affine::isTopLevelValue(op.getLowerBound(), scope) && affine::isTopLevelValue(op.getUpperBound(), scope) &&
          affine::isTopLevelValue(op.getStep(), scope);
 }
+
+} // namespace
 
 [[nodiscard]] bool ForOpRewrite::canRaiseToAffine(scf::ForOp op) {
   Type type = op.getInductionVar().getType();
@@ -335,8 +338,6 @@ void TmpSCFToAffine::runOnOperation() {
 
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
-
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // API
