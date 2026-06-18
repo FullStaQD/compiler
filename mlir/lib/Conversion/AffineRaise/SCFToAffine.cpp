@@ -29,6 +29,51 @@ namespace qcc {
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Helper free functions
+//===----------------------------------------------------------------------===//
+
+static bool indexBoundsRaisable(scf::ForOp op) {
+  Value lb = op.getLowerBound();
+  Value ub = op.getUpperBound();
+  IntegerAttr constAttr;
+
+  // The asymmetry between lb and ub comes from the fact that the step
+  // normalization (for non-constant (dynamic) steps) does not work with
+  // multiple *lower* bounds (max).
+  bool lbOK = affine::isValidDim(lb) || (isa_and_present<affine::AffineMaxOp>(lb.getDefiningOp()) &&
+                                         matchPattern(op.getStep(), m_Constant(&constAttr)));
+  bool ubOK = affine::isValidDim(ub) || isa_and_present<affine::AffineMinOp>(ub.getDefiningOp());
+  bool stepOK = affine::isValidSymbol(op.getStep());
+
+  return lbOK && ubOK && stepOK;
+}
+
+/// Decide whether an integer-typed loop can be raised by first casting its
+/// bounds (lb, ub, step) to `index`. Requires the cast to be lossless under
+/// affine's *signed* `index` interpretation, and every bound to be available at
+/// the top level of the affine scope (so the inserted casts are valid symbols).
+static bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
+  uint64_t indexWidth = DataLayout::closest(op).getTypeSizeInBits(IndexType::get(op.getContext())).getFixedValue();
+  // Lossless under signed index: sign-extend needs width <= indexWidth;
+  // zero-extend (unsigned) needs a spare sign bit, i.e. width < indexWidth.
+  uint64_t requiredWidth = intType.getWidth() + (op.getUnsignedCmp() ? 1 : 0);
+  if (requiredWidth > indexWidth) {
+    return false;
+  }
+
+  Region* scope = affine::getAffineScope(op);
+  if (scope == nullptr) {
+    return false;
+  }
+
+  // Being top-level implies the value is a symbol once it is casted to index.
+  return affine::isTopLevelValue(op.getLowerBound(), scope) && affine::isTopLevelValue(op.getUpperBound(), scope) &&
+         affine::isTopLevelValue(op.getStep(), scope);
+}
+
+namespace {
+
+//===----------------------------------------------------------------------===//
 // SCFToAffine
 //===----------------------------------------------------------------------===//
 
@@ -93,48 +138,9 @@ private:
   static std::pair<affine::AffineForOp, Value> createAffineForWithDynamicStep(scf::ForOp op, PatternRewriter& rewriter);
 };
 
-namespace {
-
-static bool indexBoundsRaisable(scf::ForOp op) {
-  Value lb = op.getLowerBound();
-  Value ub = op.getUpperBound();
-  IntegerAttr constAttr;
-
-  // The asymmetry between lb and ub comes from the fact that the step
-  // normalization (for non-constant (dynamic) steps) does not work with
-  // multiple *lower* bounds (max).
-  bool lbOK = affine::isValidDim(lb) || (isa_and_present<affine::AffineMaxOp>(lb.getDefiningOp()) &&
-                                         matchPattern(op.getStep(), m_Constant(&constAttr)));
-  bool ubOK = affine::isValidDim(ub) || isa_and_present<affine::AffineMinOp>(ub.getDefiningOp());
-  bool stepOK = affine::isValidSymbol(op.getStep());
-
-  return lbOK && ubOK && stepOK;
-}
-
-/// Decide whether an integer-typed loop can be raised by first casting its
-/// bounds (lb, ub, step) to `index`. Requires the cast to be lossless under
-/// affine's *signed* `index` interpretation, and every bound to be available at
-/// the top level of the affine scope (so the inserted casts are valid symbols).
-static bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
-  uint64_t indexWidth = DataLayout::closest(op).getTypeSizeInBits(IndexType::get(op.getContext())).getFixedValue();
-  // Lossless under signed index: sign-extend needs width <= indexWidth;
-  // zero-extend (unsigned) needs a spare sign bit, i.e. width < indexWidth.
-  uint64_t requiredWidth = intType.getWidth() + (op.getUnsignedCmp() ? 1 : 0);
-  if (requiredWidth > indexWidth) {
-    return false;
-  }
-
-  Region* scope = affine::getAffineScope(op);
-  if (scope == nullptr) {
-    return false;
-  }
-
-  // Being top-level implies the value is a symbol once it is casted to index.
-  return affine::isTopLevelValue(op.getLowerBound(), scope) && affine::isTopLevelValue(op.getUpperBound(), scope) &&
-         affine::isTopLevelValue(op.getStep(), scope);
-}
-
-} // namespace
+//===----------------------------------------------------------------------===//
+// ForOpRewrite implementation
+//===----------------------------------------------------------------------===//
 
 [[nodiscard]] bool ForOpRewrite::canRaiseToAffine(scf::ForOp op) {
   Type type = op.getInductionVar().getType();
@@ -342,6 +348,8 @@ void TmpSCFToAffine::runOnOperation() {
 //===----------------------------------------------------------------------===//
 // API
 //===----------------------------------------------------------------------===//
+
+} // namespace
 
 void populateSCFToAffineConversionPatterns(RewritePatternSet& patterns) {
   patterns.add<ForOpRewrite>(patterns.getContext());
