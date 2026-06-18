@@ -1,5 +1,11 @@
-
-// RUN: %python %S/integration_run.py -n 5 -c qcc  %s | FileCheck %s
+// Test 1: Check QIR output.
+// RUN: qcc  %s | mlir-translate -mlir-to-llvmir | FileCheck %s --check-prefix=CHECK-QIR
+// Test 2: Check output recording from qir-runner simulation.
+// qir-runner requires a .ll file (it checks the extension and does not accept
+// stdin), so we first emit the LLVM IR to a temporary .ll file and then invoke
+// qir-runner on it.
+// RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
+// RUN: uvx --from qirrunner qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
 
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {
@@ -16,34 +22,31 @@ builtin.module @jasp_module {
   }
 }
 
-// CHECK-LABEL: ---QIR---
-// CHECK: @__quantum__qis__h__body(ptr null)
-// CHECK: @__quantum__qis__cx__body(ptr null, ptr inttoptr (i64 1 to ptr))
-// CHECK-DAG: @__quantum__qis__mz__body(ptr null, ptr null)
-// CHECK-DAG: @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR: @__quantum__qis__h__body(ptr null)
+// CHECK-QIR: @__quantum__qis__cx__body(ptr null, ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-DAG: @__quantum__qis__mz__body(ptr null, ptr null)
+// CHECK-QIR-DAG: @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
 
-// CHECK-DAG: [[BIT0:%.+]] = call i1 @__quantum__rt__read_result(ptr null)
-// CHECK-DAG: [[BIT1:%.+]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
-// CHECK-DAG: [[INT_RESULT_0:%.+]] = zext i1 [[BIT0]] to i64
-// CHECK-DAG: [[INT_RESULT_1:%.+]] = zext i1 [[BIT1]] to i64
+// CHECK-QIR-DAG: [[BIT0:%.+]] = call i1 @__quantum__rt__read_result(ptr null)
+// CHECK-QIR-DAG: [[BIT1:%.+]] = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-DAG: [[INT_RESULT_0:%.+]] = zext i1 [[BIT0]] to i64
+// CHECK-QIR-DAG: [[INT_RESULT_1:%.+]] = zext i1 [[BIT1]] to i64
 
-// CHECK-DAG: [[LEFT_SHIFTED_1:%.+]] = shl i64 [[INT_RESULT_1]], 1
-// CHECK-DAG: [[COMBINED_INT:%.+]] = or i64 [[INT_RESULT_0]], [[LEFT_SHIFTED_1]]
-// CHECK: @__quantum__rt__int_record_output(i64 [[COMBINED_INT]], ptr @.qir_dummy_label)
+// CHECK-QIR-DAG: [[LEFT_SHIFTED_1:%.+]] = shl i64 [[INT_RESULT_1]], 1
+// CHECK-QIR-DAG: [[COMBINED_INT:%.+]] = or i64 [[INT_RESULT_0]], [[LEFT_SHIFTED_1]]
+// CHECK-QIR: @__quantum__rt__int_record_output(i64 [[COMBINED_INT]], ptr @.qir_dummy_label)
 
 
-// CHECK-LABEL: ---OUTPUT-RECORDING---
-
-// CHECK: START
-// CHECK: METADATA entry_point
-// CHECK: METADATA output_labeling_schema
-// CHECK: METADATA qir_profiles
-// CHECK: METADATA required_num_qubits 2
-// CHECK: METADATA required_num_results 2
+// CHECK-SIM: START
+// CHECK-SIM: METADATA entry_point
+// CHECK-SIM: METADATA output_labeling_schema
+// CHECK-SIM: METADATA qir_profiles
+// CHECK-SIM: METADATA required_num_qubits 2
+// CHECK-SIM: METADATA required_num_results 2
 
 // We expect values 0 (|00> state) or 3 (|11> state).
-// CHECK: OUTPUT INT {{[03]}} dummy_label
-// CHECK: OUTPUT INT {{[03]}} dummy_label
-// CHECK: OUTPUT INT {{[03]}} dummy_label
-// CHECK: OUTPUT INT {{[03]}} dummy_label
-// CHECK: OUTPUT INT {{[03]}} dummy_label
+// CHECK-SIM: OUTPUT INT {{[03]}} dummy_label
+// CHECK-SIM: OUTPUT INT {{[03]}} dummy_label
+// CHECK-SIM: OUTPUT INT {{[03]}} dummy_label
+// CHECK-SIM: OUTPUT INT {{[03]}} dummy_label
+// CHECK-SIM: OUTPUT INT {{[03]}} dummy_label

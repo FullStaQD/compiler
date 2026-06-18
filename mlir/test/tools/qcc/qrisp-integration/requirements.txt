@@ -1,0 +1,7 @@
+# Requirements for the compilation of qrisp programs
+
+# TODO: replace by released version once available
+qrisp @ git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
+
+# TODO: remove once qrisp lists dependency explicitly
+xdsl==0.59.0

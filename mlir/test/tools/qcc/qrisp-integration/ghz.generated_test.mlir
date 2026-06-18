@@ -1,5 +1,5 @@
+// RUN: not qcc %s 2>&1 | FileCheck %s --check-prefix=CHECK-QIR
 
-// RUN: not %python %S/integration_run.py -r 42 -n 1 -c qcc %s | FileCheck %s
 
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {
@@ -35,4 +35,4 @@ builtin.module @jasp_module {
 }
 
 // TODO: Once loop unrolling is in place, add proper checks
-// CHECK: qubit index must be a constant; unroll loops before this pass
+// CHECK-QIR: qubit index must be a constant; unroll loops before this pass
