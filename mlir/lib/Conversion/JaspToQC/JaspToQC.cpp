@@ -328,23 +328,6 @@ private:
 /// ```mlir
 /// %measured = qc.measure %q : !qc.qubit -> i1
 /// ```
-///
-/// Example (qubit array, returning tensor<i64>):
-/// The jasp.measure result type is tensor<i64>, so the result in QC is i64.
-/// Each qubit's measurement (i1) is extended to i64, shifted to its bit
-/// position, and OR-ed into the accumulator:
-/// ```mlir
-/// %size = memref.dim %q_arr, %c0 : memref<?x!qc.qubit> -> index
-/// %result = scf.for %i = %c0 to %size step %c1 iter_args(%acc = %c0_i64) -> i64 {
-///   %q = memref.load %q_arr[%i] : memref<?x!qc.qubit> -> !qc.qubit
-///   %bit = qc.measure %q : !qc.qubit -> i1
-///   %bit_i64 = arith.extui %bit : i1 to i64
-///   %iv_i64 = arith.index_cast %i : index to i64
-///   %shifted = arith.shli %bit_i64, %iv_i64 : i64
-///   %new_acc = arith.ori %acc, %shifted : i64
-///   scf.yield %new_acc : i64
-/// }
-/// ```
 struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
   using OpConversionPattern::OpConversionPattern;
 
