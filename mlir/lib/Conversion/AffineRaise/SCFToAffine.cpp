@@ -1,14 +1,11 @@
-//===- SCFToAffine.cpp - SCF to Affine conversion -------------------------===//
+// ===----------------------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
+// Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See <repo-root>/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
-//
-// This file implements a pass to raise scf ops to affine ops.
-//
-//===----------------------------------------------------------------------===//
+// ===----------------------------------------------------------------------===//
 
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
 
