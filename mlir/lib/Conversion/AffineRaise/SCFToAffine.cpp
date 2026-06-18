@@ -26,7 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace qcc {
-#define GEN_PASS_DEF_RAISESCFTOAFFINEPASS
+#define GEN_PASS_DEF_TMPRAISESCFTOAFFINEPASS
 #include "qcc/Conversion/AffineRaise/AffineRaise.h.inc"
 
 using namespace mlir;
@@ -37,7 +37,7 @@ namespace {
 // SCFToAffine
 //===----------------------------------------------------------------------===//
 
-struct SCFToAffine : public impl::RaiseSCFToAffinePassBase<SCFToAffine> {
+struct TmpSCFToAffine : public impl::TmpRaiseSCFToAffinePassBase<TmpSCFToAffine> {
   void runOnOperation() override;
 };
 
@@ -324,7 +324,7 @@ void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter)
 // Pass implementation
 //===----------------------------------------------------------------------===//
 
-void SCFToAffine::runOnOperation() {
+void TmpSCFToAffine::runOnOperation() {
   MLIRContext& ctx = getContext();
   RewritePatternSet patterns(&ctx);
   populateSCFToAffineConversionPatterns(patterns);

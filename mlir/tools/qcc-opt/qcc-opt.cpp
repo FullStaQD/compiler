@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 
   // Our passes
   qcc::registerAddEntrypointToMain();
-  qcc::registerRaiseSCFToAffinePass();
+  qcc::registerTmpRaiseSCFToAffinePass();
   qcc::registerWhileToFor();
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();

@@ -10,13 +10,15 @@
 include "mlir/Pass/PassBase.td"
 
 //===----------------------------------------------------------------------===//
-// SCFToAffine
+// TmpSCFToAffine
 //===----------------------------------------------------------------------===//
 
-// TODO: extend to scf.if, scf.parallel, possibly more.
-def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
+def TmpRaiseSCFToAffinePass : Pass<"tmp-raise-scf-to-affine"> {
   let summary = "Raise SCF operations to affine operations (best effort)";
   let description = [{
+    TODO: Temporary solution. Ported from https://github.com/llvm/llvm-project/pull/200851.
+    Once our dependency includes this, this may be deleted.
+
     Raising to the affine dialect enables affine analyses and transforms such
     as loop tiling, unrolling, vectorization, and dependence analysis.
     Currently only `scf.for` is handled; loops that cannot be raised are left
