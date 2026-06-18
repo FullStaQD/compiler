@@ -71,6 +71,7 @@ struct ConvertWhileSLEToSLT : public OpRewritePattern<scf::WhileOp> {
 };
 } // namespace
 
+namespace {
 struct WhileToFor final : public impl::WhileToForBase<WhileToFor> {
   using impl::WhileToForBase<WhileToFor>::WhileToForBase;
 
@@ -82,9 +83,10 @@ protected:
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
+} // namespace
 
 } // namespace qcc
 
 namespace impl {
-std::unique_ptr<::mlir::Pass> createWhileToFor() { return std::make_unique<qcc::WhileToFor>(); }
+static std::unique_ptr<::mlir::Pass> createWhileToFor() { return std::make_unique<qcc::WhileToFor>(); }
 } // namespace impl

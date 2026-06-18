@@ -55,14 +55,14 @@ private:
   /// An `scf.for` can trivially be raised if lb, ub are dimensions and step is
   /// a constant. With some more work one can raise under relaxed constraints as
   /// expressed by this function.
-  bool canRaiseToAffine(scf::ForOp op) const;
+  static bool canRaiseToAffine(scf::ForOp op);
 
   /// Cast lb, ub, step and the induction variable of an integer-typed `op` to
   /// `index`, in place. The bound and step casts are placed at the top level of
   /// the affine scope so they are valid affine symbols; the induction variable
   /// is cast back to its original type at the start of the body so the body is
   /// left unchanged. Assumes `canRaiseToAffine(op) == true`.
-  void castBoundsToIndex(scf::ForOp op, PatternRewriter& rewriter) const;
+  static void castBoundsToIndex(scf::ForOp op, PatternRewriter& rewriter);
 
   /// Returns an equivalent `affine.for` skeleton and the *old* induction
   /// variable for use by the body that is inlined later. The affine loop body
@@ -86,12 +86,12 @@ private:
   /// variable is recovered in the body as `lb + step * new_iv`. Here we require
   /// lb to be a dimension; ub may still be an `affine.min`, which is rescaled
   /// accordingly.
-  std::pair<affine::AffineForOp, Value> createAffineFor(scf::ForOp op, PatternRewriter& rewriter) const;
+  static std::pair<affine::AffineForOp, Value> createAffineFor(scf::ForOp op, PatternRewriter& rewriter);
 
-  std::pair<affine::AffineForOp, Value> createAffineForWithConstantStep(scf::ForOp op, int64_t step,
-                                                                        PatternRewriter& rewriter) const;
+  static std::pair<affine::AffineForOp, Value> createAffineForWithConstantStep(scf::ForOp op, int64_t step,
+                                                                               PatternRewriter& rewriter);
 
-  std::pair<affine::AffineForOp, Value> createAffineForWithDynamicStep(scf::ForOp op, PatternRewriter& rewriter) const;
+  static std::pair<affine::AffineForOp, Value> createAffineForWithDynamicStep(scf::ForOp op, PatternRewriter& rewriter);
 };
 
 bool indexBoundsRaisable(scf::ForOp op) {
@@ -119,24 +119,28 @@ bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
   // Lossless under signed index: sign-extend needs width <= indexWidth;
   // zero-extend (unsigned) needs a spare sign bit, i.e. width < indexWidth.
   uint64_t requiredWidth = intType.getWidth() + (op.getUnsignedCmp() ? 1 : 0);
-  if (requiredWidth > indexWidth)
+  if (requiredWidth > indexWidth) {
     return false;
+  }
 
   Region* scope = affine::getAffineScope(op);
-  if (!scope)
+  if (scope == nullptr) {
     return false;
+  }
 
   // Being top-level implies the value is a symbol once it is casted to index.
   return affine::isTopLevelValue(op.getLowerBound(), scope) && affine::isTopLevelValue(op.getUpperBound(), scope) &&
          affine::isTopLevelValue(op.getStep(), scope);
 }
 
-bool ForOpRewrite::canRaiseToAffine(scf::ForOp op) const {
+[[nodiscard]] bool ForOpRewrite::canRaiseToAffine(scf::ForOp op) {
   Type type = op.getInductionVar().getType();
-  if (isa<IndexType>(type))
+  if (isa<IndexType>(type)) {
     return indexBoundsRaisable(op);
-  if (auto intType = dyn_cast<IntegerType>(type))
+  }
+  if (auto intType = dyn_cast<IntegerType>(type)) {
     return intBoundsRaisable(op, intType);
+  }
   return false;
 }
 
@@ -145,8 +149,9 @@ LogicalResult ForOpRewrite::matchAndRewrite(scf::ForOp op, PatternRewriter& rewr
     return rewriter.notifyMatchFailure(op, "cannot raise scf op to affine");
   }
 
-  if (!isa<IndexType>(op.getInductionVar().getType()))
+  if (!isa<IndexType>(op.getInductionVar().getType())) {
     castBoundsToIndex(op, rewriter);
+  }
 
   auto [affineFor, oldIV] = createAffineFor(op, rewriter);
   Block* affineBody = affineFor.getBody();
@@ -171,7 +176,7 @@ LogicalResult ForOpRewrite::matchAndRewrite(scf::ForOp op, PatternRewriter& rewr
   return success();
 }
 
-std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineFor(scf::ForOp op, PatternRewriter& rewriter) const {
+std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineFor(scf::ForOp op, PatternRewriter& rewriter) {
   IntegerAttr constAttr;
   if (matchPattern(op.getStep(), m_Constant(&constAttr))) {
     int64_t step = constAttr.getInt();
@@ -182,7 +187,7 @@ std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineFor(scf::ForOp o
 }
 
 std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithConstantStep(scf::ForOp op, int64_t step,
-                                                                                    PatternRewriter& rewriter) const {
+                                                                                    PatternRewriter& rewriter) {
   Value lb = op.getLowerBound();
   Value ub = op.getUpperBound();
 
@@ -209,7 +214,7 @@ std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithConstantS
 }
 
 std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithDynamicStep(scf::ForOp op,
-                                                                                   PatternRewriter& rewriter) const {
+                                                                                   PatternRewriter& rewriter) {
   Value lb = op.getLowerBound();
   Value ub = op.getUpperBound();
   Value step = op.getStep();
@@ -269,7 +274,7 @@ std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithDynamicSt
   return std::make_pair(affineFor, oldIV);
 }
 
-void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter) const {
+void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
 
   Value lb = loop.getLowerBound();
@@ -282,8 +287,9 @@ void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter)
 
   auto createIndexCast = [&](Type out, Value in) -> Value {
     Location loc = loop.getLoc();
-    if (loop.getUnsignedCmp())
+    if (loop.getUnsignedCmp()) {
       return arith::IndexCastUIOp::create(rewriter, loc, out, in);
+    }
     return arith::IndexCastOp::create(rewriter, loc, out, in);
   };
 
@@ -292,8 +298,9 @@ void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter)
 
   Region* scope = affine::getAffineScope(loop);
   Operation* anchor = loop;
-  while (anchor->getParentRegion() != scope)
+  while (anchor->getParentRegion() != scope) {
     anchor = anchor->getParentOp();
+  }
   rewriter.setInsertionPoint(anchor);
 
   Value newLb = createIndexCast(rewriter.getIndexType(), lb);
@@ -306,7 +313,7 @@ void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter)
     loop.setStep(newStep);
 
     Value originalIV = loop.getInductionVar();
-    Value iv = loop.getBody()->insertArgument((unsigned)0, rewriter.getIndexType(), loop.getLoc());
+    Value iv = loop.getBody()->insertArgument(static_cast<unsigned>(0), rewriter.getIndexType(), loop.getLoc());
 
     rewriter.setInsertionPointToStart(loop.getBody());
     Value castIV = createIndexCast(originalType, iv);
