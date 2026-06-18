@@ -1,5 +1,7 @@
 // RUN: qcc %s | FileCheck %s
 
+// TODO: replace with actual GHZ test measuring the whole qubit array.
+
 builtin.module @jasp_module {
   func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i1>, !jasp.QuantumState) {
     %0 = arith.constant dense<3> : tensor<i64>
@@ -35,5 +37,35 @@ builtin.module @jasp_module {
   }
 }
 
-// TODO: Once loop unrolling is in place, add proper checks
-// CHECK: qubit index must be a constant; unroll loops before this pass
+// CHECK-LABEL:   llvm.func @main() attributes {passthrough = ["entry_point", ["output_labeling_schema", "schema_id"], ["qir_profiles", "adaptive_profile"], ["required_num_qubits", "3"], ["required_num_results", "3"]]} {
+// CHECK:           %[[MLIR_0:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+// CHECK:           %[[MLIR_1:.*]] = llvm.mlir.constant(2 : i64) : i64
+// CHECK:           %[[MLIR_2:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[MLIR_3:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[MLIR_4:.*]] = llvm.mlir.zero : !llvm.ptr
+// CHECK:           llvm.call @__quantum__rt__initialize(%[[MLIR_4]]) : (!llvm.ptr) -> ()
+// CHECK:           %[[INTTOPTR_0:.*]] = llvm.inttoptr %[[MLIR_3]] : i64 to !llvm.ptr
+// CHECK:           llvm.call @__quantum__qis__h__body(%[[INTTOPTR_0]]) : (!llvm.ptr) -> ()
+// CHECK:           %[[INTTOPTR_1:.*]] = llvm.inttoptr %[[MLIR_2]] : i64 to !llvm.ptr
+// CHECK:           llvm.call @__quantum__qis__cx__body(%[[INTTOPTR_0]], %[[INTTOPTR_1]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           %[[INTTOPTR_2:.*]] = llvm.inttoptr %[[MLIR_1]] : i64 to !llvm.ptr
+// CHECK:           llvm.call @__quantum__qis__cx__body(%[[INTTOPTR_1]], %[[INTTOPTR_2]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           llvm.call @__quantum__qis__mz__body(%[[INTTOPTR_0]], %[[INTTOPTR_0]]) : (!llvm.ptr, !llvm.ptr) -> ()
+// CHECK:           %[[CALL_0:.*]] = llvm.call @__quantum__rt__read_result(%[[INTTOPTR_0]]) : (!llvm.ptr) -> i1
+// CHECK:           llvm.call @__quantum__rt__bool_record_output(%[[CALL_0]], %[[MLIR_0]]) : (i1, !llvm.ptr) -> ()
+// CHECK:           llvm.return
+// CHECK:         }
+// CHECK:         llvm.func @__quantum__rt__initialize(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr)
+// CHECK:         llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
+// CHECK:         llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
+// CHECK:         llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
+// CHECK:         llvm.func @__quantum__qis__h__body(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__qis__x__body(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__qis__s__body(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__qis__sdg__body(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__qis__t__body(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__qis__tdg__body(!llvm.ptr)
+// CHECK:         llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr)
+// CHECK:         llvm.module_flags [#llvm.mlir.module_flag<error, "qir_major_version", 2 : i32>, #llvm.mlir.module_flag<max, "qir_minor_version", 1 : i32>, #llvm.mlir.module_flag<error, "dynamic_qubit_management", 0 : i32>, #llvm.mlir.module_flag<error, "dynamic_result_management", 0 : i32>, #llvm.mlir.module_flag<error, "ir_functions", 1 : i32>, #llvm.mlir.module_flag<error, "backwards_branching", 1 : i32>, #llvm.mlir.module_flag<error, "multiple_target_branching", 0 : i32>, #llvm.mlir.module_flag<error, "multiple_return_points", 0 : i32>]
+// CHECK:         llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}

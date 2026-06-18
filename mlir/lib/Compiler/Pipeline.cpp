@@ -78,9 +78,10 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addNestedPass<mlir::func::FuncOp>(qcc::createTmpRaiseSCFToAffinePass());
 
   // Unroll affine loops.
-  // We have to do this in this by parsing because the createAffineLoopUnroll function does not pass on the -1 factor.
+  // TODO: We have to do this in this by parsing because the createAffineLoopUnroll function does not pass on the -1
+  // factor.
   mlir::affine::registerAffineLoopUnroll();
-  if (failed(mlir::parsePassPipeline("builtin.module(func.func(affine-loop-unroll{unroll-factor=-1}))", pm))) {
+  if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1})", pm))) {
     llvm::errs() << "Failed to parse pass pipeline\n";
     return;
   }
