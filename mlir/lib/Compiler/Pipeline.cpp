@@ -26,6 +26,8 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
 
+#include <mlir/Pass/PassRegistry.h>
+
 namespace qcc {
 
 void buildQuantumPipeline(mlir::PassManager& pm) {
@@ -40,11 +42,6 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // are converted to plain values (e.g. tensor<i64> becomes i64)
   // whenever possible.
   pm.addPass(qcc::createJaspToQC());
-
-  // Dynamic to static allocation translation
-  pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(qcc::createJaspCheckStaticQubitAllocation());
-  pm.addPass(qcc::createConvertMemrefToStaticQubits());
 
   // Convert `tensor.empty` to `bufferization.alloc_tensor`, which is expected by
   // bufferization.
@@ -81,10 +78,20 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addNestedPass<mlir::func::FuncOp>(qcc::createTmpRaiseSCFToAffinePass());
 
   // Unroll affine loops.
-  pm.addNestedPass<mlir::func::FuncOp>(mlir::affine::createLoopUnrollPass());
+  // We have to do this in this by parsing because the createAffineLoopUnroll function does not pass on the -1 factor.
+  mlir::affine::registerAffineLoopUnroll();
+  if (failed(mlir::parsePassPipeline("builtin.module(func.func(affine-loop-unroll{unroll-factor=-1}))", pm))) {
+    llvm::errs() << "Failed to parse pass pipeline\n";
+    return;
+  }
 
   // Lower leftover affine ops to scf.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createLowerAffinePass());
+
+  // Dynamic to static allocation translation
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(qcc::createJaspCheckStaticQubitAllocation());
+  pm.addPass(qcc::createConvertMemrefToStaticQubits());
 
   // Second cleanup
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
