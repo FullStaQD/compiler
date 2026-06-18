@@ -138,6 +138,8 @@ private:
   static std::pair<affine::AffineForOp, Value> createAffineForWithDynamicStep(scf::ForOp op, PatternRewriter& rewriter);
 };
 
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // ForOpRewrite implementation
 //===----------------------------------------------------------------------===//
@@ -348,8 +350,6 @@ void TmpSCFToAffine::runOnOperation() {
 //===----------------------------------------------------------------------===//
 // API
 //===----------------------------------------------------------------------===//
-
-} // namespace
 
 void populateSCFToAffineConversionPatterns(RewritePatternSet& patterns) {
   patterns.add<ForOpRewrite>(patterns.getContext());
