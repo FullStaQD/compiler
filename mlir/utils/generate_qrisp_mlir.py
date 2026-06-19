@@ -44,7 +44,7 @@ def _load_module_from_path(path: str):
 
 
 def _find_qrisp_function(module):
-    """Find the single user-defined function in ``module``."""
+    """Find the single user-defined function in module."""
     candidates = [
         obj for name, obj in vars(module).items()
         if inspect.isfunction(obj)
@@ -94,11 +94,8 @@ def main(argv):
     mlir = str(make_jaspr(qrisp_function)().to_mlir(lower_stablehlo=True))
 
     print(
-        f"""
-// GENERATED FROM QRISP VERSION {qrisp_version}
-
-{mlir}
-"""
+        f"// GENERATED FROM QRISP VERSION {qrisp_version}\n\n"
+        f"{mlir}"
     )
     return 0
 
