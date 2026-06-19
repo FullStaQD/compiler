@@ -166,7 +166,7 @@ private:
     OpBuilder builder(ctx);
     builder.setInsertionPointToEnd(moduleOp.getBody());
 
-    mlir::Type f64Type = builder.getF64Type(); // NOLINT
+    mlir::Type f64Type = builder.getF64Type(); // NOLINT(cppcoreguidelines-slicing)
     mlir::Type ptrType = LLVM::LLVMPointerType::get(ctx);
 
     auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), {f64Type, ptrType});
