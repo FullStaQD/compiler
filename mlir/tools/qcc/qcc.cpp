@@ -83,14 +83,14 @@ int main(int argc, char** argv) {
   mlir::MLIRContext context(registry);
 
   std::string errorMessage;
-  auto file = mlir::openInputFile(inputFilename, &errorMessage);
-  if (!file) {
+  auto inFile = mlir::openInputFile(inputFilename, &errorMessage);
+  if (!inFile) {
     llvm::errs() << errorMessage << "\n";
     return 1;
   }
 
   llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
+  sourceMgr.AddNewSourceBuffer(std::move(inFile), llvm::SMLoc());
 
   // Enable nice diagnostic printing for parser and pass errors
   const mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
@@ -110,8 +110,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  auto output = mlir::openOutputFile(outputFilename, &errorMessage);
-  if (!output) {
+  auto outFile = mlir::openOutputFile(outputFilename, &errorMessage);
+  if (!outFile) {
     llvm::errs() << errorMessage << "\n";
     return 1;
   }
@@ -123,11 +123,11 @@ int main(int argc, char** argv) {
       llvm::errs() << "failed to translate the module to LLVM IR\n";
       return 1;
     }
-    llvmModule->print(output->os(), /*AAW=*/nullptr);
+    llvmModule->print(outFile->os(), /*AAW=*/nullptr);
   } else {
-    module->print(output->os());
+    module->print(outFile->os());
   }
-  output->keep(); // otherwise file gets deleted
+  outFile->keep(); // otherwise file gets deleted
 
   return 0;
 }
