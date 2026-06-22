@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script --quiet
 
 #  ===----------------------------------------------------------------------===//
 #
@@ -8,6 +8,13 @@
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
 #  ===----------------------------------------------------------------------===//
+
+# /// script
+# dependencies = [
+#   "qrisp @ git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b",
+#   "xdsl==0.59.0"
+# ]
+# ///
 
 """
 Generate MLIR (in the ``jasp`` dialect) from a Qrisp source file.

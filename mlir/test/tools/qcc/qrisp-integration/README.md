@@ -6,17 +6,13 @@ This guide documents the process of converting a [Qrisp](https://qrisp.eu/) quan
 
 ## Instructions
 
-- Setup a python environment and run:
-
-  ```bash
-  pip install -r requirements.txt
-  ```
-
 - Generate MLIR in the `jasp` dialect:
 
   ```bash
-  python mlir/utils/generate_qrisp_mlir.py my_program.py > my_program.mlir
+  mlir/utils/generate_qrisp_mlir.py my_program.py > my_program.mlir
   ```
+
+  (Make sure this script is executable.)
 
 - Add `lit` and `FileCheck` directives as usual.
 
