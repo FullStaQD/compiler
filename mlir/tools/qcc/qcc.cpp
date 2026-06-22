@@ -29,8 +29,13 @@
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/ToolOutputFile.h>
@@ -47,6 +52,9 @@ int main(int argc, char** argv) {
   const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
   const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
                                             cl::cat(qccCategory));
+  const cl::opt<bool> emitQir("emit-qir",
+                              cl::desc("Translate the QIR LLVM dialect output to LLVM IR (QIR) instead of MLIR"),
+                              cl::init(false), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
@@ -67,6 +75,10 @@ int main(int argc, char** argv) {
   mlir::bufferization::func_ext::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::memref::registerAllocationOpInterfaceExternalModels(registry);
   mlir::func::registerInlinerExtension(registry);
+
+  // For emitting LLVM IR:
+  mlir::registerBuiltinDialectTranslation(registry);
+  mlir::registerLLVMDialectTranslation(registry);
 
   mlir::MLIRContext context(registry);
 
@@ -104,7 +116,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  module->print(output->os());
+  if (emitQir) {
+    llvm::LLVMContext llvmContext;
+    std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
+    if (!llvmModule) {
+      llvm::errs() << "failed to translate the module to LLVM IR\n";
+      return 1;
+    }
+    llvmModule->print(output->os(), /*AAW=*/nullptr);
+  } else {
+    module->print(output->os());
+  }
   output->keep(); // otherwise file gets deleted
 
   return 0;

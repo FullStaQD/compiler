@@ -14,6 +14,9 @@ set(LIBS
     MLIROptLib
     MLIRRegisterAllDialects
     MLIRRegisterAllExtensions
+    MLIRTargetLLVMIRExport
+    MLIRBuiltinToLLVMIRTranslation
+    MLIRLLVMToLLVMIRTranslation
     QCCPipeline)
 
 add_llvm_executable(qcc qcc.cpp DEPENDS ${LIBS})
