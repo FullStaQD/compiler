@@ -56,11 +56,16 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK:           llvm.call @__quantum__qis__mz__body
     // CHECK:           llvm.call @__quantum__rt__read_result
 
-    aux.record_bool %m5
+    aux.record_int %m5 : i1
     // CHECK:           %[[LABEL_PTR:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
     // CHECK:           llvm.call @__quantum__rt__bool_record_output(%[[MR5]], %[[LABEL_PTR]]) : (i1, !llvm.ptr) -> ()
-    aux.record_bool %m7
+    aux.record_int %m7 : i1
     // CHECK:           llvm.call @__quantum__rt__bool_record_output
+    %record_int = arith.constant 42 : i64
+    // CHECK:           %[[CONST_INT:.*]] = arith.constant 42 : i64
+    aux.record_int %record_int : i64
+    // CHECK:           %[[LABEL_PTR_1:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+    // CHECK:           llvm.call @__quantum__rt__int_record_output(%[[CONST_INT]], %[[LABEL_PTR_1]]) : (i64, !llvm.ptr) -> ()
 
     %exit_code = arith.constant 0 : i64
     return %exit_code : i64
@@ -71,6 +76,7 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 // The pass assumes that these decls already exist.
 llvm.func @__quantum__rt__initialize(!llvm.ptr)
 llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr)
+llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
 llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
 llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
 llvm.func @__quantum__qis__h__body(!llvm.ptr)
@@ -78,5 +84,5 @@ llvm.func @__quantum__qis__x__body(!llvm.ptr)
 llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr)
 llvm.func @__quantum__qis__rz__body(f64, !llvm.ptr)
 
-// The label needed to lower `aux.record_bool` to its corresponding runtime function:
+// The label needed to lower `aux.record_int` to its corresponding runtime function:
 llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
