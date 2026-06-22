@@ -36,6 +36,14 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK-DAG:       %[[QP7:.*]] = llvm.inttoptr %[[QC7]] : i64 to !llvm.ptr
     // CHECK:           llvm.call @__quantum__qis__cx__body(%[[QP3]], %[[QP7]]) : (!llvm.ptr, !llvm.ptr) -> ()
 
+    // Supported rz rotations.
+    %rz_angle = arith.constant 1.5707963267948966 : f64
+    qc.rz(%rz_angle) %q5 : !qc.qubit
+    // CHECK:           %[[ANGLE:.*]] = arith.constant {{.*}} : f64
+    // CHECK-DAG:       %[[QC5_RZ:.*]] = llvm.mlir.constant(5 : i64) : i64
+    // CHECK-DAG:       %[[QP5_RZ:.*]] = llvm.inttoptr %[[QC5_RZ]] : i64 to !llvm.ptr
+    // CHECK:           llvm.call @__quantum__qis__rz__body(%[[ANGLE]], %[[QP5_RZ]]) : (f64, !llvm.ptr) -> ()
+
     // Supported measurement operations.
     %m5 = qc.measure %q5 : !qc.qubit -> i1
     // CHECK-DAG:       %[[QC5:.*]] = llvm.mlir.constant(5 : i64) : i64
@@ -74,6 +82,7 @@ llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attri
 llvm.func @__quantum__qis__h__body(!llvm.ptr)
 llvm.func @__quantum__qis__x__body(!llvm.ptr)
 llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr)
+llvm.func @__quantum__qis__rz__body(f64, !llvm.ptr)
 
 // The label needed to lower `aux.record_int` to its corresponding runtime function:
 llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
