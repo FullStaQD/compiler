@@ -18,6 +18,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/QC/IR/QCOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
@@ -314,11 +315,12 @@ private:
 
 /// Converts jasp.measure to qc.measure
 ///
-/// The conversion is straightforward. However, the measurement result in jasp is
-/// of type `tensor<i1>`, whereas in QC it is of type `i1`.
-/// Therefore, a conversion between these types is inserted.
+/// Handles both single-qubit and qubit-array measurement:
+///   - Single qubit: directly emits qc.measure
+///   - Qubit array: iterates over all qubits with scf.for, measures each
+///     individually, and packs the result bits into an i64.
 ///
-/// Example transformation:
+/// Example (single qubit):
 /// ```mlir
 /// %measured, %state1 = jasp.measure %q, %state0 : !jasp.Qubit, !jasp.QuantumState -> tensor<i1>, !jasp.QuantumState
 /// ```
@@ -331,14 +333,109 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
 
   LogicalResult matchAndRewrite(jasp::MeasureOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto qcQubit = adaptor.getMeasQ();
+    auto loc = op.getLoc();
+    Value measQOperand = adaptor.getMeasQ();
+    Type measQType = measQOperand.getType();
 
-    auto qcMeasureOp = qc::MeasureOp::create(rewriter, op.getLoc(), qcQubit);
+    // single qubit measurement
+    if (!isa<MemRefType>(measQType)) {
+      return convertSingleQubitMeasurement(op, rewriter, loc, measQOperand);
+    }
 
-    auto measureBit = qcMeasureOp.getResult();
+    // TODO: Once loop unrolling is in the pipeline, we can eliminate the static case here.
+    // Determine the number of qubits to measure.
+    // Try to find a compile-time constant from the original IR.
+    int64_t staticSize = ShapedType::kDynamic;
+    if (auto createQubits = op.getMeasQ().getDefiningOp<jasp::CreateQubitsOp>()) {
+      Value amount = createQubits.getAmount();
+      if (auto constOp = amount.getDefiningOp<arith::ConstantOp>()) {
+        auto denseVal = constOp.getValue();
+        if (auto denseAttr = dyn_cast<DenseIntOrFPElementsAttr>(denseVal)) {
+          staticSize = denseAttr.getSplatValue<int64_t>();
+        }
+      }
+    }
 
-    rewriter.replaceOpWithMultiple(op, {measureBit, ValueRange()});
+    if (!ShapedType::isDynamic(staticSize) && staticSize > 0) {
+      return convertStaticArrayMeasurement(op, rewriter, loc, measQOperand, staticSize);
+    }
 
+    return convertDynamicArrayMeasurement(op, rewriter, loc, measQOperand);
+  }
+
+private:
+  LogicalResult convertSingleQubitMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter, Location loc,
+                                              Value qubit) const {
+    Type resultType = typeConverter->convertType(op.getMeasRes().getType());
+
+    auto measOp = qc::MeasureOp::create(rewriter, loc, qubit);
+    Value bit = measOp.getResult();
+
+    // If the result type is wider (e.g. i64), extend.
+    if (resultType && resultType.isInteger(64) && !resultType.isInteger(1)) {
+      bit = arith::ExtUIOp::create(rewriter, loc, resultType, bit);
+    }
+
+    rewriter.replaceOpWithMultiple(op, {bit, ValueRange()});
+    return success();
+  }
+
+  static LogicalResult convertStaticArrayMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter,
+                                                     Location loc, Value array, int64_t staticSize) {
+    auto i64Type = rewriter.getI64Type();
+
+    // Static size: unroll the measurement loop. Emit individual qubit
+    // loads and measurements, then pack the bits into an i64.
+    Value result = arith::ConstantOp::create(rewriter, loc, i64Type, cast<TypedAttr>(rewriter.getI64IntegerAttr(0)));
+
+    for (int64_t i = 0; i < staticSize; ++i) {
+      Value idx = arith::ConstantIndexOp::create(rewriter, loc, i);
+      Value qubit = memref::LoadOp::create(rewriter, loc, array, ValueRange{idx});
+      auto measOp = qc::MeasureOp::create(rewriter, loc, qubit);
+      Value bit = measOp.getResult();
+
+      Value bitI64 = arith::ExtUIOp::create(rewriter, loc, i64Type, bit);
+      Value ivI64 = arith::ConstantOp::create(rewriter, loc, i64Type, cast<TypedAttr>(rewriter.getI64IntegerAttr(i)));
+      Value shifted = arith::ShLIOp::create(rewriter, loc, bitI64, ivI64);
+      result = arith::OrIOp::create(rewriter, loc, result, shifted);
+    }
+
+    rewriter.replaceOpWithMultiple(op, {result, ValueRange()});
+    return success();
+  }
+
+  static LogicalResult convertDynamicArrayMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter,
+                                                      Location loc, Value array) {
+    // TODO: Clean up if equivalent semantics become possible in qc.
+    // As long as we don't have measurement to integers, we need to lower to
+    // bit-fiddling here.
+
+    auto i64Type = rewriter.getI64Type();
+
+    Value c0Index = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value c1Index = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    Value c0I64 = arith::ConstantOp::create(rewriter, loc, i64Type, cast<TypedAttr>(rewriter.getI64IntegerAttr(0)));
+
+    Value size = memref::DimOp::create(rewriter, loc, array, c0Index);
+
+    auto forOp = scf::ForOp::create(rewriter, loc, c0Index, size, c1Index, ValueRange{c0I64});
+
+    rewriter.setInsertionPointToStart(forOp.getBody());
+    Value iv = forOp.getInductionVar();
+    Value acc = forOp.getRegionIterArg(0);
+
+    Value qubit = memref::LoadOp::create(rewriter, loc, array, ValueRange{iv});
+    auto measOp = qc::MeasureOp::create(rewriter, loc, qubit);
+    Value bit = measOp.getResult();
+
+    Value bitI64 = arith::ExtUIOp::create(rewriter, loc, i64Type, bit);
+    Value ivI64 = arith::IndexCastOp::create(rewriter, loc, i64Type, iv);
+    Value shifted = arith::ShLIOp::create(rewriter, loc, bitI64, ivI64);
+    Value newAcc = arith::OrIOp::create(rewriter, loc, acc, shifted);
+
+    scf::YieldOp::create(rewriter, loc, newAcc);
+
+    rewriter.replaceOpWithMultiple(op, {forOp.getResult(0), ValueRange()});
     return success();
   }
 };
@@ -405,7 +502,7 @@ protected:
 
     target.addIllegalDialect<JaspDialect>();
     target.addLegalDialect<QCDialect, memref::MemRefDialect, arith::ArithDialect, func::FuncDialect,
-                           linalg::LinalgDialect>();
+                           linalg::LinalgDialect, scf::SCFDialect>();
 
     patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspCreateQubitsOp,
                  ConvertJaspGetQubitOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp, ConvertJaspDeleteQubitsOp,
