@@ -123,6 +123,7 @@ The license headers in this repository are managed using the [`license-eye`](htt
 After installation, the tool can be invoked using the following command:
 
 ```shell
+license-eye header check
 license-eye header fix
 ```
 
