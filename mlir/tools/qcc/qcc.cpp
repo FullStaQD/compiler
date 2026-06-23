@@ -35,6 +35,7 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
+#include <cstdint>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -50,11 +51,11 @@ static cl::OptionCategory qccCategory("QCC options");
 
 namespace {
 /// The target determines the backend to compile for, the actual passes
-/// (pipeline), and possibly the runtime.
-enum class Target { Qir, HisepQ };
+/// (pipeline), and the runtime.
+enum class Target : uint8_t { Qir, HisepQ };
 
-/// The stage (abstraction level) to compile to and emit.
-enum class Stage { Mlir, LlvmIr, Native };
+/// The stage to compile to and emit.
+enum class Stage : uint8_t { Mlir, LlvmIr, Native };
 } // namespace
 
 int main(int argc, char** argv) {
