@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Refuse to dump a binary encoding onto a terminal (mirrors llvm-as/opt).
+  // Refuse to dump binary onto a terminal:
   if (binary && llvm::CheckBitcodeOutputToConsole(outFile->os())) {
     return 1;
   }
