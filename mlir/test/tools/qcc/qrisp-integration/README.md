@@ -36,10 +36,11 @@ This guide documents the process of converting a [Qrisp](https://qrisp.eu/) quan
 
 ## Notes on checks
 
-- You may want to check both `QIR` and `qirrunner` simulation output:
+- You may want to check both `QIR` and `qirrunner` simulation output. `qcc` emits
+  QIR (LLVM IR) directly by default, so no `mlir-translate` step is needed:
   ```
-  // RUN: qcc  %s | mlir-translate -mlir-to-llvmir | FileCheck %s --check-prefix=CHECK-QIR
-  // RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
+  // RUN: qcc %s -o %t.ll
+  // RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
   // RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
   ```
 - Do not run simulations if the program involves more than **4** qubits.

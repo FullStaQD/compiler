@@ -11,6 +11,7 @@
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
+#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
@@ -34,15 +35,27 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
+#include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CommandLine.h>
+#include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/SystemUtils.h>
 #include <llvm/Support/ToolOutputFile.h>
 
 namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
+
+namespace {
+/// The target determines the backend to compile for, the actual passes
+/// (pipeline), and possibly the runtime.
+enum class Target { Qir, HisepQ };
+
+/// The stage (abstraction level) to compile to and emit.
+enum class Stage { Mlir, LlvmIr, Native };
+} // namespace
 
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
@@ -52,11 +65,31 @@ int main(int argc, char** argv) {
   const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
   const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
                                             cl::cat(qccCategory));
-  const cl::opt<bool> emitQir("emit-qir",
-                              cl::desc("Translate the QIR LLVM dialect output to LLVM IR (QIR) instead of MLIR"),
-                              cl::init(false), cl::cat(qccCategory));
+  const cl::opt<Target> target(
+      "target", cl::desc("Target pipeline to compile for"), cl::init(Target::Qir),
+      cl::values(clEnumValN(Target::Qir, "qir", "QIR (LLVM-based) target"),
+                 clEnumValN(Target::HisepQ, "hisep-q", "HiSEP-Q QISA target (not yet implemented)")),
+      cl::cat(qccCategory));
+  const cl::opt<Stage> compileTo(
+      "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
+      cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
+                 clEnumValN(Stage::LlvmIr, "llvm-ir", "LLVM IR (QIR for the QIR target)"),
+                 clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
+      cl::cat(qccCategory));
+  const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
+                             cl::init(false), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
+
+  if (target == Target::HisepQ) {
+    llvm::errs() << "error: the 'hisep-q' target is not yet implemented\n";
+    return 1;
+  }
+
+  if (compileTo == Stage::Native) {
+    llvm::errs() << "error: the 'native' stage is not yet implemented\n";
+    return 1;
+  }
 
   mlir::DialectRegistry registry;
 
@@ -116,16 +149,38 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  if (emitQir) {
+  // Refuse to dump a binary encoding onto a terminal (mirrors llvm-as/opt).
+  if (binary && llvm::CheckBitcodeOutputToConsole(outFile->os())) {
+    return 1;
+  }
+
+  switch (compileTo) {
+  case Stage::Mlir:
+    if (binary) {
+      if (mlir::failed(mlir::writeBytecodeToFile(*module, outFile->os()))) {
+        llvm::errs() << "failed to write MLIR bytecode\n";
+        return 1;
+      }
+    } else {
+      module->print(outFile->os());
+    }
+    break;
+  case Stage::LlvmIr: {
     llvm::LLVMContext llvmContext;
     std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
     if (!llvmModule) {
       llvm::errs() << "failed to translate the module to LLVM IR\n";
       return 1;
     }
-    llvmModule->print(outFile->os(), /*AAW=*/nullptr);
-  } else {
-    module->print(outFile->os());
+    if (binary) {
+      llvm::WriteBitcodeToFile(*llvmModule, outFile->os());
+    } else {
+      llvmModule->print(outFile->os(), /*AAW=*/nullptr);
+    }
+    break;
+  }
+  case Stage::Native:
+    llvm_unreachable("the 'native' stage is rejected during option validation");
   }
   outFile->keep(); // otherwise file gets deleted
 

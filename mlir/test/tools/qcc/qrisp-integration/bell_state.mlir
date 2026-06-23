@@ -1,4 +1,4 @@
-// RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
+// RUN: qcc %s -o %t.ll
 // RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
 // TODO: Simplify once qir-runner is installed, see (https://github.com/FullStaQD/compiler/issues/92).
 // RUN: uvx --from qirrunner qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
