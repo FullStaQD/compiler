@@ -182,7 +182,10 @@ int main(int argc, char** argv) {
   }
   case Stage::Native:
     llvm_unreachable("the 'native' stage is rejected during option validation");
+  default:
+    llvm_unreachable("--compile-to should always have a value (default value if nothing is set explicitly)");
   }
+
   outFile->keep(); // otherwise file gets deleted
 
   return 0;
