@@ -120,9 +120,13 @@ settings:
 ## License headers
 
 The license headers in this repository are managed using the [`license-eye`](https://github.com/apache/skywalking-eyes) tool.
-After installation, the tool can be invoked using the following command:
 
 ```shell
+# Install (for the right version see the CI):
+apt-get install golang-go
+GOPATH=/usr/local go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.8.0
+
+# Basic usage:
 license-eye header check
 license-eye header fix
 ```
