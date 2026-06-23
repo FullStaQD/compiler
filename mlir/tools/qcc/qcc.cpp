@@ -139,6 +139,9 @@ int main(int argc, char** argv) {
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     return 1;
   }
+
+  // Only the QIR pipeline exists today; --target was already validated above
+  // (HiSEP-Q is rejected), so there is nothing to switch on here yet.
   qcc::buildQuantumPipeline(pm);
 
   if (mlir::failed(pm.run(*module))) {
