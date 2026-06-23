@@ -123,7 +123,7 @@ The license headers in this repository are managed using the [`license-eye`](htt
 
 ```shell
 # Install (for the right version see the CI):
-apt-get install golang-go
+apt-get install golang-go # on ubuntu
 GOPATH=/usr/local go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.8.0
 
 # Basic usage:
