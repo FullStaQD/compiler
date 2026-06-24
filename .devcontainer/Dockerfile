@@ -15,7 +15,8 @@ ENV UV_TOOL_DIR=/opt/uv/tools
 RUN uv tool install cmake && \
   uv tool install ninja && \
   uv tool install lit && \
-  uv tool install prek
+  uv tool install prek && \
+  uv tool install qirrunner
 
 # Downloads and installs a prebuilt LLVM/MLIR toolchain for the current OS and architecture. Uses `zstd`.
 RUN curl -LsSf https://github.com/munich-quantum-software/setup-mlir/releases/latest/download/setup-mlir.sh \

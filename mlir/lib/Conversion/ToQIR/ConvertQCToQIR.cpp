@@ -46,6 +46,7 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
     return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
         .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
         .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
+        .Case<qc::RZOp>([](auto) { return qcc::qirQisRZ; })
         .Case<qc::TOp>([](auto) { return qcc::qirQisT; })
         .Case<qc::TdgOp>([](auto) { return qcc::qirQisTdg; })
         .Case<qc::SOp>([](auto) { return qcc::qirQisS; })
@@ -202,11 +203,14 @@ struct UnitaryLowering : public ConversionPattern {
       return emitMissingQIRDeclError(unitaryOp, qisName);
     }
 
-    auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
-    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
-    allPtrs.append(targetPtrs);
+    auto args = llvm::to_vector(unitaryOp.getParameters());
 
-    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
+    auto controlPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
+    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
+    args.append(controlPtrs);
+    args.append(targetPtrs);
+
+    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, args);
     rewriter.eraseOp(op);
 
     return success();

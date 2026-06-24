@@ -51,6 +51,7 @@ protected:
     createVoidFnDecl(qcc::qirQisT, 1);
     createVoidFnDecl(qcc::qirQisTdg, 1);
     createVoidFnDecl(qcc::qirQisCX, 2);
+    createF64PtrFnDecl(qcc::qirQisRZ);
 
     addQIRModuleFlags();
 
@@ -173,6 +174,24 @@ private:
                            /*isConstant=*/true, LLVM::Linkage::Internal, qcc::qirDummyLabelGlobalSymbolName,
                            builder.getStringAttr(label.str() + '\0') // Manual null terminator
     );
+  }
+
+  /// Inserts `llvm.func` with signature `fnName(f64, ptr) -> void`.
+  ///
+  /// Used for parametric single-qubit QIS gates whose first argument is a
+  /// rotation angle (double-precision float) and second is the target qubit pointer.
+  void createF64PtrFnDecl(StringRef fnName) {
+    ModuleOp moduleOp = getOperation();
+    auto* ctx = moduleOp.getContext();
+    OpBuilder builder(ctx);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+
+    mlir::Type f64Type = builder.getF64Type(); // NOLINT(cppcoreguidelines-slicing)
+    mlir::Type ptrType = LLVM::LLVMPointerType::get(ctx);
+
+    auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), {f64Type, ptrType});
+
+    LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
   }
 };
 
