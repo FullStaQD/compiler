@@ -1,39 +1,11 @@
 import shutil
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, NoReturn, final
 
-import lit.formats  # pyright: ignore[reportMissingTypeStubs]
-import lit.util  # pyright: ignore[reportMissingTypeStubs]
+import lit.formats
+import lit.util
 
-from lit.llvm import llvm_config  # pyright: ignore[reportMissingTypeStubs]
-
-if TYPE_CHECKING:
-    @final
-    class ConfigType:
-        name: str = ""
-        test_format = lit.formats.ShTest()
-        suffixes: list[str] = []
-        test_source_root: Path = ""
-        test_exec_root: Path = ""
-        project_binary_dir: str = ""
-        project_source_dir: str = ""
-        project_tools_dir: Path = ""
-        llvm_tools_dir: str = ""
-        llvm_shlib_ext: str = ""
-        cmake_build_type: str = ""
-        environment: dict[str, str] = {}
-        substitutions: list[tuple[str, str]] = []
-        excludes: list[str] = []
-
-
-    @final
-    class LitConfigType:
-        def fatal(self, message: str) -> NoReturn: ...
-
-
-    config = ConfigType()
-    lit_config = LitConfigType()
+from lit.llvm import llvm_config
 
 # Configuration file for the 'lit' test runner.
 
