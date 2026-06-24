@@ -5,6 +5,8 @@ add_mlir_conversion_library(
   ${CONVERSION_SOURCES}
   DEPENDS
   QCCToIntrinsicsIncGen
+  QCCAuxDialectIncGen
+  QCCAuxOpsIncGen
   LINK_LIBS
   # Dialects
   MLIRQCDialect
