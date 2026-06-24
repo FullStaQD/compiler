@@ -11,6 +11,7 @@
 
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -100,8 +101,8 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createRemoveDeadValuesPass());
 
-  // conversion from LLVM QIR to LLVM with intrinsics to lower to HiSEP-Q assembly.
-  pm.addPass(qcc::createConvertToIntrinsics());
+  // conversion from LLVM QCC to LLVM with intrinsics to lower to HiSEP-Q assembly.
+  pm.addPass(qcc::createConvertQCToIntrinsics());
 }
 
 } // namespace qcc

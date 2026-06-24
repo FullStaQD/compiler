@@ -15,22 +15,7 @@ def ConvertQCToIntrinsics : Pass<"convert-qc-to-intrinsics", "mlir::func::FuncOp
   let description = [{
       The pass anchors to a function and guarantees the following:
 
-      - QIR runtime and QIS function calls are translated to target specific intrinsics.
-      - Only the llvm dialect (in the function body) is considered legal after this pass.
-      }];
-
-  let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
-  ];
-}
-
-def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp"> {
-  let summary = "Lowers QIR (adaptive) conforming LLVM dialect to LLVM with intrinsics for HiSEP-Q.";
-
-  let description = [{
-      The pass anchors to a module and guarantees the following:
-
-      - QIR runtime and QIS function calls are translated to target specific intrinsics.
+      - QC runtime and QIS function calls are translated to target specific intrinsics.
       - Only the llvm dialect (in the function body) is considered legal after this pass.
       }];
 
