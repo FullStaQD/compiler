@@ -60,7 +60,7 @@ for candidate_dir in candidate_dirs:
 if not found:
     lit_config.fatal(f"Could not find qcc and qcc-opt anywhere under {base_tool_dir}.")
 
-# If `qir-runner` is not already available in the environment; fall back to
+# If `qir-runner` is not already available in the environment, fall back to
 # running it ephemerally via `uvx`.
 if shutil.which("qir-runner", path=config.environment["PATH"]) is None:
     if shutil.which("uvx", path=config.environment["PATH"]) is None:
