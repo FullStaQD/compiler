@@ -94,6 +94,6 @@ if shutil.which("qir-runner", path=config.environment["PATH"]) is None:
     if shutil.which("uvx", path=config.environment["PATH"]) is None:
         lit_config.fatal(
             "Could not find the 'qir-runner' executable, which is required to run some tests. "
-            "Either install 'qir-runner' yourself or install 'uvx' to let it manage this for you."
+            "Either install it yourself, or install 'uvx' (see README) to run it ephemerally instead."
         )
     config.substitutions.append((r"\bqir-runner\b", "uvx --from qirrunner qir-runner"))
