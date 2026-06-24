@@ -1,7 +1,7 @@
 import shutil
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, NoReturn, final
 
 import lit.formats  # pyright: ignore[reportMissingTypeStubs]
 import lit.util  # pyright: ignore[reportMissingTypeStubs]
@@ -27,7 +27,13 @@ if TYPE_CHECKING:
         excludes: list[str] = []
 
 
+    @final
+    class LitConfigType:
+        def fatal(self, message: str) -> NoReturn: ...
+
+
     config = ConfigType()
+    lit_config = LitConfigType()
 
 # Configuration file for the 'lit' test runner.
 
@@ -80,14 +86,13 @@ for candidate_dir in candidate_dirs:
         break
 
 if not found:
-    msg = f"Could not find qcc and qcc-opt anywhere under {base_tool_dir}."
-    raise RuntimeError(msg)
+    lit_config.fatal(f"Could not find qcc and qcc-opt anywhere under {base_tool_dir}.")
 
 # If `qir-runner` is not already available in the environment; fall back to
 # running it ephemerally via `uvx`.
 if shutil.which("qir-runner", path=config.environment["PATH"]) is None:
     if shutil.which("uvx", path=config.environment["PATH"]) is None:
-        raise RuntimeError(
+        lit_config.fatal(
             "Could not find the 'qir-runner' executable, which is required to run some tests. "
             "Either install 'qir-runner' yourself or install 'uvx' to let it manage this for you."
         )
