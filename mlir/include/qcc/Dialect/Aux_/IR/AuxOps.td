@@ -51,35 +51,4 @@ def RecordIntOp : AuxOp<"record_int"> {
     let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
-def RecordIntOp : AuxOp<"record_integer"> {
-    let summary = "Records an integer value.";
-
-    let description = [{
-        This corresponds to the following QIR runtime function:
-
-        ```llvm
-        llvm.func @__quantum__rt__integer_record_output(i64, !llvm.ptr)
-        ```
-
-        Our principal dialects have nothing in it which can be translated to it. Hence we use this as a workaround.
-        It is used like this:
-
-        ```mlir
-        func.func @main() -> i64 attributes { qcc.entry_point } {
-          ...
-          aux.record_integer %m7
-          ...
-        }
-        ```
-
-        To actually translate it to the above QIR runtime function we use a dummy label for the second argument of
-        the QIR function.
-    }];
-
-    let arguments = (ins I64:$value);
-    let results = (outs);
-
-    let assemblyFormat = "$value attr-dict";
-}
-
 #endif // INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_
