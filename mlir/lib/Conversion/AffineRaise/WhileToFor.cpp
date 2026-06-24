@@ -86,7 +86,3 @@ protected:
 } // namespace
 
 } // namespace qcc
-
-namespace impl {
-static std::unique_ptr<::mlir::Pass> createWhileToFor() { return std::make_unique<qcc::WhileToFor>(); }
-} // namespace impl

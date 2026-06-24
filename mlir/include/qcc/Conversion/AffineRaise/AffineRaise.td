@@ -53,8 +53,24 @@ def WhileToFor : Pass<"while-to-for"> {
   let summary = "Convert scf.while loops to scf.for loops using uplift patterns.";
 
   let description = [{
-      Applies the SCF uplift patterns to rewrite eligible `scf.while` loops as
+      Applies the builtin SCF uplift patterns to rewrite eligible `scf.while` loops as
       `scf.for` loops.
+
+      The pass matches roughly on the following pattern:
+
+      ```
+      %i_out, ... = scf.while (%i = %lb, ...) : (i64, ...) -> (i64, ...) {
+        %done = arith.cmpi slt, %i, %ub : i64
+        scf.condition(%done) %i, ... : i64, ...
+      } do {
+      ^bb0(%i: i64, ...):
+        ...
+        %next_i = arith.addi %i, %step : i64
+        scf.yield %next_i, ... : i64, ...
+      }
+      ```
+      In preparation, candidate `arith.cmpi` operations are rewritten from `sle` to `slt`, since
+      upper bounds of `scf.for` are exclusive. This change may cause undefined behavior due to overflow.
    }];
 
   let dependentDialects = [

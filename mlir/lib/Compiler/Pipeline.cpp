@@ -26,6 +26,7 @@
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 #include "mlir/Transforms/Passes.h"
 
+#include <llvm/Support/ErrorHandling.h>
 #include <mlir/Pass/PassRegistry.h>
 
 namespace qcc {
@@ -79,11 +80,12 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   // Unroll affine loops.
   // TODO: We have to do this in this by parsing because the createAffineLoopUnroll function does not pass on the -1
-  // factor.
+  // factor (instead uses a value of 4, see https://github.com/llvm/llvm-project/issues/204801).
+  // To deal with nested loops, we specify unroll-num-reps=10. This should be changed to a more robust solution in the
+  // future.
   mlir::affine::registerAffineLoopUnroll();
-  if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1})", pm))) {
-    llvm::errs() << "Failed to parse pass pipeline\n";
-    return;
+  if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1 unroll-num-reps=10})", pm))) {
+    llvm_unreachable("pipeline is a hardcoded string and can always be parsed.");
   }
 
   // Lower leftover affine ops to scf.

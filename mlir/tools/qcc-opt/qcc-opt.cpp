@@ -17,6 +17,7 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -60,7 +61,6 @@ int main(int argc, char** argv) {
     mlir::scf::SCFDialect,
     mlir::memref::MemRefDialect,
     mlir::LLVM::LLVMDialect,
-    mlir::memref::MemRefDialect,
     mlir::DLTIDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
   mlir::registerSCCP();
   mlir::bufferization::registerPromoteBuffersToStackPass();
   mlir::registerInlinerPass();
+  mlir::affine::registerAffineLoopUnroll();
 
   // Our passes
   qcc::registerAddEntrypointToMain();
