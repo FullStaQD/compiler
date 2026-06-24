@@ -69,11 +69,12 @@ static Value qubitToVec(OpBuilder& builder, Value qubitValue) {
 
   auto index = static_cast<int64_t>(alloc.getIndex());
   auto loc = defOp->getLoc();
-  auto i64Type = builder.getI64Type();
+  auto i8Type = builder.getIntegerType(8);
   auto i32Type = builder.getI32Type();
-  auto vecType = VectorType::get(llvm::ArrayRef<int64_t>{1}, i64Type);
+  // Scalable vector<[1]xi8> matches the `anyvector` (nxv1i8) the QV intrinsics expect.
+  auto vecType = VectorType::get(llvm::ArrayRef<int64_t>{1}, i8Type, llvm::ArrayRef<bool>{true});
 
-  Value indexConst = LLVM::ConstantOp::create(builder, loc, i64Type, builder.getI64IntegerAttr(index));
+  Value indexConst = LLVM::ConstantOp::create(builder, loc, i8Type, builder.getIntegerAttr(i8Type, index));
   Value undef = LLVM::UndefOp::create(builder, loc, vecType);
   Value lane = LLVM::ConstantOp::create(builder, loc, i32Type, builder.getI32IntegerAttr(0));
   return LLVM::InsertElementOp::create(builder, loc, undef, indexConst, lane);
@@ -84,8 +85,8 @@ namespace {
 struct QCToIntrinsicsTypeConverter final : LLVMTypeConverter {
   explicit QCToIntrinsicsTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
     addConversion([ctx](qc::QubitType) -> mlir::Type {
-      mlir::Type i64 = IntegerType::get(ctx, 64);
-      return VectorType::get(llvm::ArrayRef<int64_t>{1}, i64);
+      mlir::Type i8 = IntegerType::get(ctx, 8);
+      return VectorType::get(llvm::ArrayRef<int64_t>{1}, i8, llvm::ArrayRef<bool>{true});
     });
   }
 };
@@ -96,12 +97,12 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
     auto loc = op.getLoc();
-    auto i64Type = rewriter.getI64Type();
+    auto i32Type = rewriter.getI32Type();
 
     Value qubitVec = qubitToVec(rewriter, op.getQubit());
-    Value tag = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(0));
-    Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(0));
-    Value vl = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(1));
+    Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
+    Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
+    Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
 
     // QVSingleIntrinsic: (vs1: vector<1xi64>, rs2: i64, block_imm: i64, vl: i64) -> void
     LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr("llvm.riscv.qv.mz"),
@@ -140,22 +141,22 @@ struct UnitaryLowering : public ConversionPattern {
       return op->emitError() << "no intrinsic mapping for gate op";
 
     auto loc = op->getLoc();
-    auto i64Type = rewriter.getI64Type();
+    auto i32Type = rewriter.getI32Type();
 
     if (unitaryOp.getNumControls() == 0) {
-      // QVSingleIntrinsic: (vs1: vector<1xi64>, rs2: i64, block_imm: i64, vl: i64)
+      // QVSingleIntrinsic: (vs1: vector<[1]xi8>, rs2: i32, block_imm: i32, vl: i32)
       Value vs1 = qubitToVec(rewriter, unitaryOp.getTargets()[0]);
-      Value tag = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(0));
-      Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(0));
-      Value vl = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(1));
+      Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
+      Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
+      Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
       LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(intrName),
                                     ValueRange{vs1, tag, blockImm, vl});
     } else {
-      // QVPairIntrinsic: (vs1: vector<1xi64>, vs2: vector<1xi64>, block_imm: i64, vl: i64)
+      // QVPairIntrinsic: (vs1: vector<[1]xi8>, vs2: vector<[1]xi8>, block_imm: i32, vl: i32)
       Value vs1 = qubitToVec(rewriter, unitaryOp.getControls()[0]);
       Value vs2 = qubitToVec(rewriter, unitaryOp.getTargets()[0]);
-      Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(0));
-      Value vl = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(1));
+      Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
+      Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
       LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(intrName),
                                     ValueRange{vs1, vs2, blockImm, vl});
     }
