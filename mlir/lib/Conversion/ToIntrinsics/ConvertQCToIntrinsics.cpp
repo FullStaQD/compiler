@@ -92,7 +92,6 @@ struct QCToIntrinsicsTypeConverter final : LLVMTypeConverter {
   }
 };
 
-// TODO: Replace intrinsic names with actual HiSEP-Q measurement intrinsics.
 struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
   using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
 
