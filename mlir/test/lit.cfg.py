@@ -1,3 +1,4 @@
+import shutil
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, final
@@ -21,7 +22,6 @@ if TYPE_CHECKING:
         llvm_tools_dir: str = ""
         llvm_shlib_ext: str = ""
         cmake_build_type: str = ""
-        qir_runner_executable: str = ""
         environment: dict[str, str] = {}
         substitutions: list[tuple[str, str]] = []
         excludes: list[str] = []
@@ -83,5 +83,12 @@ if not found:
     msg = f"Could not find qcc and qcc-opt anywhere under {base_tool_dir}."
     raise RuntimeError(msg)
 
-if config.qir_runner_executable:
-    llvm_config.add_tool_substitutions(["qir-runner"], [str(Path(config.qir_runner_executable).parent)])
+# If `qir-runner` is not already available in the environment; fall back to
+# running it ephemerally via `uvx`.
+if shutil.which("qir-runner", path=config.environment["PATH"]) is None:
+    if shutil.which("uvx", path=config.environment["PATH"]) is None:
+        raise RuntimeError(
+            "Could not find the 'qir-runner' executable, which is required to run some tests. "
+            "Either install 'qir-runner' yourself or install 'uvx' to let it manage this for you."
+        )
+    config.substitutions.append((r"\bqir-runner\b", "uvx --from qirrunner qir-runner"))
