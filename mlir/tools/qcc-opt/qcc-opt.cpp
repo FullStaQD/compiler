@@ -9,6 +9,7 @@
 
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
@@ -81,6 +82,7 @@ int main(int argc, char** argv) {
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();
   qcc::registerConvertMemrefToStaticQubits();
+  qcc::registerConvertQCToIntrinsics();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
