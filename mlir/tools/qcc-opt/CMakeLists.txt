@@ -22,6 +22,7 @@ target_link_libraries(
           MLIRTensorTransforms
           MLIRBufferizationTransforms
           QCCJaspToQC
+          MLIRFuncToLLVM
           QCCToIntrinsics
           QCCToQIR
           QCCAuxOutputRecording

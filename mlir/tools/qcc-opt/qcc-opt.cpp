@@ -15,6 +15,7 @@
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
@@ -82,6 +83,7 @@ int main(int argc, char** argv) {
   qcc::registerJaspToQC();
   qcc::registerJaspCheckStaticQubitAllocation();
   qcc::registerConvertMemrefToStaticQubits();
+  mlir::registerConvertFuncToLLVMPass();
   qcc::registerConvertQCToIntrinsics();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
