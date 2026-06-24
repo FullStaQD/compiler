@@ -4,6 +4,7 @@ add_mlir_library(
   DEPENDS
   AuxOutputRecordingIncGen
   JaspToQCIncGen
+  QCCToIntrinsicsIncGen
   QCCToQIRIncGen
   LINK_LIBS
   MLIRPass
@@ -30,6 +31,7 @@ add_mlir_library(
   MLIRBufferizationTransforms
   QCCAuxOutputRecording
   QCCJaspToQC
+  QCCToIntrinsics
   QCCToQIR
   # Extensions/Interfaces
   MLIRFuncInlinerExtension
