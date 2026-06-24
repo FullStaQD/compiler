@@ -85,6 +85,7 @@ int main(int argc, char** argv) {
   qcc::registerConvertMemrefToStaticQubits();
   mlir::registerConvertFuncToLLVMPass();
   qcc::registerConvertQCToIntrinsics();
+  qcc::registerConvertQIRToIntrinsics();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
