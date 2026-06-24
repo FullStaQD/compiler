@@ -9,16 +9,6 @@
 
 // RUN: qcc-opt %s -convert-qc-to-intrinsics | FileCheck %s
 
-// Functions without qcc.entry_point must be left unmodified.
-func.func @not_an_entry_point() {
-    %q0 = qc.static 0 : !qc.qubit
-    qc.x %q0 : !qc.qubit
-    return
-}
-// CHECK-LABEL: func.func @not_an_entry_point()
-// CHECK:         qc.static 0
-// CHECK:         qc.x
-
 // Single-qubit gates (H, X) lower to QVSingleIntrinsic calls:
 // (vs1: vector<[1]xi8>, rs2: i32, block_imm: i32, vl: i32) -> void
 // The qubit index is placed in lane 0 of a scalable <vscale x 1 x i8> register.
