@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         llvm_tools_dir: str = ""
         llvm_shlib_ext: str = ""
         cmake_build_type: str = ""
+        qir_runner_executable: str = ""
         environment: dict[str, str] = {}
         substitutions: list[tuple[str, str]] = []
         excludes: list[str] = []
@@ -81,3 +82,6 @@ for candidate_dir in candidate_dirs:
 if not found:
     msg = f"Could not find qcc and qcc-opt anywhere under {base_tool_dir}."
     raise RuntimeError(msg)
+
+if config.qir_runner_executable:
+    llvm_config.add_tool_substitutions(["qir-runner"], [str(Path(config.qir_runner_executable).parent)])
