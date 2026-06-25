@@ -43,6 +43,8 @@ IDEs and the cli should provide you with a way to choose which config you want t
 
 If you prefer to build outside the container, you need LLVM/MLIR version >= [VERSION_USED_BY_DEVCONTAINER_IMAGE](.devcontainer/Dockerfile) installed. If you have no previous installation, check the guide [here](https://mqt.readthedocs.io/projects/core/en/latest/installation.html#setting-up-mlir).
 
+We also recommend to [install](https://docs.astral.sh/uv/getting-started/installation/) `uv`.
+
 ---
 
 ## Building
