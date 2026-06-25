@@ -7,11 +7,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h"
 #include "qcc/Conversion/ToQIR/Constants.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -23,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
+#include <mlir/Pass/Pass.h>
 #include <optional>
 
 using namespace mlir;
@@ -49,16 +48,19 @@ static bool isHandledQIRSymbol(StringRef name) {
 ///   `llvm.inttoptr (llvm.mlir.constant N : i64) : !llvm.ptr`
 static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
   auto intToPtrOp = ptrValue.getDefiningOp<LLVM::IntToPtrOp>();
-  if (!intToPtrOp)
+  if (!intToPtrOp) {
     return std::nullopt;
+  }
 
   auto constOp = intToPtrOp.getArg().getDefiningOp<LLVM::ConstantOp>();
-  if (!constOp)
+  if (!constOp) {
     return std::nullopt;
+  }
 
   auto intAttr = dyn_cast<IntegerAttr>(constOp.getValue());
-  if (!intAttr)
+  if (!intAttr) {
     return std::nullopt;
+  }
 
   return intAttr.getInt();
 }
@@ -88,12 +90,14 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
-    if (!callee)
+    if (!callee) {
       return failure();
+    }
 
     StringRef intrName = mapQISToIntrinsic(*callee);
-    if (intrName.empty())
+    if (intrName.empty()) {
       return failure();
+    }
 
     auto loc = callOp.getLoc();
     auto i32Type = rewriter.getI32Type();
@@ -108,19 +112,21 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
       // QVPairIntrinsic: (vs1: vec<[1]xi8>, vs2: vec<[1]xi8>, block_imm: i32, vl: i32)
       auto ctrlIdx = getQubitIndexFromPtr(operands[0]);
       auto tgtIdx = getQubitIndexFromPtr(operands[1]);
-      if (!ctrlIdx || !tgtIdx)
+      if (!ctrlIdx || !tgtIdx) {
         return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
                                 "for '__quantum__qis__cx__body'");
+      }
 
       args = {qubitIndexToVec(rewriter, loc, *ctrlIdx), qubitIndexToVec(rewriter, loc, *tgtIdx), blockImm, vl};
     } else {
       // QVSingleIntrinsic: (vs1: vec<[1]xi8>, rs2: i32, block_imm: i32, vl: i32)
       // For mz__body: operands[0] = qubit_ptr, operands[1] = result_ptr (discarded).
       auto qubitIdx = getQubitIndexFromPtr(operands[0]);
-      if (!qubitIdx)
+      if (!qubitIdx) {
         return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
                                 "for '")
                << *callee << "'";
+      }
 
       Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
       args = {qubitIndexToVec(rewriter, loc, *qubitIdx), tag, blockImm, vl};
@@ -140,8 +146,9 @@ struct ReadResultLowering : public OpRewritePattern<LLVM::CallOp> {
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
-    if (!callee || *callee != qcc::qirRtReadResult)
+    if (!callee || *callee != qcc::qirRtReadResult) {
       return failure();
+    }
 
     rewriter.replaceOpWithNewOp<LLVM::UndefOp>(callOp, rewriter.getI1Type());
     return success();
@@ -155,8 +162,9 @@ struct RtInitLowering : public OpRewritePattern<LLVM::CallOp> {
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
-    if (!callee || *callee != qcc::qirRtInit)
+    if (!callee || *callee != qcc::qirRtInit) {
       return failure();
+    }
 
     rewriter.eraseOp(callOp);
     return success();
@@ -172,11 +180,13 @@ struct RecordOutputLowering : public OpRewritePattern<LLVM::CallOp> {
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
-    if (!callee)
+    if (!callee) {
       return failure();
+    }
 
-    if (*callee != qcc::qirRtBoolRecordOutput && *callee != qcc::qirRtIntRecordOutput)
+    if (*callee != qcc::qirRtBoolRecordOutput && *callee != qcc::qirRtIntRecordOutput) {
       return failure();
+    }
 
     rewriter.eraseOp(callOp);
     return success();
@@ -203,8 +213,9 @@ protected:
     RewritePatternSet patterns(ctx);
     patterns.add<QISCallLowering, ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
 
-    if (failed(applyPatternsGreedily(moduleOp, std::move(patterns))))
+    if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
       return signalPassFailure();
+    }
 
     removeQIRDeclarations();
   }
@@ -214,11 +225,13 @@ private:
   void removeQIRDeclarations() {
     SmallVector<LLVM::LLVMFuncOp> toErase;
     getOperation()->walk([&](LLVM::LLVMFuncOp funcOp) {
-      if (isHandledQIRSymbol(funcOp.getName()))
+      if (isHandledQIRSymbol(funcOp.getName())) {
         toErase.push_back(funcOp);
+      }
     });
-    for (auto funcOp : toErase)
+    for (auto funcOp : toErase) {
       funcOp.erase();
+    }
   }
 };
 

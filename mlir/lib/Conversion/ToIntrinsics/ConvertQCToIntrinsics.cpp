@@ -7,7 +7,6 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -31,6 +30,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <cstdint>
+#include <mlir/Pass/Pass.h>
 
 using namespace mlir;
 using namespace qcc;
@@ -133,12 +133,14 @@ struct UnitaryLowering : public ConversionPattern {
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> /*operands*/,
                                 ConversionPatternRewriter& rewriter) const override {
     auto unitaryOp = dyn_cast<qc::UnitaryOpInterface>(op);
-    if (!unitaryOp || !isa<qc::QCDialect>(op->getDialect()))
+    if (!unitaryOp || !isa<qc::QCDialect>(op->getDialect())) {
       return failure();
+    }
 
     auto intrName = mapUnitaryToIntrinsic(unitaryOp);
-    if (intrName.empty())
+    if (intrName.empty()) {
       return op->emitError() << "no intrinsic mapping for gate op";
+    }
 
     auto loc = op->getLoc();
     auto i32Type = rewriter.getI32Type();
@@ -183,8 +185,9 @@ protected:
     func::FuncOp funcOp = getOperation();
     auto* ctx = funcOp.getContext();
 
-    if (!funcOp->hasAttr("qcc.entry_point"))
+    if (!funcOp->hasAttr("qcc.entry_point")) {
       return;
+    }
 
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
@@ -196,8 +199,9 @@ protected:
     RewritePatternSet patterns(ctx);
     patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering>(typeConverter, ctx);
 
-    if (failed(applyPartialConversion(funcOp, target, std::move(patterns))))
+    if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
+    }
 
     removeQCStaticOps();
   }
