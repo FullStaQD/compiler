@@ -24,6 +24,6 @@ lit build/dev/mlir/test/ -v --filter NAME           # run a single/filtered test
 
 ## Code style
 
-As an LLVM/MLIR base project we mostly follow their guidelines.
-We also follow Google's guidelines but LLVM guidelines take precedence.
-For details see [CONTRIBUTING.md](CONTRIBUTING.md).
+Follow LLVM/MLIR conventions; Google's guidelines apply where LLVM is silent,
+but LLVM always takes precedence. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+details, including the few exceptions where we deliberately deviate from LLVM.
