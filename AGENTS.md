@@ -17,7 +17,7 @@ Details and alternatives are in [README.md](README.md).
 cmake --preset dev                                  # configure
 cmake --build build/dev                             # build
 
-# Test
+# Test (with dev preset)
 cmake --build build/dev --target test-qcc-project   # build + run all tests
 lit build/dev/mlir/test/ -v --filter NAME           # run a single/filtered test
 ```
