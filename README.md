@@ -53,7 +53,7 @@ Project-wide guidance for AI coding agents lives in [AGENTS.md](AGENTS.md).
 Developers may keep their own personal, tool-specific customization files
 (e.g. `CLAUDE.md`); these are gitignored and not part of the project.
 
-We try to keep the file lean and focus on the essential.
+We try to keep the file lean and focussed on the essentials.
 Some studies suggest that too much context degrades agent performance.
 
 ---
