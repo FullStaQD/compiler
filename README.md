@@ -50,6 +50,7 @@ We also recommend to [install](https://docs.astral.sh/uv/getting-started/install
 ## Coding agents
 
 Project-wide guidance for AI coding agents lives in [AGENTS.md](AGENTS.md).
+See [agents.md](https://agents.md).
 Developers may keep their own personal, tool-specific customization files
 (e.g. `CLAUDE.md`); these are gitignored and not part of the project.
 
