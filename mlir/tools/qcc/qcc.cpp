@@ -140,8 +140,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Only the QIR pipeline exists today; --target was already validated above
-  // (HiSEP-Q is rejected), so there is nothing to switch on here yet.
+  // TODO: Assemble pipeline based on target once a second valid target is added.
   qcc::buildQuantumPipeline(pm);
 
   if (mlir::failed(pm.run(*module))) {
