@@ -69,6 +69,7 @@ def WhileToFor : Pass<"while-to-for"> {
         scf.yield %next_i, ... : i64, ...
       }
       ```
+
       In preparation, candidate `arith.cmpi` operations are rewritten from `sle` to `slt`, since
       upper bounds of `scf.for` are exclusive. This change may cause undefined behavior due to overflow.
    }];
