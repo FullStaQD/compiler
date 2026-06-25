@@ -63,9 +63,9 @@ if not found:
 # If `qir-runner` is not already available in the environment, fall back to
 # running it ephemerally via `uvx`.
 if shutil.which("qir-runner", path=config.environment["PATH"]) is None:
-    if shutil.which("uvx", path=config.environment["PATH"]) is None:
+    if shutil.which("uv", path=config.environment["PATH"]) is None:
         lit_config.fatal(
             "Could not find the 'qir-runner' executable, which is required to run some tests. "
-            "Either install it yourself, or install 'uvx' (see README) to run it ephemerally instead."
+            "Either install it yourself, or install 'uv' (see README) to run it ephemerally instead."
         )
-    config.substitutions.append((r"\bqir-runner\b", "uvx --from qirrunner qir-runner"))
+    config.substitutions.append((r"\bqir-runner\b", "uv tool run --from qirrunner qir-runner"))
