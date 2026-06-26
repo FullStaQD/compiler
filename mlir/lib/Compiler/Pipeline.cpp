@@ -101,8 +101,8 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createRemoveDeadValuesPass());
 
-  // conversion from LLVM QCC to LLVM with intrinsics to lower to HiSEP-Q assembly.
-  pm.addPass(qcc::createConvertQCToIntrinsics());
+  // conversion from LLVM QIR to LLVM with intrinsics to lower to HiSEP-Q assembly.
+  pm.addPass(qcc::createConvertQIRToIntrinsics());
 }
 
 } // namespace qcc

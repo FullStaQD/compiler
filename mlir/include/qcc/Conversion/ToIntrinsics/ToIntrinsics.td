@@ -9,28 +9,6 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ConvertQCToIntrinsics : Pass<"convert-qc-to-intrinsics", "mlir::func::FuncOp"> {
-  let summary = "Lowers the QC dialect into RISC-V quantum vector intrinsics.";
-
-  let description = [{
-      Translates quantum gate and measurement ops from the QC dialect directly
-      into `llvm.call_intrinsic` calls targeting the RISC-V QV extension.
-
-      Each qubit (from a `qc.static` allocation) is encoded as a `vector<[1]xi8>`
-      scalable-vector value holding the qubit index.
-
-      Only functions marked with `qcc.entry_point` are processed.
-
-      Assumptions:
-      - All qubits originate from `qc.static` ops (no qubit function arguments).
-      - The `llvm` dialect is the only legal dialect after this pass.
-   }];
-
-  let dependentDialects = [
-    "mlir::LLVM::LLVMDialect"
-  ];
-}
-
 def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp"> {
   let summary = "Replaces QIR QIS call ops with RISC-V quantum vector intrinsics.";
 

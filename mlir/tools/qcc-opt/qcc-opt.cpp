@@ -84,7 +84,6 @@ int main(int argc, char** argv) {
   qcc::registerJaspCheckStaticQubitAllocation();
   qcc::registerConvertMemrefToStaticQubits();
   mlir::registerConvertFuncToLLVMPass();
-  qcc::registerConvertQCToIntrinsics();
   qcc::registerConvertQIRToIntrinsics();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
