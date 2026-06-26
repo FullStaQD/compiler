@@ -75,7 +75,7 @@ static Value qubitIndexToVec(OpBuilder& builder, Location loc, int64_t index) {
   Value indexConst = LLVM::ConstantOp::create(builder, loc, i8Type, builder.getIntegerAttr(i8Type, index));
   Value undef = LLVM::UndefOp::create(builder, loc, vecType);
   Value lane = LLVM::ConstantOp::create(builder, loc, i32Type, builder.getI32IntegerAttr(0));
-  return LLVM::InsertElementOp::create(builder, loc, undef, indexConst, lane);
+  return {LLVM::InsertElementOp::create(builder, loc, undef, indexConst, lane)};
 }
 
 namespace {
