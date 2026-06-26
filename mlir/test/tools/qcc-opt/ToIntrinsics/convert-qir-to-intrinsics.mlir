@@ -17,10 +17,6 @@
 // with the qubit encoded as a `vector<[1]xi8>` scalable vector in lane 0.
 // Constants and undefs are CSE'd into a shared preamble within each function.
 
-// ------------------------------------------------------------------
-// Helper function declarations (produced by PrepToQIR).
-// ------------------------------------------------------------------
-
 llvm.func @__quantum__rt__initialize(!llvm.ptr) -> ()
 llvm.func @__quantum__rt__read_result(!llvm.ptr) -> i1 attributes {arg_attrs = [{llvm.readonly}]}
 llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr) -> ()
@@ -31,10 +27,6 @@ llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr) -> ()
 
 llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
 
-// ------------------------------------------------------------------
-// Single-qubit gates (H, X) lower to QVSingleIntrinsic:
-// (vs1: vector<[1]xi8>, rs2: i32, block_imm: i32, vl: i32) -> void
-// ------------------------------------------------------------------
 
 llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
   %c0 = llvm.mlir.constant(0 : i64) : i64
@@ -60,10 +52,6 @@ llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
 // CHECK:         %[[VEC1:.*]] = llvm.insertelement %[[IDX1]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"(%[[VEC1]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 
-// ------------------------------------------------------------------
-// CX gate lowers to QVPairIntrinsic:
-// (vs1: vector<[1]xi8>, vs2: vector<[1]xi8>, block_imm: i32, vl: i32) -> void
-// ------------------------------------------------------------------
 
 llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
   %c2 = llvm.mlir.constant(2 : i64) : i64
@@ -86,9 +74,6 @@ llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
 // CHECK:         %[[TVEC:.*]] = llvm.insertelement %[[TIDX]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"(%[[CVEC]], %[[TVEC]], %[[ZERO]], %[[ONE]])
 
-// ------------------------------------------------------------------
-// Measurement lowers to QVSingleIntrinsic; read_result becomes undef.
-// ------------------------------------------------------------------
 
 llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
   %c0 = llvm.mlir.constant(0 : i64) : i64
@@ -112,9 +97,6 @@ llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"(%[[VEC]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 // CHECK:         llvm.return %[[UNDEF_I1]] : i1
 
-// ------------------------------------------------------------------
-// Runtime init and record-output calls are erased.
-// ------------------------------------------------------------------
 
 llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
   %null = llvm.mlir.zero : !llvm.ptr
@@ -135,10 +117,6 @@ llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
 // CHECK-NOT:     llvm.call @__quantum__rt__initialize
 // CHECK-NOT:     llvm.call @__quantum__rt__bool_record_output
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"
-
-// ------------------------------------------------------------------
-// QIR function declarations are removed from the module.
-// ------------------------------------------------------------------
 
 // CHECK-NOT: llvm.func @__quantum__qis__h__body
 // CHECK-NOT: llvm.func @__quantum__qis__x__body
