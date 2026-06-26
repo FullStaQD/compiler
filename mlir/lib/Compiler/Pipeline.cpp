@@ -102,8 +102,9 @@ void buildQuantumPipeline(mlir::PassManager& pm, const PipelineOptions& options)
   pm.addPass(mlir::createRemoveDeadValuesPass());
 
   // conversion from LLVM QIR to LLVM with intrinsics to lower to HiSEP-Q assembly.
-  if (options.emitIntrinsics)
+  if (options.emitIntrinsics) {
     pm.addPass(qcc::createConvertQIRToIntrinsics());
+  }
 }
 
 } // namespace qcc
