@@ -15,7 +15,7 @@ builtin.module @jasp_module {
     %7 = jasp.quantum_gate "h" (%6) , %2 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
     %8 = jasp.quantum_gate "h" (%4) , %7 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
     %9 = jasp.quantum_gate "t" (%4) , %8 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
-    %10 = jasp.quantum_gate "cx" (%4, %6) , %9 : (!jasp.Qubit, !jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
+    %10 = jasp.quantum_gate "cx" (%6, %4) , %9 : (!jasp.Qubit, !jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
     %11, %12 = jasp.measure %4, %10 : !jasp.Qubit, !jasp.QuantumState -> tensor<i1>, !jasp.QuantumState
     %13 = tensor.extract %11[] : tensor<i1>
     %14 = arith.constant true
@@ -33,22 +33,17 @@ builtin.module @jasp_module {
   }
 }
 
-// FIXME: cleanup check statements
-
-// CHECK-QIR:  call void @__quantum__qis__cx__body(ptr null, ptr inttoptr (i64 1 to ptr))
+// What matters is that this contains branch instructions based on measurement:
 // CHECK-QIR:   call void @__quantum__qis__mz__body(ptr null, ptr null)
-// CHECK-QIR:   %1 = call i1 @__quantum__rt__read_result(ptr null)
-// CHECK-QIR:   br i1 %1, label %2, label %3
+// CHECK-QIR:   %[[M0:.*]] = call i1 @__quantum__rt__read_result(ptr null)
+// CHECK-QIR:   br i1 %[[M0]], label %[[IF:.*]], label %[[ELSE:.*]]
 
-// CHECK-QIR: 2:                                                ; preds = %0
+// CHECK-QIR: [[IF]]:                                                ; preds = %0
 // CHECK-QIR:   call void @__quantum__qis__s__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR:   br label %3
+// CHECK-QIR:   br label %[[ELSE]]
 
-// CHECK-QIR: 3:                                                ; preds = %2, %0
+// CHECK-QIR: [[ELSE]]:                                                ; preds = %2, %0
 // CHECK-QIR:   call void @__quantum__qis__t__adj(ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR:   call void @__quantum__qis__h__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR:   call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR:   %4 = call i1 @__quantum__rt__read_result(ptr inttoptr (i64 1 to ptr))
 
 
 // CHECK-SIM: START
@@ -58,9 +53,8 @@ builtin.module @jasp_module {
 // CHECK-SIM: METADATA required_num_qubits 2
 // CHECK-SIM: METADATA required_num_results 2
 
-// FIXME: something is wrong with the program, test fails
-// xCHECK-SIM: OUTPUT BOOL false dummy_label
-// xCHECK-SIM: OUTPUT BOOL false dummy_label
-// xCHECK-SIM: OUTPUT BOOL false dummy_label
-// xCHECK-SIM: OUTPUT BOOL false dummy_label
-// xCHECK-SIM: OUTPUT BOOL false dummy_label
+// CHECK-SIM: OUTPUT BOOL false
+// CHECK-SIM: OUTPUT BOOL false
+// CHECK-SIM: OUTPUT BOOL false
+// CHECK-SIM: OUTPUT BOOL false
+// CHECK-SIM: OUTPUT BOOL false

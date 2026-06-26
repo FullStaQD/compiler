@@ -10,14 +10,14 @@ def t_gate_teleportation():
     h(ancilla)
     t(ancilla)  # cheating: prepare magic state
 
-    cx(ancilla, data)
+    cx(data, ancilla)
 
     m0 = measure(ancilla)
-    q_cond(m0 == 1, lambda q: (s(q), None)[1], lambda q: None, data) # if statement
+    q_cond(m0 == 1, lambda q: (s(q), None)[1], lambda q: None, data)  # if statement
 
     # Just to check for correctness:
     t_dg(data)
     h(data)  # data should now be in |0> state
     m1 = measure(data)
 
-    return m1 # should return 0
+    return m1  # should return 0
