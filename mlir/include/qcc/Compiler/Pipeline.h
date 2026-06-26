@@ -13,9 +13,15 @@
 
 namespace qcc {
 
+struct PipelineOptions {
+  /// When true, the final QIR-to-intrinsics lowering pass is appended to the
+  /// pipeline, producing RISC-V QV intrinsic calls instead of QIS call ops.
+  bool emitIntrinsics = false;
+};
+
 /// A compilation pipeline assuming qc dialect as input and providing QIR-MLIR as output.
 ///
 /// NOTE: The exact shape of the pipeline is still under construction.
-void buildQuantumPipeline(mlir::PassManager& pm);
+void buildQuantumPipeline(mlir::PassManager& pm, const PipelineOptions& options = {});
 
 } // namespace qcc

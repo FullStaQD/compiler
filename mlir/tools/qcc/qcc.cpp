@@ -39,6 +39,9 @@ namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
 
+static cl::opt<bool> emitIntrinsics("emit-intrinsics", cl::desc("Lower QIR gate calls to RISC-V QV intrinsics"),
+                                    cl::init(false), cl::cat(qccCategory));
+
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
@@ -92,7 +95,7 @@ int main(int argc, char** argv) {
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     return 1;
   }
-  qcc::buildQuantumPipeline(pm);
+  qcc::buildQuantumPipeline(pm, {.emitIntrinsics = emitIntrinsics});
 
   if (mlir::failed(pm.run(*module))) {
     return 1;

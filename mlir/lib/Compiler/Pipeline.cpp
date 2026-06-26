@@ -26,7 +26,7 @@
 
 namespace qcc {
 
-void buildQuantumPipeline(mlir::PassManager& pm) {
+void buildQuantumPipeline(mlir::PassManager& pm, const PipelineOptions& options) {
 
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
@@ -102,7 +102,8 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(mlir::createRemoveDeadValuesPass());
 
   // conversion from LLVM QIR to LLVM with intrinsics to lower to HiSEP-Q assembly.
-  pm.addPass(qcc::createConvertQIRToIntrinsics());
+  if (options.emitIntrinsics)
+    pm.addPass(qcc::createConvertQIRToIntrinsics());
 }
 
 } // namespace qcc
