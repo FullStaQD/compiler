@@ -15,7 +15,8 @@
 //
 // Expected output: every QIS call is replaced by an `llvm.call_intrinsic` call
 // with the qubit encoded as a `vector<[1]xi8>` scalable vector in lane 0.
-// Constants and undefs are CSE'd into a shared preamble within each function.
+// Constants and undefs that are shared across batches (zero i32, undef vector)
+// are deduplicated via the per-block cache in the pass.
 
 llvm.func @__quantum__rt__initialize(!llvm.ptr) -> ()
 llvm.func @__quantum__rt__read_result(!llvm.ptr) -> i1 attributes {arg_attrs = [{llvm.readonly}]}

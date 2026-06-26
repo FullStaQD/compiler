@@ -65,78 +65,199 @@ static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
   return intAttr.getInt();
 }
 
-/// Encodes a qubit index as a `vector<[1]xi8>` scalable vector for QV intrinsics.
-/// The index is inserted into lane 0 of an undef vector.
-static Value qubitIndexToVec(OpBuilder& builder, Location loc, int64_t index) {
-  auto i8Type = builder.getIntegerType(8);
-  auto i32Type = builder.getI32Type();
-  auto vecType = VectorType::get({1}, i8Type, /*scalableDims=*/{true});
+// ---------------------------------------------------------------------------
+// Per-block lowering context
+//
+// Caches shared values (undef vectors, zero constant) so consecutive batches
+// that produce the same types/constants reuse existing SSA values rather than
+// creating duplicates.  This matches the CSE behaviour that the old single-op
+// pattern rewriter produced implicitly, and keeps the MLIR output clean.
+// ---------------------------------------------------------------------------
 
-  Value indexConst = LLVM::ConstantOp::create(builder, loc, i8Type, builder.getIntegerAttr(i8Type, index));
-  Value undef = LLVM::UndefOp::create(builder, loc, vecType);
-  Value lane = LLVM::ConstantOp::create(builder, loc, i32Type, builder.getI32IntegerAttr(0));
-  return {LLVM::InsertElementOp::create(builder, loc, undef, indexConst, lane)};
+struct BlockContext {
+  OpBuilder builder;
+  // VectorType → undef value; linear scan is fine (≤2 sizes per block).
+  SmallVector<std::pair<Type, Value>> undefCache;
+  // N → constant(N : i32); caches vl and lane-0 zero so repeated same-size
+  // batches share SSA values (matching old pass CSE behaviour).
+  SmallVector<std::pair<int64_t, Value>> i32Cache;
+
+  explicit BlockContext(MLIRContext* ctx) : builder(ctx) {}
+
+  /// Returns (or lazily creates) `llvm.mlir.undef : vecType` at `loc`.
+  Value getUndef(Location loc, VectorType vecType) {
+    for (auto& [type, val] : undefCache) {
+      if (type == vecType)
+        return val;
+    }
+    auto val = LLVM::UndefOp::create(builder, loc, vecType);
+    undefCache.push_back({vecType, val});
+    return val;
+  }
+
+  /// Returns (or lazily creates) `llvm.mlir.constant(N : i32) : i32` at `loc`.
+  Value getI32(Location loc, int64_t N) {
+    for (auto& [n, val] : i32Cache) {
+      if (n == N)
+        return val;
+    }
+    auto val = LLVM::ConstantOp::create(builder, loc, builder.getI32Type(), builder.getI32IntegerAttr(N));
+    i32Cache.push_back({N, val});
+    return val;
+  }
+};
+
+/// Builds a `vector<[N]xi8>` scalable vector whose lane `i` holds `indices[i]`.
+/// Lane-0 index reuses `ctx.getZeroI32()` to share the SSA value with other
+/// zero-valued i32 constants (tag, block_imm) in the same batch.
+static Value buildQubitVec(BlockContext& ctx, Location loc, ArrayRef<int64_t> indices) {
+  int64_t N = (int64_t)indices.size();
+  auto i8Type = ctx.builder.getIntegerType(8);
+  auto vecType = VectorType::get({N}, i8Type, /*scalableDims=*/{true});
+
+  Value vec = ctx.getUndef(loc, vecType);
+
+  for (int64_t i = 0; i < N; ++i) {
+    Value idx = LLVM::ConstantOp::create(ctx.builder, loc, i8Type, ctx.builder.getIntegerAttr(i8Type, indices[i]));
+    // Use the shared i32 cache for all lane indices so that lane-0, tag, and
+    // block_imm all share one SSA value (matching old pass CSE behaviour).
+    Value lane = ctx.getI32(loc, i);
+    vec = LLVM::InsertElementOp::create(ctx.builder, loc, vec, idx, lane);
+  }
+  return vec;
 }
 
-namespace {
+// ---------------------------------------------------------------------------
+// Batch definition and emission
+// ---------------------------------------------------------------------------
 
-/// Rewrites `llvm.call @__quantum__qis__*__body(qubit_ptr, ...)` into the
-/// corresponding `llvm.call_intrinsic "llvm.riscv.qv.*"(vec, ...)`.
-///
-/// Qubit pointer arguments (produced by `llvm.inttoptr` of a constant index)
-/// are re-encoded as `vector<[1]xi8>` scalable vectors.
-struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
-  using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
+/// One run of consecutive same-gate QIS calls that can be lowered together.
+struct GateBatch {
+  StringRef intrinsicName;
+  SmallVector<int64_t> vs1;    // lane values for the first (or only) vector arg
+  SmallVector<int64_t> vs2;    // lane values for the second vector arg (CX only)
+  SmallVector<Operation*> ops; // constituent call ops (will be erased after replacement)
+  bool isCX = false;
 
-  LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
+  bool empty() const { return ops.empty(); }
+  void clear() { *this = GateBatch{}; }
+};
+
+/// Lowers a collected batch to a single `llvm.call_intrinsic` and erases the
+/// original call ops.  All ops are inserted before `batch.ops.front()`.
+static void emitBatch(GateBatch& batch, BlockContext& ctx) {
+  if (batch.empty())
+    return;
+
+  Location loc = batch.ops.front()->getLoc();
+  ctx.builder.setInsertionPoint(batch.ops.front());
+
+  int64_t N = (int64_t)batch.vs1.size();
+
+  Value blockImm = ctx.getI32(loc, 0);
+  Value vl = ctx.getI32(loc, N);
+
+  SmallVector<Value> args;
+  if (batch.isCX) {
+    // QVPairIntrinsic: (vs1: ctrl vec, vs2: tgt vec, block_imm, vl)
+    args = {buildQubitVec(ctx, loc, batch.vs1), buildQubitVec(ctx, loc, batch.vs2), blockImm, vl};
+  } else {
+    // QVSingleIntrinsic: (vs1: qubit vec, rs2/tag, block_imm, vl)
+    Value tag = ctx.getI32(loc, 0);
+    args = {buildQubitVec(ctx, loc, batch.vs1), tag, blockImm, vl};
+  }
+
+  LLVM::CallIntrinsicOp::create(ctx.builder, loc, ctx.builder.getStringAttr(batch.intrinsicName), args);
+  for (auto* op : batch.ops)
+    op->erase();
+  batch.clear();
+}
+
+// ---------------------------------------------------------------------------
+// Block-level lowering
+// ---------------------------------------------------------------------------
+
+/// Lowers all QIS gate calls in `block` to batched vector intrinsics.
+/// Consecutive calls to the same QIS gate are fused into a single intrinsic
+/// call whose qubit vector carries all their indices; a gate-change or
+/// non-QIS operation flushes the active batch.
+static LogicalResult lowerBlock(Block& block) {
+  // Snapshot ops so we can safely erase while iterating.
+  SmallVector<Operation*> ops;
+  for (auto& op : block)
+    ops.push_back(&op);
+
+  BlockContext ctx(block.getParentOp()->getContext());
+  GateBatch current;
+  bool failed = false;
+
+  auto flush = [&]() { emitBatch(current, ctx); };
+
+  for (auto* op : ops) {
+    auto callOp = dyn_cast<LLVM::CallOp>(op);
+    if (!callOp) {
+      flush();
+      continue;
+    }
+
     auto callee = callOp.getCallee();
     if (!callee) {
-      return failure();
+      flush();
+      continue;
     }
 
     StringRef intrName = mapQISToIntrinsic(*callee);
     if (intrName.empty()) {
-      return failure();
+      flush();
+      continue;
     }
 
-    auto loc = callOp.getLoc();
-    auto i32Type = rewriter.getI32Type();
+    // Different gate from the active batch → flush first.
+    if (!current.empty() && current.intrinsicName != intrName) {
+      flush();
+    }
+
     auto operands = callOp.getArgOperands();
+    bool isCX = (*callee == qcc::qirQisCX);
 
-    Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
-    Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
-
-    SmallVector<Value> args;
-
-    if (*callee == qcc::qirQisCX) {
-      // QVPairIntrinsic: (vs1: vec<[1]xi8>, vs2: vec<[1]xi8>, block_imm: i32, vl: i32)
+    if (isCX) {
       auto ctrlIdx = getQubitIndexFromPtr(operands[0]);
       auto tgtIdx = getQubitIndexFromPtr(operands[1]);
       if (!ctrlIdx || !tgtIdx) {
-        return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
-                                "for '__quantum__qis__cx__body'");
+        flush();
+        callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
+                         "for '__quantum__qis__cx__body'");
+        failed = true;
+        continue;
       }
-
-      args = {qubitIndexToVec(rewriter, loc, *ctrlIdx), qubitIndexToVec(rewriter, loc, *tgtIdx), blockImm, vl};
+      current.intrinsicName = intrName;
+      current.isCX = true;
+      current.vs1.push_back(*ctrlIdx);
+      current.vs2.push_back(*tgtIdx);
+      current.ops.push_back(op);
     } else {
-      // QVSingleIntrinsic: (vs1: vec<[1]xi8>, rs2: i32, block_imm: i32, vl: i32)
-      // For mz__body: operands[0] = qubit_ptr, operands[1] = result_ptr (discarded).
+      // For mz__body, operands[1] is the result ptr; we only need operands[0].
       auto qubitIdx = getQubitIndexFromPtr(operands[0]);
       if (!qubitIdx) {
-        return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
-                                "for '")
-               << *callee << "'";
+        flush();
+        callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
+                         "for '")
+            << *callee << "'";
+        failed = true;
+        continue;
       }
-
-      Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
-      args = {qubitIndexToVec(rewriter, loc, *qubitIdx), tag, blockImm, vl};
+      current.intrinsicName = intrName;
+      current.isCX = false;
+      current.vs1.push_back(*qubitIdx);
+      current.ops.push_back(op);
     }
-
-    LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(intrName), args);
-    rewriter.eraseOp(callOp);
-    return success();
   }
-};
+
+  flush();
+  return failed ? failure() : success();
+}
+
+namespace {
 
 /// Replaces `llvm.call @__quantum__rt__read_result(%result_ptr)` with `undef : i1`.
 ///
@@ -210,10 +331,24 @@ protected:
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
 
-    RewritePatternSet patterns(ctx);
-    patterns.add<QISCallLowering, ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
+    // Phase 1: erase/replace runtime helper calls (single-op patterns).
+    RewritePatternSet rtPatterns(ctx);
+    rtPatterns.add<ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
+    if (failed(applyPatternsGreedily(moduleOp, std::move(rtPatterns)))) {
+      return signalPassFailure();
+    }
 
-    if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
+    // Phase 2: lower and batch QIS gate calls to vector intrinsics.
+    // Consecutive calls to the same gate are fused into one vector intrinsic.
+    bool anyFailed = false;
+    moduleOp->walk([&](LLVM::LLVMFuncOp func) {
+      for (Block& block : func.getBody()) {
+        if (failed(lowerBlock(block))) {
+          anyFailed = true;
+        }
+      }
+    });
+    if (anyFailed) {
       return signalPassFailure();
     }
 
