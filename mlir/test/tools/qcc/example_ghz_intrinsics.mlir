@@ -50,5 +50,14 @@ func.func @main() attributes { qcc.entry_point } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
 // CHECK:         llvm.return
 
-// QIR declarations are removed from the module.
-// CHECK-NOT: llvm.func @__quantum
+// Declarations for the gates used (and their rt helpers) are removed.
+// Unmapped declarations (s, sdg, t, tdg, rz) declared by PrepToQIR but unused
+// in the GHZ circuit are left in place, as they have no intrinsic mapping.
+// CHECK-NOT: llvm.func @__quantum__qis__h__body
+// CHECK-NOT: llvm.func @__quantum__qis__x__body
+// CHECK-NOT: llvm.func @__quantum__qis__cx__body
+// CHECK-NOT: llvm.func @__quantum__qis__mz__body
+// CHECK-NOT: llvm.func @__quantum__rt__initialize
+// CHECK-NOT: llvm.func @__quantum__rt__read_result
+// CHECK-NOT: llvm.func @__quantum__rt__bool_record_output
+// CHECK-NOT: llvm.func @__quantum__rt__int_record_output
