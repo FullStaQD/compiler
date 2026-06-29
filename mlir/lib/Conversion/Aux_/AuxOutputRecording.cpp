@@ -20,6 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 #include <llvm/Support/Casting.h>
+#include <llvm/Support/raw_ostream.h>
 #include <mlir/Support/WalkResult.h>
 
 namespace qcc {
@@ -28,6 +29,14 @@ namespace qcc {
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h.inc"
 
 using namespace mlir;
+
+bool isMemRefOfIntegers(mlir::Type type) {
+  // Check if memref is a memref of integer type
+  if (auto memrefType = llvm::dyn_cast<mlir::MemRefType>(type)) {
+    return llvm::isa<mlir::IntegerType>(memrefType.getElementType());
+  }
+  return false;
+}
 
 namespace {
 
@@ -71,9 +80,11 @@ protected:
         Type ty = v.getType();
         if (ty.isInteger()) {
           aux::RecordIntOp::create(builder, loc, v);
-        } else {
+        } else if (isMemRefOfIntegers(ty)) {
           // TODO: Add support for other types as needed.
-          funcOp.emitError("Non-integer return types are not supported.");
+          aux::RecordMemRefOp::create(builder, loc, v);
+        } else {
+          funcOp.emitError("Return types other than integers and memory references are not supported.");
           return WalkResult::interrupt();
         }
       }

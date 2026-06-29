@@ -32,6 +32,10 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <cstdint>
+#include <llvm/Support/raw_ostream.h>
+#include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/MemRef/IR/MemRef.h>
+#include <mlir/Dialect/SCF/IR/SCF.h>
 
 using namespace mlir;
 using namespace qcc;
@@ -209,6 +213,55 @@ struct UnitaryLowering : public ConversionPattern {
   }
 };
 
+struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
+  using OpConversionPattern<aux::RecordMemRefOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(aux::RecordMemRefOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    auto ctx = rewriter.getContext();
+    StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
+
+    // 1. Get the address representation of your dummy label
+    auto addressOf = LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(ctx), labelName);
+
+    // 2. Extract the compile-time static size from the original memref operand
+    MemRefType memrefType = cast<MemRefType>(op.getValue().getType());
+    int64_t staticSize = memrefType.getDimSize(0);
+
+    // 3. Emit the runtime function tracking the size of the array using pure LLVM constants
+    auto i64Type = rewriter.getI64Type();
+    Value totalElementsConst = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(staticSize));
+
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtArrayRecordOutput, ValueRange{totalElementsConst, addressOf});
+
+    // 4. Extract the aligned pointer from the LLVM memref descriptor struct (adaptor value)
+    // Under the MLIR type converter, a standard MemRef maps to an LLVM struct where
+    // index 1 is the aligned data pointer.
+    Value memrefDescriptor = adaptor.getValue();
+    Value alignedPtr = LLVM::ExtractValueOp::create(rewriter, loc, memrefDescriptor, 1);
+
+    // 5. Sequentially emit GEP and Load operations for each index using pure LLVM Dialect
+    for (int64_t i = 0; i < staticSize; ++i) {
+      // Create a compile-time index for GEP (GepOp expects i32 or i64 attributes/values)
+      Value llvmIndex = LLVM::ConstantOp::create(rewriter, loc, i64Type, rewriter.getI64IntegerAttr(i));
+
+      // Calculate the specific element address: ptr = alignedPtr + i
+      auto elementPtr = LLVM::GEPOp::create(rewriter, loc, alignedPtr.getType(), memrefType.getElementType(),
+                                            alignedPtr, ValueRange{llvmIndex});
+
+      // Load the value out of that calculated element pointer
+      auto elementValue = LLVM::LoadOp::create(rewriter, loc, memrefType.getElementType(), elementPtr);
+
+      // Call the QIR runtime function for this specific element
+      LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtIntRecordOutput, ValueRange{elementValue, addressOf});
+    }
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace qcc {
@@ -247,7 +300,7 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering, RecordMemrefLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
