@@ -1,4 +1,4 @@
-// RUN: qcc %s | FileCheck %s
+// RUN: qcc --compile-to=mlir %s | FileCheck %s
 
 func.func @main() {
   %qubits = memref.alloc(): memref<2x2x2x!qc.qubit>
