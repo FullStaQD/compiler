@@ -1,3 +1,7 @@
+// RUN: qcc %s | mlir-translate -mlir-to-llvmir > %t.ll
+// RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
+// RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
+
 // GENERATED FROM QRISP VERSION 0.9.5
 
 builtin.module @jasp_module {
@@ -330,3 +334,26 @@ builtin.module @jasp_module {
     func.return %arg0 : tensor<i64>
   }
 }
+
+// CHECK-QIR-DAG: declare void @__quantum__qis__reset__body(ptr)
+// CHECK-QIR-DAG: declare void @__quantum__qis__rz__body(double, ptr)
+
+// CHECK-QIR-DAG: call void @__quantum__qis__x__body(ptr null)
+// CHECK-QIR-DAG: call void @__quantum__qis__reset__body(ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-DAG: call void @__quantum__qis__h__body(ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-DAG: call void @__quantum__qis__rz__body(double %{{.+}}, ptr null)
+// CHECK-QIR-DAG: call void @__quantum__qis__rz__body(double %{{.+}}, ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-DAG: call void @__quantum__qis__cx__body(ptr inttoptr (i64 1 to ptr), ptr null)
+// CHECK-QIR-DAG: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-DAG: call void @__quantum__rt__int_record_output(i64 %{{.+}}, ptr @.qir_dummy_label)
+
+// CHECK-SIM: START
+// CHECK-SIM: METADATA required_num_qubits 2
+// CHECK-SIM: METADATA required_num_results 2
+// Exit code should always be zero.
+// CHECK-SIM: OUTPUT INT 0 dummy_label
+// CHECK-SIM: OUTPUT INT 0 dummy_label
+// CHECK-SIM: OUTPUT INT 0 dummy_label
+// CHECK-SIM: OUTPUT INT 0 dummy_label
+// CHECK-SIM: OUTPUT INT 0 dummy_label
+// CHECK-SIM: END 0

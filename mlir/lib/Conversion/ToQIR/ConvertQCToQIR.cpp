@@ -47,6 +47,10 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
         .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
         .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
         .Case<qc::RZOp>([](auto) { return qcc::qirQisRZ; })
+        // The phase gate P(θ) differs from RZ(θ) only by a global phase,
+        // which does not affect measurement outcomes. QIR has no native
+        // phase gate, so we lower P to RZ.
+        .Case<qc::POp>([](auto) { return qcc::qirQisRZ; })
         .Case<qc::TOp>([](auto) { return qcc::qirQisT; })
         .Case<qc::TdgOp>([](auto) { return qcc::qirQisTdg; })
         .Case<qc::SOp>([](auto) { return qcc::qirQisS; })
