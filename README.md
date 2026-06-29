@@ -112,7 +112,7 @@ Run the tests like so:
 
 ```shell
 # Rebuilds and runs all tests:
-cmake --build build/dev --target test-qcc-project
+cmake --build build/dev --target check-qcc
 
 # Run specific tests (filters by filename):
 lit build/dev/mlir/test/ -v --filter "convert"
