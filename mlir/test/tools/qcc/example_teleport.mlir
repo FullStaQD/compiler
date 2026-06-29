@@ -1,4 +1,4 @@
-// RUN: qcc -o - %s | FileCheck %s
+// RUN: qcc --compile-to=mlir -o - %s | FileCheck %s
 
 // A simple teleportation program, written in qrisp and compiled to mlir.
 // Tests the lowering of control flow to llvm.
