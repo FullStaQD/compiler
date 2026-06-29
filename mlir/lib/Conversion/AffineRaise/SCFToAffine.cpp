@@ -221,7 +221,7 @@ std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithConstantS
   auto affineFor =
       affine::AffineForOp::create(rewriter, op.getLoc(), lbOperands, lbMap, ubOperands, ubMap, step, op.getInits());
 
-  return std::make_pair(affineFor, affineFor.getInductionVar());
+  return {affineFor, affineFor.getInductionVar()};
 }
 
 std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithDynamicStep(scf::ForOp op,
@@ -282,7 +282,7 @@ std::pair<affine::AffineForOp, Value> ForOpRewrite::createAffineForWithDynamicSt
   rewriter.setInsertionPointToStart(affineFor.getBody());
   auto oldIV = affine::AffineApplyOp::create(rewriter, op.getLoc(), ivMap, ivOperands);
 
-  return std::make_pair(affineFor, oldIV);
+  return {affineFor, oldIV};
 }
 
 void ForOpRewrite::castBoundsToIndex(scf::ForOp loop, PatternRewriter& rewriter) {
