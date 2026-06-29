@@ -16,6 +16,10 @@ cmake --build build/dev                             # build
 # Test (with dev preset)
 cmake --build build/dev --target check-qcc          # build + run all tests
 lit build/dev/mlir/test/ -v --filter NAME           # run a single/filtered test
+
+# pre-commit checks
+prek install                                        # to run on each commit
+prek run -a                                         # autofixes too, might need a second run to pass
 ```
 
 ## Code style
