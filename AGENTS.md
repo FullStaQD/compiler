@@ -1,8 +1,5 @@
-# AGENTS.md
+# QCC
 
-Guidance for AI coding agents working in this repository.
-
-## Project
 
 **qcc** is an MLIR-based compiler that lowers JASP dialect IR (produced by
 [Qrisp](https://qrisp.eu)) to QIR. Generated tools: `qcc-opt` (an
