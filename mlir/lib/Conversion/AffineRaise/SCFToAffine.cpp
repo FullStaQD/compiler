@@ -101,6 +101,7 @@ static bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
   auto boundRaisable = [&](Value bound) {
     // Case 1: look through a cast this pass (or an equivalent) inserted.
     if (Value underlying = lookThroughIndexCastToIndex(bound); underlying != bound) {
+      // TODO: Here one could look for min/max patterns again.
       return affine::isValidDim(underlying, parentRegion) || affine::isValidSymbol(underlying, parentRegion);
     }
     // Case 2: a foldable constant can be re-materialized as an index constant.
