@@ -21,7 +21,7 @@ Generate MLIR (in the ``jasp`` dialect) from a Qrisp source file.
 
 Usage::
 
-    python generate_qrisp_mlir.py <path-to-qrisp-file>
+    ./generate_qrisp_mlir.py <path-to-qrisp-file>
 
 The Qrisp file should contain a single function (besides imports). This
 function is run through ``qrisp.jasp.make_jaspr`` and the resulting MLIR is

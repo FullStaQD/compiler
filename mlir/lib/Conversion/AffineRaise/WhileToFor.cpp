@@ -80,7 +80,9 @@ protected:
     RewritePatternSet patterns(&getContext());
     patterns.add<ConvertWhileSLEToSLT>(&getContext());
     mlir::scf::populateUpliftWhileToForPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+    }
   }
 };
 } // namespace

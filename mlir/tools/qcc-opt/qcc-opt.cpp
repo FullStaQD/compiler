@@ -83,15 +83,12 @@ int main(int argc, char** argv) {
   mlir::bufferization::registerPromoteBuffersToStackPass();
   mlir::registerInlinerPass();
   mlir::affine::registerAffineLoopUnroll();
-  mlir::affine::registerAffineLoopNormalize();
 
   // Our passes
   qcc::registerAddEntrypointToMain();
   qcc::registerTmpRaiseSCFToAffinePass();
   qcc::registerWhileToFor();
   qcc::registerJaspToQC();
-  qcc::registerJaspCheckStaticQubitAllocation();
-  qcc::registerConvertMemrefToStaticQubits();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
