@@ -83,6 +83,7 @@ int main(int argc, char** argv) {
   mlir::bufferization::registerPromoteBuffersToStackPass();
   mlir::registerInlinerPass();
   mlir::affine::registerAffineLoopUnroll();
+  mlir::affine::registerAffineLoopNormalize();
 
   // Our passes
   qcc::registerAddEntrypointToMain();
