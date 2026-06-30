@@ -86,7 +86,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // future.
   mlir::affine::registerAffineLoopUnroll();
   if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1 unroll-full-threshold=1000}, "
-                                     "affine-loop-unroll{unroll-factor=-1})",
+                                     "affine-loop-unroll{unroll-factor=-1 unroll-num-reps=10})",
                                      pm))) {
     llvm_unreachable("pipeline is a hardcoded string and can always be parsed.");
   }
