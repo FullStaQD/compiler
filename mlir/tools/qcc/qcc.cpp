@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
   const cl::opt<Stage> compileTo(
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
       cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
-                 clEnumValN(Stage::LlvmIr, "llvm-ir", "LLVM IR (QIR for the QIR target)"),
+                 clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR (QIR for the QIR target)"),
                  clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
       cl::cat(qccCategory));
   const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
