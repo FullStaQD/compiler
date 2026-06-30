@@ -93,6 +93,8 @@ int main(int argc, char** argv) {
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
   qcc::registerAuxOutputRecording();
+  qcc::registerJaspCheckStaticQubitAllocation();
+  qcc::registerConvertMemrefToStaticQubits();
 
   // Extension registration
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);
