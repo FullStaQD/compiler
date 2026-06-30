@@ -2,12 +2,12 @@
 
 // Stage selection:
 // RUN: qcc --compile-to=mlir %s | FileCheck %s --check-prefix=CHECK-MLIR
-// RUN: qcc --compile-to=llvm-ir %s | FileCheck %s --check-prefix=CHECK-LLVM
+// RUN: qcc --compile-to=llvmir %s | FileCheck %s --check-prefix=CHECK-LLVM
 // Default is LLVM-IR:
 // RUN: qcc %s | FileCheck %s --check-prefix=CHECK-LLVM
 
 // Binary encodings round-trip back to the matching textual form:
-// RUN: qcc --binary --compile-to=llvm-ir %s -o %t.bc
+// RUN: qcc --binary --compile-to=llvmir %s -o %t.bc
 // RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=CHECK-LLVM
 // RUN: qcc --binary --compile-to=mlir %s -o %t.mlirbc
 // RUN: qcc-opt %t.mlirbc | FileCheck %s --check-prefix=CHECK-MLIR
