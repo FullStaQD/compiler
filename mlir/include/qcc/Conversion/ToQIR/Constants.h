@@ -86,12 +86,12 @@ static constexpr llvm::StringLiteral qirQisRZ = "__quantum__qis__rz__body";
 static constexpr llvm::StringLiteral qirQisS = "__quantum__qis__s__body";
 
 /// Single target S† gate.
-static constexpr llvm::StringLiteral qirQisSdg = "__quantum__qis__s__adj";
+static constexpr llvm::StringLiteral qirQisSdg = "__quantum__qis__sdg__body";
 
 /// Single target T gate.
 static constexpr llvm::StringLiteral qirQisT = "__quantum__qis__t__body";
 
 /// Single target T† gate.
-static constexpr llvm::StringLiteral qirQisTdg = "__quantum__qis__t__adj";
+static constexpr llvm::StringLiteral qirQisTdg = "__quantum__qis__tdg__body";
 
 } // namespace qcc
