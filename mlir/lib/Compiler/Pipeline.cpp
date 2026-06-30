@@ -84,6 +84,7 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   // factor (instead uses a value of 4, see https://github.com/llvm/llvm-project/issues/204801).
   // To deal with nested loops, we specify unroll-num-reps=10. This should be changed to a more robust solution in the
   // future.
+  // In addition, to support the IQPE integration test, we need to perform a two-step unrolling.
   mlir::affine::registerAffineLoopUnroll();
   if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1 unroll-full-threshold=1000}, "
                                      "affine-loop-unroll{unroll-factor=-1 unroll-num-reps=10})",
