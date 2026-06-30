@@ -87,4 +87,40 @@ def RecordMemRefOp : AuxOp<"record_memref"> {
   let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
+def RecordTuple : AuxOp<"record_tuple"> {
+  let summary = "Records multiple outputs.";
+
+  let description = [{
+        Helper to later lower to to the following QIR runtime functions when
+        multiple returns are present:
+
+        ```llvm
+        llvm.func @__quantum__rt__tuple_record_output(i64, !llvm.ptr)
+        llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
+        llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
+        ...
+        ```
+
+        Our principal dialects have nothing in it which can be translated to it. Hence we use this as a workaround.
+        It is used like this:
+
+        ```mlir
+        func.func @main() -> i64, i1 attributes { qcc.entry_point } {
+          ...
+          aux.record_tuple 2
+          aux.record_int %m1
+          aux.record_int %m2
+        }
+        ```
+
+        To actually translate it to the above QIR runtime function we use a dummy label for the second argument of
+        the QIR function.
+    }];
+
+  let arguments = (ins I64:$value);
+  let results = (outs);
+
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
 #endif // INCLUDE_QCC_DIALECT_AUX_IR_AUXOPS_TD_

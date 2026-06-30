@@ -21,6 +21,8 @@
 
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
+#include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/Support/WalkResult.h>
 
 namespace qcc {
@@ -75,7 +77,14 @@ protected:
 
       OpBuilder builder(retOp);
 
+      auto size = oldReturnOperands.size();
       auto loc = retOp.getLoc();
+      if (size > 1) {
+        // Indicate that multiple values are returned
+        auto op = arith::ConstantOp::create(builder, loc, builder.getI64IntegerAttr(size));
+        aux::RecordTuple::create(builder, loc, op->getResult(0));
+      }
+
       for (Value v : oldReturnOperands) {
         Type ty = v.getType();
         if (ty.isInteger()) {
