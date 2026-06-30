@@ -335,17 +335,13 @@ builtin.module @jasp_module {
   }
 }
 
-// CHECK-QIR-DAG: declare void @__quantum__qis__reset__body(ptr)
-// CHECK-QIR-DAG: declare void @__quantum__qis__rz__body(double, ptr)
+// At precision 4, we expect four measurements of the same auxiliary qubit 1.
+// CHECK-QIR: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR-NOT: call void @__quantum__qis__mz__body
 
-// CHECK-QIR-DAG: call void @__quantum__qis__x__body(ptr null)
-// CHECK-QIR-DAG: call void @__quantum__qis__reset__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR-DAG: call void @__quantum__qis__h__body(ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR-DAG: call void @__quantum__qis__rz__body(double %{{.+}}, ptr null)
-// CHECK-QIR-DAG: call void @__quantum__qis__rz__body(double %{{.+}}, ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR-DAG: call void @__quantum__qis__cx__body(ptr inttoptr (i64 1 to ptr), ptr null)
-// CHECK-QIR-DAG: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
-// CHECK-QIR-DAG: call void @__quantum__rt__int_record_output(i64 %{{.+}}, ptr @.qir_dummy_label)
 
 // CHECK-SIM: START
 // CHECK-SIM: METADATA required_num_qubits 2
