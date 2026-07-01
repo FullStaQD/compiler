@@ -16,11 +16,11 @@ def iqpe():
 
         reset(phase_digit[0])
         h(phase_digit[0])
-        cp(2.0 * pi * target_phase * 2.0**(precision - i - 1), phase_digit[0], eigenstate[0])
+        cp(pi * target_phase * 2.0**(precision - i), phase_digit[0], eigenstate[0])
 
         for j in jrange(i):
             with control(((measured_digits >> j) & 1) == 1):
-                rz(-2.0 * pi * 2.0**(j - i - 1), phase_digit[0])
+                rz(-pi * 2.0**(j - i), phase_digit[0])
                 # Beware that the base for exponentiation must be float:
                 # 2**(...) in the jasp tracer interprets the exponent as
                 # unsigned i64. Hence e.g. 2**(-2) evaluates to 2**(62) (this is
