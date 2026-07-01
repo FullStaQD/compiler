@@ -321,7 +321,8 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering, RecordMemrefLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering, RecordMemrefLowering, RecordTupleLowering>(
+        typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
