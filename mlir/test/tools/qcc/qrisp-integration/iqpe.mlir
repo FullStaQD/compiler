@@ -14,11 +14,11 @@ builtin.module @jasp_module {
     %6, %7 = jasp.create_qubits %0, %5 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
     %8 = arith.constant dense<3.125000e-01> : tensor<f64>
     %9 = arith.constant dense<4> : tensor<i64>
-    %10, %11, %12, %13, %14, %15, %16, %17 = scf.while (%arg229 = %6, %arg230 = %8, %arg231 = %1, %arg232 = %9, %arg233 = %3, %arg234 = %3, %arg235 = %9, %arg236 = %7) : (!jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState) {
-      %18 = tensor.extract %arg234[] : tensor<i64>
-      %19 = tensor.extract %arg235[] : tensor<i64>
+    %10, %11, %12, %13, %14, %15, %16, %17 = scf.while (%arg170 = %6, %arg171 = %8, %arg172 = %1, %arg173 = %9, %arg174 = %3, %arg175 = %3, %arg176 = %9, %arg177 = %7) : (!jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState) {
+      %18 = tensor.extract %arg175[] : tensor<i64>
+      %19 = tensor.extract %arg176[] : tensor<i64>
       %20 = arith.cmpi slt, %18, %19 : i64
-      scf.condition(%20) %arg229, %arg230, %arg231, %arg232, %arg233, %arg234, %arg235, %arg236 : !jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState
+      scf.condition(%20) %arg170, %arg171, %arg172, %arg173, %arg174, %arg175, %arg176, %arg177 : !jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState
     } do {
     ^bb0(%arg19: !jasp.QubitArray, %arg20: tensor<f64>, %arg21: !jasp.QubitArray, %arg22: tensor<i64>, %arg23: tensor<i64>, %arg24: tensor<i64>, %arg25: tensor<i64>, %arg26: !jasp.QuantumState):
       %21 = arith.constant dense<0> : tensor<i64>
@@ -144,11 +144,11 @@ builtin.module @jasp_module {
       %141 = tensor.from_elements %140 : tensor<i64>
       %142 = arith.subi %140, %140 : i64
       %143 = tensor.from_elements %142 : tensor<i64>
-      %144, %145, %146, %147, %148, %149 = scf.while (%arg132 = %arg23, %arg133 = %arg24, %arg134 = %arg19, %arg135 = %141, %arg136 = %143, %arg137 = %137) : (tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState) -> (tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState) {
-        %150 = tensor.extract %arg136[] : tensor<i64>
-        %151 = tensor.extract %arg135[] : tensor<i64>
+      %144, %145, %146, %147, %148, %149 = scf.while (%arg73 = %arg23, %arg74 = %arg24, %arg75 = %arg19, %arg76 = %141, %arg77 = %143, %arg78 = %137) : (tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState) -> (tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState) {
+        %150 = tensor.extract %arg77[] : tensor<i64>
+        %151 = tensor.extract %arg76[] : tensor<i64>
         %152 = arith.cmpi sle, %150, %151 : i64
-        scf.condition(%152) %arg132, %arg133, %arg134, %arg135, %arg136, %arg137 : tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState
+        scf.condition(%152) %arg73, %arg74, %arg75, %arg76, %arg77, %arg78 : tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState
       } do {
       ^bb1(%arg39: tensor<i64>, %arg40: tensor<i64>, %arg41: !jasp.QubitArray, %arg42: tensor<i64>, %arg43: tensor<i64>, %arg44: !jasp.QuantumState):
         %153 = tensor.extract %arg39[] : tensor<i64>
@@ -171,129 +171,43 @@ builtin.module @jasp_module {
           %168 = tensor.extract %arg40[] : tensor<i64>
           %169 = tensor.extract %arg43[] : tensor<i64>
           %170 = arith.subi %169, %168 : i64
-          %171 = arith.constant dense<1> : tensor<i64>
-          %172 = arith.constant 1 : i64
-          %173 = arith.subi %170, %172 : i64
-          %174 = arith.constant dense<0> : tensor<i64>
-          %175 = arith.constant 2 : i64
-          %176 = arith.constant 0 : i64
-          %177 = arith.cmpi eq, %175, %176 : i64
-          %178 = arith.constant 0 : i64
-          %179 = arith.cmpi ne, %173, %178 : i64
-          %180 = arith.andi %177, %179 : i1
-          %181 = tensor.from_elements %180 : tensor<i1>
-          %182 = func.call @_where(%181, %174, %171) : (tensor<i1>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %183 = arith.constant 1 : i64
-          %184 = arith.andi %173, %183 : i64
-          %185 = tensor.from_elements %184 : tensor<i64>
-          %186 = arith.constant 2 : i64
-          %187 = tensor.extract %182[] : tensor<i64>
-          %188 = arith.muli %187, %186 : i64
-          %189 = tensor.from_elements %188 : tensor<i64>
-          %190 = func.call @_where_4(%185, %189, %182) : (tensor<i64>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %191 = arith.constant 4 : i64
-          %192 = arith.constant 1 : i64
-          %193 = arith.constant 0 : i64
-          %194 = arith.shrui %173, %192 : i64
-          %195 = arith.constant 64 : i64
-          %196 = arith.cmpi ugt, %195, %192 : i64
-          %197 = arith.select %196, %194, %193 : i64
-          %198 = arith.constant 1 : i64
-          %199 = arith.andi %197, %198 : i64
-          %200 = tensor.from_elements %199 : tensor<i64>
-          %201 = tensor.extract %190[] : tensor<i64>
-          %202 = arith.muli %201, %191 : i64
-          %203 = tensor.from_elements %202 : tensor<i64>
-          %204 = func.call @_where_4(%200, %203, %190) : (tensor<i64>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %205 = arith.constant 16 : i64
-          %206 = arith.constant 1 : i64
-          %207 = arith.constant 0 : i64
-          %208 = arith.shrui %197, %206 : i64
-          %209 = arith.constant 64 : i64
-          %210 = arith.cmpi ugt, %209, %206 : i64
-          %211 = arith.select %210, %208, %207 : i64
-          %212 = arith.constant 1 : i64
-          %213 = arith.andi %211, %212 : i64
-          %214 = tensor.from_elements %213 : tensor<i64>
-          %215 = tensor.extract %204[] : tensor<i64>
-          %216 = arith.muli %215, %205 : i64
-          %217 = tensor.from_elements %216 : tensor<i64>
-          %218 = func.call @_where_4(%214, %217, %204) : (tensor<i64>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %219 = arith.constant 256 : i64
-          %220 = arith.constant 1 : i64
-          %221 = arith.constant 0 : i64
-          %222 = arith.shrui %211, %220 : i64
-          %223 = arith.constant 64 : i64
-          %224 = arith.cmpi ugt, %223, %220 : i64
-          %225 = arith.select %224, %222, %221 : i64
-          %226 = arith.constant 1 : i64
-          %227 = arith.andi %225, %226 : i64
-          %228 = tensor.from_elements %227 : tensor<i64>
-          %229 = tensor.extract %218[] : tensor<i64>
-          %230 = arith.muli %229, %219 : i64
-          %231 = tensor.from_elements %230 : tensor<i64>
-          %232 = func.call @_where_4(%228, %231, %218) : (tensor<i64>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %233 = arith.constant 65536 : i64
-          %234 = arith.constant 1 : i64
-          %235 = arith.constant 0 : i64
-          %236 = arith.shrui %225, %234 : i64
-          %237 = arith.constant 64 : i64
-          %238 = arith.cmpi ugt, %237, %234 : i64
-          %239 = arith.select %238, %236, %235 : i64
-          %240 = arith.constant 1 : i64
-          %241 = arith.andi %239, %240 : i64
-          %242 = tensor.from_elements %241 : tensor<i64>
-          %243 = tensor.extract %232[] : tensor<i64>
-          %244 = arith.muli %243, %233 : i64
-          %245 = tensor.from_elements %244 : tensor<i64>
-          %246 = func.call @_where_4(%242, %245, %232) : (tensor<i64>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %247 = arith.constant 4294967296 : i64
-          %248 = arith.constant 1 : i64
-          %249 = arith.constant 0 : i64
-          %250 = arith.shrui %239, %248 : i64
-          %251 = arith.constant 64 : i64
-          %252 = arith.cmpi ugt, %251, %248 : i64
-          %253 = arith.select %252, %250, %249 : i64
-          %254 = arith.constant 1 : i64
-          %255 = arith.andi %253, %254 : i64
-          %256 = tensor.from_elements %255 : tensor<i64>
-          %257 = tensor.extract %246[] : tensor<i64>
-          %258 = arith.muli %257, %247 : i64
-          %259 = tensor.from_elements %258 : tensor<i64>
-          %260 = func.call @_where_4(%256, %259, %246) : (tensor<i64>, tensor<i64>, tensor<i64>) -> tensor<i64>
-          %261 = tensor.extract %260[] : tensor<i64>
-          %262 = arith.sitofp %261 : i64 to f64
-          %263 = arith.constant -6.2831853071795862 : f64
-          %264 = arith.mulf %263, %262 : f64
-          %265 = tensor.from_elements %264 : tensor<f64>
-          %266 = jasp.get_qubit %arg41, %174 : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
-          %267 = jasp.quantum_gate "rz" (%266, %265) , %arg44 : (!jasp.Qubit, tensor<f64>) , !jasp.QuantumState -> !jasp.QuantumState
-          scf.yield %267 : !jasp.QuantumState
+          %171 = arith.constant 1 : i64
+          %172 = arith.subi %170, %171 : i64
+          %173 = arith.sitofp %172 : i64 to f64
+          %174 = arith.constant 2.000000e+00 : f64
+          %175 = math.powf %174, %173 : f64
+          %176 = arith.constant -6.2831853071795862 : f64
+          %177 = arith.mulf %176, %175 : f64
+          %178 = tensor.from_elements %177 : tensor<f64>
+          %179 = arith.constant dense<0> : tensor<i64>
+          %180 = jasp.get_qubit %arg41, %179 : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
+          %181 = jasp.quantum_gate "rz" (%180, %178) , %arg44 : (!jasp.Qubit, tensor<f64>) , !jasp.QuantumState -> !jasp.QuantumState
+          scf.yield %181 : !jasp.QuantumState
         }
-        %268 = arith.constant 1 : i64
-        %269 = tensor.extract %arg43[] : tensor<i64>
-        %270 = arith.addi %269, %268 : i64
-        %271 = tensor.from_elements %270 : tensor<i64>
-        %272 = func.call @_jrange_marker(%271, %arg42) : (tensor<i64>, tensor<i64>) -> tensor<i64>
-        scf.yield %arg39, %arg40, %arg41, %arg42, %272, %167 : tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState
+        %182 = arith.constant 1 : i64
+        %183 = tensor.extract %arg43[] : tensor<i64>
+        %184 = arith.addi %183, %182 : i64
+        %185 = tensor.from_elements %184 : tensor<i64>
+        %186 = func.call @_jrange_marker(%185, %arg42) : (tensor<i64>, tensor<i64>) -> tensor<i64>
+        scf.yield %arg39, %arg40, %arg41, %arg42, %186, %167 : tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState
       }
-      %273 = jasp.quantum_gate "h" (%22) , %149 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
-      %274, %275 = jasp.measure %arg19, %273 : !jasp.QubitArray, !jasp.QuantumState -> tensor<i64>, !jasp.QuantumState
-      %276 = tensor.extract %arg24[] : tensor<i64>
-      %277 = tensor.extract %274[] : tensor<i64>
-      %278 = arith.constant 0 : i64
-      %279 = arith.shli %277, %276 : i64
-      %280 = arith.constant 64 : i64
-      %281 = arith.cmpi ugt, %280, %276 : i64
-      %282 = arith.select %281, %279, %278 : i64
-      %283 = tensor.extract %arg23[] : tensor<i64>
-      %284 = arith.ori %283, %282 : i64
-      %285 = tensor.from_elements %284 : tensor<i64>
-      %286 = arith.constant 1 : i64
-      %287 = tensor.extract %arg24[] : tensor<i64>
-      %288 = arith.addi %287, %286 : i64
-      %289 = tensor.from_elements %288 : tensor<i64>
-      scf.yield %arg19, %arg20, %arg21, %arg22, %285, %289, %arg25, %275 : !jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState
+      %187 = jasp.quantum_gate "h" (%22) , %149 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
+      %188, %189 = jasp.measure %arg19, %187 : !jasp.QubitArray, !jasp.QuantumState -> tensor<i64>, !jasp.QuantumState
+      %190 = tensor.extract %arg24[] : tensor<i64>
+      %191 = tensor.extract %188[] : tensor<i64>
+      %192 = arith.constant 0 : i64
+      %193 = arith.shli %191, %190 : i64
+      %194 = arith.constant 64 : i64
+      %195 = arith.cmpi ugt, %194, %190 : i64
+      %196 = arith.select %195, %193, %192 : i64
+      %197 = tensor.extract %arg23[] : tensor<i64>
+      %198 = arith.ori %197, %196 : i64
+      %199 = tensor.from_elements %198 : tensor<i64>
+      %200 = arith.constant 1 : i64
+      %201 = tensor.extract %arg24[] : tensor<i64>
+      %202 = arith.addi %201, %200 : i64
+      %203 = tensor.from_elements %202 : tensor<i64>
+      scf.yield %arg19, %arg20, %arg21, %arg22, %199, %203, %arg25, %189 : !jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState
     }
     func.return %14, %17 : tensor<i64>, !jasp.QuantumState
   }

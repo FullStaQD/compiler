@@ -20,7 +20,7 @@ def iqpe():
 
         for j in jrange(i):
             with control(((measured_digits >> j) & 1) == 1):
-                rz(-2 * pi * 2**(j - i - 1), phase_digit[0])
+                rz(-2 * pi * 2.0**(j - i - 1), phase_digit[0])
 
         h(phase_digit[0])
         measured_digits = measured_digits | (measure(phase_digit) << i)
