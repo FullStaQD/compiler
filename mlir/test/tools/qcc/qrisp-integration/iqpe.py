@@ -33,5 +33,4 @@ def iqpe():
         init_val=(measured_digits, phase_digit, target_phase, eigenstate, precision)
     )
 
-    exit_code = q_cond(target_phase == measured_digits / (2**precision), lambda : 0, lambda : 1)
-    return exit_code
+    return measured_digits
