@@ -1,5 +1,5 @@
 from math import pi
-from qrisp import QuantumVariable, control, cp, h, q_cond, q_fori_loop, reset, rz, x, make_jaspr, measure, jrange
+from qrisp import QuantumVariable, control, cp, h, q_cond, q_fori_loop, reset, rz, x, measure, jrange
 
 def iqpe():
     target_phase = 0.3125 # 0.0101
