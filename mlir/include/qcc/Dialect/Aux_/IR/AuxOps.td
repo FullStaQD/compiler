@@ -87,7 +87,7 @@ def RecordMemRefOp : AuxOp<"record_memref"> {
   let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
-def RecordTuple : AuxOp<"record_tuple"> {
+def RecordTupleOp : AuxOp<"record_tuple"> {
   let summary = "Records multiple outputs.";
 
   let description = [{

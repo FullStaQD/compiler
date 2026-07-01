@@ -67,6 +67,15 @@ static constexpr llvm::StringLiteral qirRtIntRecordOutput = "__quantum__rt__int_
 /// on the output schema, the label is included in the output or omitted.
 static constexpr llvm::StringLiteral qirRtArrayRecordOutput = "__quantum__rt__array_record_output";
 
+/// Adds a tuple to the generated output.
+///
+/// Signature: `void(i64,ptr)`.
+///
+/// The first parameter defines the size of the tuple.
+// The second parameter defines a string label for the result value. Depending
+/// on the output schema, the label is included in the output or omitted.
+static constexpr llvm::StringLiteral qirRtTupleRecordOutput = "__quantum__rt__tuple_record_output";
+
 //===----------------------------------------------------------------------===//
 // QIR quantum instruction set (QIS)
 //===----------------------------------------------------------------------===//

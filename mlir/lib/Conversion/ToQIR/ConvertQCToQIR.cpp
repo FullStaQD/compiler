@@ -182,6 +182,27 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
   }
 };
 
+struct RecordTupleLowering : public OpConversionPattern<aux::RecordTupleOp> {
+  using OpConversionPattern<aux::RecordTupleOp>::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(aux::RecordTupleOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
+
+    auto addressOf =
+        LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
+
+    Type ty = op.getValue().getType();
+
+    llvm::StringRef callee = qirRtTupleRecordOutput;
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), callee, ValueRange{adaptor.getValue(), addressOf});
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)

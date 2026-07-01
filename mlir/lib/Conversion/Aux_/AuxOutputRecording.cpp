@@ -82,7 +82,7 @@ protected:
       if (size > 1) {
         // Indicate that multiple values are returned
         auto op = arith::ConstantOp::create(builder, loc, builder.getI64IntegerAttr(size));
-        aux::RecordTuple::create(builder, loc, op->getResult(0));
+        aux::RecordTupleOp::create(builder, loc, op->getResult(0));
       }
 
       for (Value v : oldReturnOperands) {

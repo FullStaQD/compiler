@@ -112,3 +112,18 @@ func.func @test_memref_output(%argo: memref<4xi64>) -> memref<4xi64> attributes 
 // CHECK: aux.record_memref %arg0 : memref<4xi64>
 // CHECK:     return
 // CHECK:   }
+
+
+func.func @test_multiple_outputs_with_memref(%argo: memref<4xi64>) -> (memref<4xi64>, i64) attributes { qcc.entry_point } {
+  %c = arith.constant 1 : i64
+  return %argo, %c :  memref<4xi64>, i64
+}
+
+// CHECK-LABEL: func.func @test_multiple_outputs_with_memref(%arg0: memref<4xi64>) attributes {qcc.entry_point} {
+// CHECK: %[[constant:.*]] = arith.constant 1 : i64
+// CHECK: %[[num_returns:.*]] = arith.constant 2 : i64
+// CHECK: aux.record_tuple %[[num_returns]] : i64
+// CHECK: aux.record_memref %arg0 : memref<4xi64>
+// CHECK: aux.record_int %[[constant]] : i64
+// CHECK:     return
+// CHECK:   }
