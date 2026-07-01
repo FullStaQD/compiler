@@ -89,12 +89,12 @@ int main(int argc, char** argv) {
   qcc::registerTmpRaiseSCFToAffinePass();
   qcc::registerWhileToFor();
   qcc::registerJaspToQC();
-  qcc::registerJaspCheckStaticQubitAllocation();
-  qcc::registerConvertMemrefToStaticQubits();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
   qcc::registerAuxOutputRecording();
+  qcc::registerJaspCheckStaticQubitAllocation();
+  qcc::registerConvertMemrefToStaticQubits();
 
   // Extension registration
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);

@@ -77,14 +77,19 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   // Raise `scf.for` loops to `affine.for` where the bounds and step permit it.
   pm.addNestedPass<mlir::func::FuncOp>(qcc::createTmpRaiseSCFToAffinePass());
+  pm.addPass(mlir::createCanonicalizerPass());
 
   // Unroll affine loops.
   // TODO: We have to do this in this by parsing because the createAffineLoopUnroll function does not pass on the -1
   // factor (instead uses a value of 4, see https://github.com/llvm/llvm-project/issues/204801).
   // To deal with nested loops, we specify unroll-num-reps=10. This should be changed to a more robust solution in the
   // future.
+  // In addition, to support the IQPE integration test, we need to perform a two-step unrolling.
+  // See also issue https://github.com/FullStaQD/compiler/issues/111.
   mlir::affine::registerAffineLoopUnroll();
-  if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1 unroll-num-reps=10})", pm))) {
+  if (failed(mlir::parsePassPipeline("func.func(affine-loop-unroll{unroll-factor=-1 unroll-full-threshold=1000}, "
+                                     "affine-loop-unroll{unroll-factor=-1 unroll-num-reps=10})",
+                                     pm))) {
     llvm_unreachable("pipeline is a hardcoded string and can always be parsed.");
   }
 
