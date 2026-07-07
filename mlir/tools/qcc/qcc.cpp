@@ -195,22 +195,22 @@ int main(int argc, char** argv) {
     LLVMInitializeRISCVTargetMC();
     LLVMInitializeRISCVAsmPrinter();
 
-    std::string tripleStr = mtriple.empty() ? "riscv32-unknown-unknown" : mtriple.getValue();
     std::string attrsStr = mattr.empty() ? "+experimental-xqv" : mattr.getValue();
+    llvm::Triple triple(llvm::Triple::normalize(mtriple.empty() ? "riscv32-unknown-unknown" : mtriple.getValue()));
 
     std::string errorStr;
-    const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(tripleStr, errorStr);
+    const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(/*MArch=*/"", triple, errorStr);
     if (!theTarget) {
-      llvm::errs() << "could not find target '" << tripleStr << "': " << errorStr << "\n";
+      llvm::errs() << "could not find target '" << triple.str() << "': " << errorStr << "\n";
       return 1;
     }
 
     llvm::TargetOptions targetOptions;
     std::unique_ptr<llvm::TargetMachine> targetMachine(
-        theTarget->createTargetMachine(tripleStr, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
+        theTarget->createTargetMachine(triple, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
 
     llvmModule->setDataLayout(targetMachine->createDataLayout());
-    llvmModule->setTargetTriple(tripleStr);
+    llvmModule->setTargetTriple(triple);
 
     llvm::legacy::PassManager codegenPM;
     auto fileType = binary ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
