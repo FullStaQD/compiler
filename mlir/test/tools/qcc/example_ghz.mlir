@@ -1,4 +1,4 @@
-// RUN: qcc --compile-to=mlir -o - %s | FileCheck %s
+// RUN: qcc --compile-to=.mlir -o - %s | FileCheck %s
 
 /// Prepare GHZ state (without loop so far).
 ///

@@ -11,7 +11,6 @@
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
-#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
@@ -35,7 +34,6 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -44,7 +42,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -74,12 +71,15 @@ int main(int argc, char** argv) {
   const cl::opt<Stage> compileTo(
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
       cl::values(
-          clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
-          clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR: QIR for the QIR target and intrinsics for the HiSEP-Q target"),
-          clEnumValN(Stage::Native, "native", "Native target code (assembly or object; requires --target=hisep-q)")),
+          clEnumValN(Stage::Mlir, ".mlir", "MLIR in the LLVM dialect"),
+          clEnumValN(Stage::Mlir, "mlir", "alias for .mlir"),
+          clEnumValN(Stage::LlvmIr, ".ll", "LLVM IR: QIR for the QIR target and intrinsics for the HiSEP-Q target"),
+          clEnumValN(Stage::LlvmIr, "llvmir", "alias for .ll"),
+          clEnumValN(Stage::Assembly, ".a", "Assembly output (requires --target=hisep-q)"),
+          clEnumValN(Stage::Assembly, "assembly", "alias for .a"),
+          clEnumValN(Stage::Object, ".o", "Object file output (requires --target=hisep-q)"),
+          clEnumValN(Stage::Object, "object", "alias for .o")),
       cl::cat(qccCategory));
-  const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
-                             cl::init(false), cl::cat(qccCategory));
   const cl::opt<std::string> mtriple(
       "mtriple", cl::desc("Target triple for native code generation (default: riscv32-unknown-unknown for hisep-q)"),
       cl::init(""), cl::cat(qccCategory));
@@ -147,21 +147,9 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Refuse to dump binary onto a terminal:
-  if (binary && llvm::CheckBitcodeOutputToConsole(outFile->os())) {
-    return 1;
-  }
-
   switch (compileTo) {
   case Stage::Mlir:
-    if (binary) {
-      if (mlir::failed(mlir::writeBytecodeToFile(*module, outFile->os()))) {
-        llvm::errs() << "failed to write MLIR bytecode\n";
-        return 1;
-      }
-    } else {
-      module->print(outFile->os());
-    }
+    module->print(outFile->os());
     break;
   case Stage::LlvmIr: {
     llvm::LLVMContext llvmContext;
@@ -170,16 +158,13 @@ int main(int argc, char** argv) {
       llvm::errs() << "failed to translate the module to LLVM IR\n";
       return 1;
     }
-    if (binary) {
-      llvm::WriteBitcodeToFile(*llvmModule, outFile->os());
-    } else {
-      llvmModule->print(outFile->os(), /*AAW=*/nullptr);
-    }
+    llvmModule->print(outFile->os(), /*AAW=*/nullptr);
     break;
   }
-  case Stage::Native: {
+  case Stage::Assembly:
+  case Stage::Object: {
     if (target != Target::HisepQ) {
-      llvm::errs() << "error: 'native' stage is only supported for --target=hisep-q\n";
+      llvm::errs() << "error: assembly/object output is only supported for --target=hisep-q\n";
       return 1;
     }
 
@@ -213,8 +198,10 @@ int main(int argc, char** argv) {
     llvmModule->setTargetTriple(triple);
 
     llvm::legacy::PassManager codegenPM;
-    auto fileType = binary ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
-    if (targetMachine->addPassesToEmitFile(codegenPM, outFile->os(), /*DwoOut=*/nullptr, fileType)) {
+    auto fileType =
+        (compileTo == Stage::Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+    auto& os = static_cast<llvm::raw_pwrite_stream&>(outFile->os());
+    if (targetMachine->addPassesToEmitFile(codegenPM, os, /*DwoOut=*/nullptr, fileType)) {
       llvm::errs() << "target machine cannot emit files of this type\n";
       return 1;
     }
@@ -222,8 +209,6 @@ int main(int argc, char** argv) {
     codegenPM.run(*llvmModule);
     break;
   }
-  default:
-    llvm_unreachable("--compile-to should always have a value (default value if nothing is set explicitly)");
   }
 
   outFile->keep(); // otherwise file gets deleted

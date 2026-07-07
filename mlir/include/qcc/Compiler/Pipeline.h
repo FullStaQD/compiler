@@ -19,7 +19,7 @@ namespace qcc {
 enum class Target : uint8_t { Qir, HisepQ };
 
 /// The stage to compile to and emit.
-enum class Stage : uint8_t { Mlir, LlvmIr, Native };
+enum class Stage : uint8_t { Mlir, LlvmIr, Assembly, Object };
 
 struct PipelineOptions {
   /// The backend to compile for. For `Target::HisepQ`, the final
