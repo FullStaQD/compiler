@@ -133,8 +133,12 @@ void buildQuantumPipeline(mlir::PassManager& pm, const PipelineOptions& options)
   pm.addPass(mlir::createRemoveDeadValuesPass());
 
   // conversion from LLVM QIR to LLVM with intrinsics to lower to HiSEP-Q assembly.
-  if (options.target == Target::HisepQ) {
+  switch (options.target) {
+  case Target::HisepQ:
     pm.addPass(qcc::createConvertQIRToIntrinsics());
+    break;
+  case Target::Qir:
+    break;
   }
 }
 

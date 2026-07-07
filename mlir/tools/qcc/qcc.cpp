@@ -148,23 +148,9 @@ int main(int argc, char** argv) {
   case Stage::Mlir:
     module->print(outFile->os());
     break;
-  case Stage::LlvmIr: {
-    llvm::LLVMContext llvmContext;
-    std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
-    if (!llvmModule) {
-      llvm::errs() << "failed to translate the module to LLVM IR\n";
-      return 1;
-    }
-    llvmModule->print(outFile->os(), /*AAW=*/nullptr);
-    break;
-  }
+  case Stage::LlvmIr:
   case Stage::Assembly:
   case Stage::Object: {
-    if (target != Target::HisepQ) {
-      llvm::errs() << "error: assembly/object output is only supported for --target=hisep-q\n";
-      return 1;
-    }
-
     llvm::LLVMContext llvmContext;
     std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
     if (!llvmModule) {
@@ -172,38 +158,51 @@ int main(int argc, char** argv) {
       return 1;
     }
 
-    LLVMInitializeRISCVTargetInfo();
-    LLVMInitializeRISCVTarget();
-    LLVMInitializeRISCVTargetMC();
-    LLVMInitializeRISCVAsmPrinter();
-
-    std::string attrsStr = mattr.empty() ? "+experimental-xqv" : mattr.getValue();
-    llvm::Triple triple(llvm::Triple::normalize(mtriple.empty() ? "riscv32-unknown-unknown" : mtriple.getValue()));
-
-    std::string errorStr;
-    const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(/*MArch=*/"", triple, errorStr);
-    if (theTarget == nullptr) {
-      llvm::errs() << "could not find target '" << triple.str() << "': " << errorStr << "\n";
-      return 1;
+    if (compileTo == Stage::LlvmIr) {
+      llvmModule->print(outFile->os(), /*AAW=*/nullptr);
+      break;
     }
 
-    llvm::TargetOptions targetOptions;
-    std::unique_ptr<llvm::TargetMachine> targetMachine(
-        theTarget->createTargetMachine(triple, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
-
-    llvmModule->setDataLayout(targetMachine->createDataLayout());
-    llvmModule->setTargetTriple(triple);
-
-    llvm::legacy::PassManager codegenPM;
     auto fileType =
         (compileTo == Stage::Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
     auto& os = static_cast<llvm::raw_pwrite_stream&>(outFile->os());
-    if (targetMachine->addPassesToEmitFile(codegenPM, os, /*DwoOut=*/nullptr, fileType)) {
-      llvm::errs() << "target machine cannot emit files of this type\n";
+
+    switch (target) {
+    case Target::HisepQ: {
+      LLVMInitializeRISCVTargetInfo();
+      LLVMInitializeRISCVTarget();
+      LLVMInitializeRISCVTargetMC();
+      LLVMInitializeRISCVAsmPrinter();
+
+      std::string attrsStr = mattr.empty() ? "+experimental-xqv" : mattr.getValue();
+      llvm::Triple triple(llvm::Triple::normalize(mtriple.empty() ? "riscv32-unknown-unknown" : mtriple.getValue()));
+
+      std::string errorStr;
+      const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(/*MArch=*/"", triple, errorStr);
+      if (!theTarget) {
+        llvm::errs() << "could not find target '" << triple.str() << "': " << errorStr << "\n";
+        return 1;
+      }
+
+      llvm::TargetOptions targetOptions;
+      std::unique_ptr<llvm::TargetMachine> targetMachine(
+          theTarget->createTargetMachine(triple, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
+
+      llvmModule->setDataLayout(targetMachine->createDataLayout());
+      llvmModule->setTargetTriple(triple);
+
+      llvm::legacy::PassManager codegenPM;
+      if (targetMachine->addPassesToEmitFile(codegenPM, os, /*DwoOut=*/nullptr, fileType)) {
+        llvm::errs() << "target machine cannot emit files of this type\n";
+        return 1;
+      }
+      codegenPM.run(*llvmModule);
+      break;
+    }
+    case Target::Qir:
+      llvm::errs() << "error: assembly/object output is not supported for --target=qir\n";
       return 1;
     }
-
-    codegenPM.run(*llvmModule);
     break;
   }
   }
