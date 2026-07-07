@@ -47,8 +47,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
-#include <cstdint>
-
 namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
@@ -184,7 +182,7 @@ int main(int argc, char** argv) {
 
     std::string errorStr;
     const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(/*MArch=*/"", triple, errorStr);
-    if (!theTarget) {
+    if (theTarget == nullptr) {
       llvm::errs() << "could not find target '" << triple.str() << "': " << errorStr << "\n";
       return 1;
     }
