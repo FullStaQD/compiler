@@ -50,16 +50,8 @@ namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
 
-static cl::opt<bool> emitIntrinsics("emit-intrinsics", cl::desc("Lower QIR gate calls to RISC-V QV intrinsics"),
-                                    cl::init(false), cl::cat(qccCategory));
-namespace {
-/// The target determines the backend to compile for, the actual passes
-/// (pipeline), and the runtime.
-enum class Target : uint8_t { Qir, HisepQ };
-
-/// The stage to compile to and emit.
-enum class Stage : uint8_t { Mlir, LlvmIr, Native };
-} // namespace
+using qcc::Stage;
+using qcc::Target;
 
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
@@ -75,9 +67,10 @@ int main(int argc, char** argv) {
                                cl::cat(qccCategory));
   const cl::opt<Stage> compileTo(
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
-      cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
-                 clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR (QIR for the QIR target)"),
-                 clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
+      cl::values(
+          clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
+          clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR: QIR for the QIR target and intrinsics for the HiSEP-Q target"),
+          clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
       cl::cat(qccCategory));
   const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
                              cl::init(false), cl::cat(qccCategory));
@@ -135,10 +128,7 @@ int main(int argc, char** argv) {
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     return 1;
   }
-  qcc::buildQuantumPipeline(pm, {.emitIntrinsics = emitIntrinsics});
-
-  // TODO: Assemble pipeline based on target once a second valid target is added.
-  qcc::buildQuantumPipeline(pm);
+  qcc::buildQuantumPipeline(pm, {.target = target, .stage = compileTo});
 
   if (mlir::failed(pm.run(*module))) {
     return 1;

@@ -7,9 +7,9 @@
 //
 // ===----------------------------------------------------------------------===//
 
-// RUN: qcc --emit-intrinsics -o - %s | FileCheck %s
+// RUN: qcc --target=hisep-q --compile-to=llvmir -o - %s | FileCheck %s
 
-/// Same GHZ circuit as example_ghz.mlir, compiled with --emit-intrinsics to
+/// Same GHZ circuit as example_ghz.mlir, compiled with --target=hisep-q to
 /// verify the full pipeline replaces QIS calls with RISC-V QV intrinsics.
 
 func.func @main() attributes { qcc.entry_point } {
