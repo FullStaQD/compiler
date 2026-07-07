@@ -72,8 +72,8 @@ int main(int argc, char** argv) {
           clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
           clEnumValN(Stage::LlvmIr, "ll", "LLVM IR: QIR for the QIR target and intrinsics for the HiSEP-Q target"),
           clEnumValN(Stage::LlvmIr, "llvmir", "alias for .ll"),
-          clEnumValN(Stage::Assembly, "a", "Assembly output (requires --target=hisep-q)"),
-          clEnumValN(Stage::Assembly, "assembly", "alias for .a"),
+          clEnumValN(Stage::Assembly, "s", "Assembly output (requires --target=hisep-q)"),
+          clEnumValN(Stage::Assembly, "assembly", "alias for .s"),
           clEnumValN(Stage::Object, "o", "Object file output (requires --target=hisep-q)"),
           clEnumValN(Stage::Object, "object", "alias for .o")),
       cl::cat(qccCategory));
