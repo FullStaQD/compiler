@@ -37,12 +37,18 @@
 
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 
 #include <cstdint>
 
@@ -70,17 +76,18 @@ int main(int argc, char** argv) {
       cl::values(
           clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
           clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR: QIR for the QIR target and intrinsics for the HiSEP-Q target"),
-          clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
+          clEnumValN(Stage::Native, "native", "Native target code (assembly or object; requires --target=hisep-q)")),
       cl::cat(qccCategory));
   const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
                              cl::init(false), cl::cat(qccCategory));
+  const cl::opt<std::string> mtriple(
+      "mtriple", cl::desc("Target triple for native code generation (default: riscv32-unknown-unknown for hisep-q)"),
+      cl::init(""), cl::cat(qccCategory));
+  const cl::opt<std::string> mattr(
+      "mattr", cl::desc("Target attributes for native code generation (default: +experimental-xqv for hisep-q)"),
+      cl::init(""), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
-
-  if (compileTo == Stage::Native) {
-    llvm::errs() << "error: the 'native' stage is not yet implemented\n";
-    return 1;
-  }
 
   mlir::DialectRegistry registry;
 
@@ -170,8 +177,51 @@ int main(int argc, char** argv) {
     }
     break;
   }
-  case Stage::Native:
-    llvm_unreachable("the 'native' stage is rejected during option validation");
+  case Stage::Native: {
+    if (target != Target::HisepQ) {
+      llvm::errs() << "error: 'native' stage is only supported for --target=hisep-q\n";
+      return 1;
+    }
+
+    llvm::LLVMContext llvmContext;
+    std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
+    if (!llvmModule) {
+      llvm::errs() << "failed to translate the module to LLVM IR\n";
+      return 1;
+    }
+
+    LLVMInitializeRISCVTargetInfo();
+    LLVMInitializeRISCVTarget();
+    LLVMInitializeRISCVTargetMC();
+    LLVMInitializeRISCVAsmPrinter();
+
+    std::string tripleStr = mtriple.empty() ? "riscv32-unknown-unknown" : mtriple.getValue();
+    std::string attrsStr = mattr.empty() ? "+experimental-xqv" : mattr.getValue();
+
+    std::string errorStr;
+    const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(tripleStr, errorStr);
+    if (!theTarget) {
+      llvm::errs() << "could not find target '" << tripleStr << "': " << errorStr << "\n";
+      return 1;
+    }
+
+    llvm::TargetOptions targetOptions;
+    std::unique_ptr<llvm::TargetMachine> targetMachine(
+        theTarget->createTargetMachine(tripleStr, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
+
+    llvmModule->setDataLayout(targetMachine->createDataLayout());
+    llvmModule->setTargetTriple(tripleStr);
+
+    llvm::legacy::PassManager codegenPM;
+    auto fileType = binary ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+    if (targetMachine->addPassesToEmitFile(codegenPM, outFile->os(), /*DwoOut=*/nullptr, fileType)) {
+      llvm::errs() << "target machine cannot emit files of this type\n";
+      return 1;
+    }
+
+    codegenPM.run(*llvmModule);
+    break;
+  }
   default:
     llvm_unreachable("--compile-to should always have a value (default value if nothing is set explicitly)");
   }

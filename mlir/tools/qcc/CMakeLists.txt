@@ -2,7 +2,17 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
-set(LLVM_LINK_COMPONENTS BitWriter)
+set(LLVM_LINK_COMPONENTS
+    BitWriter
+    AllTargetsCodeGens
+    AllTargetsDescs
+    AllTargetsInfos
+    AllTargetsAsmParsers
+    CodeGen
+    MC
+    Target
+    SelectionDAG
+    AsmPrinter)
 
 set(LIBS
     ${dialect_libs}
