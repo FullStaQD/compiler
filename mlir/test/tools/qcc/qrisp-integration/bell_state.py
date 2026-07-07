@@ -1,6 +1,7 @@
 from qrisp import QuantumVariable, h, cx, measure
 
 def prepare_bell_state():
+    """Demonstrates a very basic quantum program without control-flow."""
     n = 2
     qv = QuantumVariable(n)
 

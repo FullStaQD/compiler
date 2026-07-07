@@ -342,37 +342,20 @@ struct ConvertJaspMeasureOp final : OpConversionPattern<jasp::MeasureOp> {
       return convertSingleQubitMeasurement(op, rewriter, loc, measQOperand);
     }
 
-    // TODO: Once loop unrolling is in the pipeline, we can eliminate the static case here.
-    // Determine the number of qubits to measure.
-    // Try to find a compile-time constant from the original IR.
-    int64_t staticSize = ShapedType::kDynamic;
-    if (auto createQubits = op.getMeasQ().getDefiningOp<jasp::CreateQubitsOp>()) {
-      Value amount = createQubits.getAmount();
-      if (auto constOp = amount.getDefiningOp<arith::ConstantOp>()) {
-        auto denseVal = constOp.getValue();
-        if (auto denseAttr = dyn_cast<DenseIntOrFPElementsAttr>(denseVal)) {
-          staticSize = denseAttr.getSplatValue<int64_t>();
-        }
-      }
-    }
-
-    if (!ShapedType::isDynamic(staticSize) && staticSize > 0) {
-      return convertStaticArrayMeasurement(op, rewriter, loc, measQOperand, staticSize);
-    }
-
-    return convertDynamicArrayMeasurement(op, rewriter, loc, measQOperand);
+    return convertArrayMeasurement(op, rewriter, loc, measQOperand);
   }
 
 private:
   LogicalResult convertSingleQubitMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter, Location loc,
                                               Value qubit) const {
     Type resultType = typeConverter->convertType(op.getMeasRes().getType());
+    assert(resultType && resultType.isIntOrIndex() && "resultType should not be null");
 
     auto measOp = qc::MeasureOp::create(rewriter, loc, qubit);
     Value bit = measOp.getResult();
 
     // If the result type is wider (e.g. i64), extend.
-    if (resultType && resultType.isInteger(64) && !resultType.isInteger(1)) {
+    if (!resultType.isInteger(1)) {
       bit = arith::ExtUIOp::create(rewriter, loc, resultType, bit);
     }
 
@@ -380,35 +363,14 @@ private:
     return success();
   }
 
-  static LogicalResult convertStaticArrayMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter,
-                                                     Location loc, Value array, int64_t staticSize) {
-    auto i64Type = rewriter.getI64Type();
-
-    // Static size: unroll the measurement loop. Emit individual qubit
-    // loads and measurements, then pack the bits into an i64.
-    Value result = arith::ConstantOp::create(rewriter, loc, i64Type, cast<TypedAttr>(rewriter.getI64IntegerAttr(0)));
-
-    for (int64_t i = 0; i < staticSize; ++i) {
-      Value idx = arith::ConstantIndexOp::create(rewriter, loc, i);
-      Value qubit = memref::LoadOp::create(rewriter, loc, array, ValueRange{idx});
-      auto measOp = qc::MeasureOp::create(rewriter, loc, qubit);
-      Value bit = measOp.getResult();
-
-      Value bitI64 = arith::ExtUIOp::create(rewriter, loc, i64Type, bit);
-      Value ivI64 = arith::ConstantOp::create(rewriter, loc, i64Type, cast<TypedAttr>(rewriter.getI64IntegerAttr(i)));
-      Value shifted = arith::ShLIOp::create(rewriter, loc, bitI64, ivI64);
-      result = arith::OrIOp::create(rewriter, loc, result, shifted);
-    }
-
-    rewriter.replaceOpWithMultiple(op, {result, ValueRange()});
-    return success();
-  }
-
-  static LogicalResult convertDynamicArrayMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter,
-                                                      Location loc, Value array) {
+  LogicalResult convertArrayMeasurement(jasp::MeasureOp op, ConversionPatternRewriter& rewriter, Location loc,
+                                        Value array) const {
     // TODO: Clean up if equivalent semantics become possible in qc.
     // As long as we don't have measurement to integers, we need to lower to
     // bit-fiddling here.
+
+    auto resultType = typeConverter->convertType(op.getMeasRes().getType());
+    assert(resultType && resultType.isInteger(64) && "only packing into i64 integers is supported");
 
     auto i64Type = rewriter.getI64Type();
 
@@ -462,6 +424,54 @@ struct ConvertJaspDeleteQubitsOp final : OpConversionPattern<jasp::DeleteQubitsO
   }
 };
 
+/// Converts jasp.reset to qc.reset
+///
+//  For a single qubit, this directly emits
+/// `qc.reset`. For a qubit array, an scf.for iterates over all qubits and
+/// resets each individually.
+///
+/// Example (single qubit):
+/// ```mlir
+/// %state1 = jasp.reset %q, %state0 : !jasp.Qubit, !jasp.QuantumState -> !jasp.QuantumState
+/// ```
+/// becomes:
+/// ```mlir
+/// qc.reset %q : !qc.qubit
+/// ```
+struct ConvertJaspResetOp final : OpConversionPattern<jasp::ResetOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult matchAndRewrite(jasp::ResetOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto loc = op.getLoc();
+    Value resetOperand = adaptor.getQubits();
+    Type resetType = resetOperand.getType();
+
+    // single qubit reset
+    if (!isa<MemRefType>(resetType)) {
+      qc::ResetOp::create(rewriter, loc, resetOperand);
+      rewriter.eraseOp(op);
+      return success();
+    }
+
+    // qubit array reset: iterate over all qubits
+    Value c0Index = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value c1Index = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    Value size = memref::DimOp::create(rewriter, loc, resetOperand, c0Index);
+
+    auto forOp = scf::ForOp::create(rewriter, loc, c0Index, size, c1Index, ValueRange{});
+
+    rewriter.setInsertionPointToStart(forOp.getBody());
+    Value iv = forOp.getInductionVar();
+    Value qubit = memref::LoadOp::create(rewriter, loc, resetOperand, ValueRange{iv});
+    qc::ResetOp::create(rewriter, loc, qubit);
+
+    rewriter.setInsertionPointAfter(forOp);
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Convert Rank-Zero Tensors to their wrapped types in `linalg.generic` operations.
 /// Only operands are affected.
 struct ConvertRankZeroTensorsInLinalg final : OpConversionPattern<linalg::GenericOp> {
@@ -506,7 +516,7 @@ protected:
 
     patterns.add<ConvertJaspCreateQuantumKernelOp, ConvertJaspConsumeQuantumKernelOp, ConvertJaspCreateQubitsOp,
                  ConvertJaspGetQubitOp, ConvertJaspQuantumGateOp, ConvertJaspMeasureOp, ConvertJaspDeleteQubitsOp,
-                 ConvertRankZeroTensorsInLinalg>(typeConverter, context);
+                 ConvertJaspResetOp, ConvertRankZeroTensorsInLinalg>(typeConverter, context);
 
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       auto islegal = stateDestroyer.isSignatureLegal(op.getFunctionType());

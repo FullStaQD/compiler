@@ -40,51 +40,6 @@ func.func @test_simple_circuit() -> tensor<i1> {
     // CHECK: return [[RANDOM_BIT]] : i1
 }
 
-
-/// Test that measuring a qubit array returns a packed i64 with individual
-/// bits unrolled to static indices when the array size is a compile-time
-/// constant.
-// CHECK-LABEL: func @test_arr_measure
-func.func @test_arr_measure() -> tensor<i64> {
-    %state0 = jasp.create_quantum_kernel -> !jasp.QuantumState
-    %num_qubits = arith.constant dense<2> : tensor<i64>
-    // CHECK-DAG: [[ZERO_i64:%.+]] = arith.constant 0 : i64
-    // CHECK-DAG: [[ONE_i64:%.+]] = arith.constant 1 : i64
-    // CHECK-DAG: [[ZERO:%.+]] = arith.constant 0 : index
-    // CHECK-DAG: [[ONE:%.+]] = arith.constant 1 : index
-
-    %q_arr, %state1 = jasp.create_qubits %num_qubits, %state0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
-    // CHECK-DAG: [[Q_ARR:%.+]] = memref.alloc
-    // The qubit array measurement is unrolled: each qubit is loaded,
-    // measured, zero-extended to i64, shifted by its index, and OR-ed
-    // into the accumulator.
-    %result, %state2 = jasp.measure %q_arr, %state1 : !jasp.QubitArray, !jasp.QuantumState -> tensor<i64>, !jasp.QuantumState
-    // CHECK-DAG: [[QUBIT_0:%.+]] = memref.load [[Q_ARR]][[[ZERO]]]
-    // CHECK-DAG: [[BIT_0:%.+]] = qc.measure [[QUBIT_0]]
-    // CHECK-DAG: [[EXT_0:%.+]] = arith.extui [[BIT_0]] : i1 to i64
-    // CHECK-DAG: [[SHIFT_0:%.+]] = arith.shli [[EXT_0]], [[ZERO_i64]]
-    // CHECK-DAG: [[ACC_0:%.+]] = arith.ori [[ZERO_i64]], [[SHIFT_0]]
-
-    // CHECK-DAG: [[QUBIT_1:%.+]] = memref.load [[Q_ARR]][[[ONE]]]
-    // CHECK-DAG: [[BIT_1:%.+]] = qc.measure [[QUBIT_1]]
-    // CHECK-DAG: [[EXT_1:%.+]] = arith.extui [[BIT_1]] : i1 to i64
-    // CHECK-DAG: [[SHIFT_1:%.+]] = arith.shli [[EXT_1]], [[ONE_i64]]
-    // CHECK-DAG: [[RESULT:%.+]] = arith.ori [[ACC_0]], [[SHIFT_1]]
-
-    // Only two measuresments.
-    // CHECK-NOT: qc.measure
-
-    %state3 = jasp.delete_qubits %q_arr, %state2 : !jasp.QubitArray, !jasp.QuantumState -> !jasp.QuantumState
-    // CHECK: memref.dealloc
-
-    %success = jasp.consume_quantum_kernel %state3 : !jasp.QuantumState -> tensor<i1>
-    // CHECK: [[SUCCESS:%.+]] = arith.constant true
-
-    return %result : tensor<i64>
-    // CHECK: return [[RESULT]] : i64
-}
-
-
 /// Test that measuring a qubit array returns a packed i64 constructed by a for loop.
 // CHECK-LABEL: func @test_dyn_arr_measure
 // CHECK-SAME: ([[NUM_QUBITS:%.+]]: i64)

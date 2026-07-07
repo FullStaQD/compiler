@@ -13,6 +13,7 @@ add_mlir_library(
   MLIRFuncDialect
   MLIRArithDialect
   MLIRSCFDialect
+  MLIRAffineDialect
   MLIRTensorDialect
   MLIRLinalgDialect
   MLIRMemRefDialect
@@ -26,10 +27,12 @@ add_mlir_library(
   MLIRFuncTransforms
   MLIRLinalgTransforms
   MLIRSCFTransforms
+  MLIRAffineTransforms
   MLIRQCToQIR
   MLIRTensorTransforms
   MLIRBufferizationTransforms
   QCCAuxOutputRecording
+  QCCAffineRaise
   QCCJaspToQC
   QCCToIntrinsics
   QCCToQIR

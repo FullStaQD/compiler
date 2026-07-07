@@ -1,4 +1,6 @@
-// RUN: not qcc %s 2>&1 | FileCheck %s --check-prefix=CHECK-QIR
+// RUN: qcc %s -o %t.ll
+// RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
+// RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
 
 // GENERATED FROM QRISP VERSION  git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
 
@@ -35,5 +37,17 @@ builtin.module @jasp_module {
   }
 }
 
-// TODO: Once loop unrolling is in place, add proper checks
-// CHECK-QIR: qubit index must be a constant; unroll loops before this pass
+// CHECK-QIR:  call void @__quantum__qis__h__body(ptr null)
+// CHECK-QIR:  call void @__quantum__qis__cx__body(ptr null, ptr inttoptr (i64 1 to ptr))
+// CHECK-QIR:  call void @__quantum__qis__cx__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 2 to ptr))
+// CHECK-QIR:  call void @__quantum__qis__mz__body(ptr null, ptr null)
+
+// CHECK-SIM:  METADATA    required_num_qubits     3
+// CHECK-SIM:  METADATA    required_num_results    3
+
+// We expect values 0 (|000> state) or 7 (|111> state).
+// CHECK-SIM:  OUTPUT      INT     {{[07]}}
+// CHECK-SIM:  OUTPUT      INT     {{[07]}}
+// CHECK-SIM:  OUTPUT      INT     {{[07]}}
+// CHECK-SIM:  OUTPUT      INT     {{[07]}}
+// CHECK-SIM:  OUTPUT      INT     {{[07]}}

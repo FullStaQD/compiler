@@ -11,7 +11,7 @@
 
 # /// script
 # dependencies = [
-#   "qrisp @ git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b",
+#   "qrisp==0.9.5",
 #   "xdsl==0.59.0"
 # ]
 # ///
@@ -21,7 +21,7 @@ Generate MLIR (in the ``jasp`` dialect) from a Qrisp source file.
 
 Usage::
 
-    python generate_qrisp_mlir.py <path-to-qrisp-file>
+    ./generate_qrisp_mlir.py <path-to-qrisp-file>
 
 The Qrisp file should contain a single function (besides imports). This
 function is run through ``qrisp.jasp.make_jaspr`` and the resulting MLIR is
