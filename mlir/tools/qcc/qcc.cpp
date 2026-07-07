@@ -185,6 +185,9 @@ int main(int argc, char** argv) {
       }
 
       llvm::TargetOptions targetOptions;
+      // hisepq.ld relies on each function living in its own `.text.<name>` section so it can pull
+      // `.text.main` to the front of the image (execution starts at address 0).
+      targetOptions.FunctionSections = true;
       std::unique_ptr<llvm::TargetMachine> targetMachine(
           theTarget->createTargetMachine(triple, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
 
