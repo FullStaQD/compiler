@@ -1,8 +1,8 @@
 // Exercises the qcc driver's --target / --compile-to option surface.
 
 // Stage selection (extension form):
-// RUN: qcc --compile-to=.mlir %s | FileCheck %s --check-prefix=CHECK-MLIR
-// RUN: qcc --compile-to=.ll %s | FileCheck %s --check-prefix=CHECK-LLVM
+// RUN: qcc --compile-to=mlir %s | FileCheck %s --check-prefix=CHECK-MLIR
+// RUN: qcc --compile-to=ll %s | FileCheck %s --check-prefix=CHECK-LLVM
 // Stage selection (word form):
 // RUN: qcc --compile-to=mlir %s | FileCheck %s --check-prefix=CHECK-MLIR
 // RUN: qcc --compile-to=llvmir %s | FileCheck %s --check-prefix=CHECK-LLVM
@@ -10,9 +10,9 @@
 // RUN: qcc %s | FileCheck %s --check-prefix=CHECK-LLVM
 
 // Assembly/object require --target=hisep-q:
-// RUN: not qcc --compile-to=.a %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
+// RUN: not qcc --compile-to=a %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
 // RUN: not qcc --compile-to=assembly %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
-// RUN: not qcc --compile-to=.o %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
+// RUN: not qcc --compile-to=o %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
 // RUN: not qcc --compile-to=object %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
 
 func.func @main() attributes { qcc.entry_point } {
