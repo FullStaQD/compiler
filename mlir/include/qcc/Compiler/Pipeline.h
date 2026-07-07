@@ -17,6 +17,7 @@ struct PipelineOptions {
   /// When true, the final QIR-to-intrinsics lowering pass is appended to the
   /// pipeline, producing RISC-V QV intrinsic calls instead of QIS call ops.
   bool emitIntrinsics = false;
+  Stage targetStage = Stage::LlvmIr;
 };
 
 /// A compilation pipeline assuming qc dialect as input and providing QIR-MLIR as output.

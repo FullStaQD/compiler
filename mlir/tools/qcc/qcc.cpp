@@ -69,11 +69,10 @@ int main(int argc, char** argv) {
   const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
   const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
                                             cl::cat(qccCategory));
-  const cl::opt<Target> target(
-      "target", cl::desc("Target pipeline to compile for"), cl::init(Target::Qir),
-      cl::values(clEnumValN(Target::Qir, "qir", "QIR (LLVM-based) target"),
-                 clEnumValN(Target::HisepQ, "hisep-q", "HiSEP-Q QISA target (not yet implemented)")),
-      cl::cat(qccCategory));
+  const cl::opt<Target> target("target", cl::desc("Target pipeline to compile for"), cl::init(Target::Qir),
+                               cl::values(clEnumValN(Target::Qir, "qir", "QIR (LLVM-based) target"),
+                                          clEnumValN(Target::HisepQ, "hisep-q", "HiSEP-Q QISA target")),
+                               cl::cat(qccCategory));
   const cl::opt<Stage> compileTo(
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
       cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
@@ -84,11 +83,6 @@ int main(int argc, char** argv) {
                              cl::init(false), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
-
-  if (target == Target::HisepQ) {
-    llvm::errs() << "error: the 'hisep-q' target is not yet implemented\n";
-    return 1;
-  }
 
   if (compileTo == Stage::Native) {
     llvm::errs() << "error: the 'native' stage is not yet implemented\n";
