@@ -51,12 +51,8 @@ namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
 
-/// The target determines the backend to compile for, the actual passes
-/// (pipeline), and the runtime.
-enum class Target : uint8_t { Qir, HisepQ };
-
-/// The stage to compile to and emit.
-enum class Stage : uint8_t { Mlir, LlvmIr, Assembly, Object };
+using qcc::Stage;
+using qcc::Target;
 
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
@@ -136,7 +132,7 @@ int main(int argc, char** argv) {
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     return 1;
   }
-  qcc::buildQuantumPipeline(pm, target);
+  qcc::buildQuantumPipeline(pm, {.target = target, .stage = compileTo});
 
   if (mlir::failed(pm.run(*module))) {
     return 1;
