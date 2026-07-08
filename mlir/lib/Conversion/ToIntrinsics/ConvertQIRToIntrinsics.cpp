@@ -17,9 +17,11 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 
 #include <mlir/Pass/Pass.h>
 #include <optional>
@@ -65,17 +67,43 @@ static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
   return intAttr.getInt();
 }
 
-/// Encodes a qubit index as a `vector<[1]xi8>` scalable vector for QV intrinsics.
-/// The index is inserted into lane 0 of an undef vector.
-static Value qubitIndexToVec(OpBuilder& builder, Location loc, int64_t index) {
+/// Returns the (possibly newly-created) internal-linkage `i8` global constant holding
+/// `index`, reusing one global per distinct index within the module.
+///
+/// HiSEP-Q's vector unit does not implement `vmv.s.x`/`vmv.v.i` (the instructions LLVM's
+/// generic vector legalizer would otherwise select for `insertelement(undef, ..., 0)`), so
+/// qubit-index vectors must instead be materialized via a memory load (`vle8.v`), which
+/// requires the index to live in addressable memory first.
+static LLVM::GlobalOp getOrCreateIndexGlobal(OpBuilder& builder, ModuleOp moduleOp,
+                                             llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals, int64_t index) {
+  auto [it, inserted] = indexGlobals.try_emplace(index);
+  if (!inserted) {
+    return it->second;
+  }
+
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(moduleOp.getBody());
+
   auto i8Type = builder.getIntegerType(8);
-  auto i32Type = builder.getI32Type();
+  std::string name = (".qcc_qv_idx_" + llvm::Twine(index)).str();
+
+  auto global = LLVM::GlobalOp::create(builder, moduleOp.getLoc(), i8Type, /*isConstant=*/true, LLVM::Linkage::Internal,
+                                       name, builder.getIntegerAttr(i8Type, index));
+  it->second = global;
+  return global;
+}
+
+/// Encodes a qubit index as a `vector<[1]xi8>` scalable vector for QV intrinsics, by loading
+/// it from a dedicated one-byte global rather than synthesizing it in-register (see
+/// `getOrCreateIndexGlobal`).
+static Value loadQubitIndexVec(OpBuilder& builder, Location loc, ModuleOp moduleOp,
+                               llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals, int64_t index) {
+  auto i8Type = builder.getIntegerType(8);
   auto vecType = VectorType::get({1}, i8Type, /*scalableDims=*/{true});
 
-  Value indexConst = LLVM::ConstantOp::create(builder, loc, i8Type, builder.getIntegerAttr(i8Type, index));
-  Value undef = LLVM::UndefOp::create(builder, loc, vecType);
-  Value lane = LLVM::ConstantOp::create(builder, loc, i32Type, builder.getI32IntegerAttr(0));
-  return {LLVM::InsertElementOp::create(builder, loc, undef, indexConst, lane)};
+  LLVM::GlobalOp global = getOrCreateIndexGlobal(builder, moduleOp, indexGlobals, index);
+  Value addr = LLVM::AddressOfOp::create(builder, loc, global);
+  return LLVM::LoadOp::create(builder, loc, vecType, addr);
 }
 
 namespace {
@@ -86,7 +114,8 @@ namespace {
 /// Qubit pointer arguments (produced by `llvm.inttoptr` of a constant index)
 /// are re-encoded as `vector<[1]xi8>` scalable vectors.
 struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
-  using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
+  QISCallLowering(MLIRContext* context, llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals)
+      : OpRewritePattern(context), indexGlobals(indexGlobals) {}
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
@@ -102,6 +131,7 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
     auto loc = callOp.getLoc();
     auto i32Type = rewriter.getI32Type();
     auto operands = callOp.getArgOperands();
+    auto moduleOp = callOp->getParentOfType<ModuleOp>();
 
     Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
     Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
@@ -117,7 +147,8 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
                                 "for '__quantum__qis__cx__body'");
       }
 
-      args = {qubitIndexToVec(rewriter, loc, *ctrlIdx), qubitIndexToVec(rewriter, loc, *tgtIdx), blockImm, vl};
+      args = {loadQubitIndexVec(rewriter, loc, moduleOp, indexGlobals, *ctrlIdx),
+              loadQubitIndexVec(rewriter, loc, moduleOp, indexGlobals, *tgtIdx), blockImm, vl};
     } else {
       // QVSingleIntrinsic: (vs1: vec<[1]xi8>, rs2: i32, block_imm: i32, vl: i32)
       // For mz__body: operands[0] = qubit_ptr, operands[1] = result_ptr (discarded).
@@ -129,13 +160,16 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
       }
 
       Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
-      args = {qubitIndexToVec(rewriter, loc, *qubitIdx), tag, blockImm, vl};
+      args = {loadQubitIndexVec(rewriter, loc, moduleOp, indexGlobals, *qubitIdx), tag, blockImm, vl};
     }
 
     LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(intrName), args);
     rewriter.eraseOp(callOp);
     return success();
   }
+
+private:
+  llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals;
 };
 
 /// Replaces `llvm.call @__quantum__rt__read_result(%result_ptr)` with `undef : i1`.
@@ -210,8 +244,11 @@ protected:
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
 
+    llvm::DenseMap<int64_t, LLVM::GlobalOp> indexGlobals;
+
     RewritePatternSet patterns(ctx);
-    patterns.add<QISCallLowering, ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
+    patterns.add<QISCallLowering>(ctx, indexGlobals);
+    patterns.add<ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
 
     if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
       return signalPassFailure();

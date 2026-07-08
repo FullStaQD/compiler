@@ -14,8 +14,11 @@
 // QIS gate calls use those ptrs as operands.
 //
 // Expected output: every QIS call is replaced by an `llvm.call_intrinsic` call
-// with the qubit encoded as a `vector<[1]xi8>` scalable vector in lane 0.
-// Constants and undefs are CSE'd into a shared preamble within each function.
+// with the qubit encoded as a `vector<[1]xi8>` scalable vector, loaded from a
+// dedicated one-byte global holding that index (HiSEP-Q's vector unit does not
+// implement `vmv.s.x`/`vmv.v.i`, so the index cannot be synthesized in-register).
+// One global is created per distinct index and shared across all call sites in
+// the module.
 
 llvm.func @__quantum__rt__initialize(!llvm.ptr) -> ()
 llvm.func @__quantum__rt__read_result(!llvm.ptr) -> i1 attributes {arg_attrs = [{llvm.readonly}]}
@@ -42,14 +45,13 @@ llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
 // CHECK-LABEL: llvm.func @single_qubit_gates()
 // CHECK-NOT:     llvm.call @__quantum__qis__h__body
 // CHECK-NOT:     llvm.call @__quantum__qis__x__body
-// CHECK-DAG:     %[[IDX0:.*]] = llvm.mlir.constant(0 : i8) : i8
-// CHECK-DAG:     %[[IDX1:.*]] = llvm.mlir.constant(1 : i8) : i8
 // CHECK-DAG:     %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK-DAG:     %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK-DAG:     %[[UNDEF_VEC:.*]] = llvm.mlir.undef : vector<[1]xi8>
-// CHECK:         %[[VEC0:.*]] = llvm.insertelement %[[IDX0]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
+// CHECK-DAG:     %[[ADDR0:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
+// CHECK-DAG:     %[[ADDR1:.*]] = llvm.mlir.addressof @".qcc_qv_idx_1" : !llvm.ptr
+// CHECK:         %[[VEC0:.*]] = llvm.load %[[ADDR0]] : !llvm.ptr -> vector<[1]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.h"(%[[VEC0]], %[[ZERO]], %[[ZERO]], %[[ONE]])
-// CHECK:         %[[VEC1:.*]] = llvm.insertelement %[[IDX1]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
+// CHECK:         %[[VEC1:.*]] = llvm.load %[[ADDR1]] : !llvm.ptr -> vector<[1]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"(%[[VEC1]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 
 
@@ -65,13 +67,12 @@ llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
 
 // CHECK-LABEL: llvm.func @cx_gate()
 // CHECK-NOT:     llvm.call @__quantum__qis__cx__body
-// CHECK-DAG:     %[[CIDX:.*]] = llvm.mlir.constant(2 : i8) : i8
-// CHECK-DAG:     %[[TIDX:.*]] = llvm.mlir.constant(3 : i8) : i8
 // CHECK-DAG:     %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK-DAG:     %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK-DAG:     %[[UNDEF_VEC:.*]] = llvm.mlir.undef : vector<[1]xi8>
-// CHECK:         %[[CVEC:.*]] = llvm.insertelement %[[CIDX]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
-// CHECK:         %[[TVEC:.*]] = llvm.insertelement %[[TIDX]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
+// CHECK-DAG:     %[[CADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_2" : !llvm.ptr
+// CHECK-DAG:     %[[TADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_3" : !llvm.ptr
+// CHECK-DAG:     %[[CVEC:.*]] = llvm.load %[[CADDR]] : !llvm.ptr -> vector<[1]xi8>
+// CHECK-DAG:     %[[TVEC:.*]] = llvm.load %[[TADDR]] : !llvm.ptr -> vector<[1]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"(%[[CVEC]], %[[TVEC]], %[[ZERO]], %[[ONE]])
 
 
@@ -88,12 +89,11 @@ llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
 // CHECK-LABEL: llvm.func @measurement()
 // CHECK-NOT:     llvm.call @__quantum__qis__mz__body
 // CHECK-NOT:     llvm.call @__quantum__rt__read_result
-// CHECK-DAG:     %[[IDX:.*]] = llvm.mlir.constant(0 : i8) : i8
 // CHECK-DAG:     %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK-DAG:     %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK-DAG:     %[[UNDEF_VEC:.*]] = llvm.mlir.undef : vector<[1]xi8>
 // CHECK-DAG:     %[[UNDEF_I1:.*]] = llvm.mlir.undef : i1
-// CHECK:         %[[VEC:.*]] = llvm.insertelement %[[IDX]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[1]xi8>
+// CHECK-DAG:     %[[ADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
+// CHECK:         %[[VEC:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> vector<[1]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"(%[[VEC]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 // CHECK:         llvm.return %[[UNDEF_I1]] : i1
 
@@ -125,3 +125,11 @@ llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
 // CHECK-NOT: llvm.func @__quantum__rt__initialize
 // CHECK-NOT: llvm.func @__quantum__rt__read_result
 // CHECK-NOT: llvm.func @__quantum__rt__bool_record_output
+
+// One shared internal-linkage global per distinct qubit index, reused across
+// call sites (single_qubit_gates and measurement/rt_calls_erased both use
+// index 0, so only four globals total exist for indices 0-3).
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_0"(0 : i8) : i8
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_1"(1 : i8) : i8
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_2"(2 : i8) : i8
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_3"(3 : i8) : i8
