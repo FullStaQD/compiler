@@ -9,10 +9,13 @@
  *
  * Linker script for the --target=hisep-q output of qcc.
  *
- * The HiSEP-Q opcode simulator (see caps-tum/HiSEP-Q-2.0, demo/verilator)
- * loads a single memory image and starts fetching at address 0, so .text
- * has to be the very first thing in the image, and the entry function has
- * to be the very first thing in .text.
+ * The HiSEP-Q opcode simulator (see caps-tum/HiSEP-Q-2.0, demo/verilator and
+ * demo/README.md) loads a "combined" memory image with two fixed regions:
+ * instruction words starting at byte address 0, and data starting at the
+ * fixed byte address 0x1000 (word address 0x400) -- regardless of how big
+ * .text actually is. That reservation is a hardware/toolchain convention,
+ * not something elf2mem can infer from the ELF, so it has to be baked into
+ * this script.
  *
  * qcc always marks exactly one function as the entry point (`main` by
  * default, see qcc.entry_point / entry-point-name in JaspToQC.td) and the
@@ -21,19 +24,21 @@
  * the front of the output .text guarantees it lands at address 0 regardless
  * of how the rest of the module is ordered.
  *
- * All sections share a single PT_LOAD segment (via the explicit PHDRS
- * below) so lld doesn't insert page-sized gaps between .text and
- * .rodata/.data for permission separation, which would waste memory in a
- * target this small. Sections are packed at 4-byte (word) alignment
- * instead.
+ * .rodata/.data/.bss are bundled together into the "data" region starting
+ * at TEXT_REGION_SIZE; an explicit PHDRS split (rather than relying on
+ * lld's default permission-based segment splitting) keeps the boundary
+ * exactly at TEXT_REGION_SIZE regardless of linker defaults.
  */
+
+TEXT_REGION_SIZE = 0x1000;
 
 OUTPUT_ARCH(riscv)
 ENTRY(main)
 
 PHDRS
 {
-  image PT_LOAD;
+  text PT_LOAD;
+  data PT_LOAD;
 }
 
 SECTIONS
@@ -43,22 +48,25 @@ SECTIONS
   .text : {
     KEEP(*(.text.main))
     *(.text .text.*)
-  } :image
+  } :text
 
-  . = ALIGN(4);
+  ASSERT(. <= TEXT_REGION_SIZE, "hisepq.ld: .text overflows the reserved instruction region (TEXT_REGION_SIZE)")
+
+  . = TEXT_REGION_SIZE;
+
   .rodata : {
     *(.rodata .rodata.*)
-  } :image
+  } :data
 
   . = ALIGN(4);
   .data : {
     *(.data .data.*)
-  } :image
+  } :data
 
   . = ALIGN(4);
   .bss : {
     *(.bss .bss.*)
-  } :image
+  } :data
 
   /DISCARD/ : {
     *(.comment)

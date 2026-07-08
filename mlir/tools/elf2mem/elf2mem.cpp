@@ -129,7 +129,9 @@ int main(int argc, char** argv) {
   std::optional<uint32_t> nextExpectedAddr;
   for (const Segment& seg : segments) {
     if (nextExpectedAddr != seg.addr) {
-      os << llvm::format("@%08X\n", seg.addr);
+      // $readmemh addresses a word array, not bytes: divide by 4 (segment alignment was already
+      // checked above, so this is exact).
+      os << llvm::format("@%08X\n", seg.addr / 4);
     }
 
     for (uint32_t off = 0; off < seg.memSize; off += 4) {
