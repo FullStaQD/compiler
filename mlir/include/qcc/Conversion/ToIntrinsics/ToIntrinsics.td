@@ -19,13 +19,18 @@ def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp">
       RISC-V QV extension (e.g. `llvm.riscv.qv.h`, `llvm.riscv.qv.cx`).
 
       Each qubit pointer argument (produced by `llvm.inttoptr` of a constant
-      integer index) is re-encoded as a `vector<[1]xi8>` scalable-vector value
+      integer index) is re-encoded as a `vector<[4]xi8>` scalable-vector value
       matching the `anyvector` operand that the QVSingle / QVPair intrinsics
       expect. That vector is materialized by loading it from a dedicated
-      internal-linkage `i8` global holding the index (one global per distinct
-      index, shared across call sites), rather than synthesizing it in a
-      register with `vmv.s.x`/`vmv.v.i` -- HiSEP-Q's vector unit does not
-      implement those instructions.
+      internal-linkage 4-byte global holding the index in its first byte (one
+      global per distinct index, shared across call sites), rather than
+      synthesizing it in a register with `vmv.s.x`/`vmv.v.i` -- HiSEP-Q's
+      vector unit does not implement those instructions. The vector is 4
+      elements wide (not 1) because this target's ELEN=32 makes a 1-element
+      `vector<[1]xi8>` legalize to LMUL=mf8, which is below the RVV-mandated
+      LMUL >= SEW/ELEN minimum and traps as an illegal instruction; 4 elements
+      legalizes to mf2 instead. The `vl` argument passed to the intrinsic call
+      is still 1, so only the first (real) element is ever processed.
 
       Additionally:
       - `__quantum__rt__initialize` calls are erased (no-op on the intrinsic path).

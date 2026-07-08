@@ -10,6 +10,7 @@
 #include "qcc/Conversion/ToQIR/Constants.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -23,10 +24,23 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 
+#include <cstdint>
 #include <mlir/Pass/Pass.h>
 #include <optional>
 
 using namespace mlir;
+
+/// Element count used for the scalable `vector<[N]xi8>` type that carries a qubit index into
+/// the QV intrinsics (see `loadQubitIndexVec`).
+///
+/// This target declares `zve32x` (ELEN=32), and the RVV spec requires LMUL >= SEW/ELEN, i.e.
+/// LMUL >= 8/32 = mf4 at SEW=8. A single-element vector (`vector<[1]xi8>`) legalizes to the
+/// smallest fractional LMUL that can hold it, mf8, which is below that minimum and traps as an
+/// illegal instruction on this hardware. `vector<[4]xi8>` legalizes to mf2 (comfortably legal,
+/// and the exact LMUL used by HiSEP-Q's own reference-compiler output), while the actual runtime
+/// element count processed by the QV intrinsic call is still 1 (see the `vl` argument in
+/// `QISCallLowering`) -- only the container's minimum legal size changes, not the semantics.
+static constexpr int64_t kQubitIndexVecNumElements = 4;
 
 /// Maps a QIR QIS function name to its RISC-V QV intrinsic counterpart.
 /// Returns an empty string for unrecognized / unsupported names.
@@ -67,13 +81,16 @@ static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
   return intAttr.getInt();
 }
 
-/// Returns the (possibly newly-created) internal-linkage `i8` global constant holding
-/// `index`, reusing one global per distinct index within the module.
+/// Returns the (possibly newly-created) internal-linkage global constant holding `index` in its
+/// first byte (remaining `kQubitIndexVecNumElements - 1` bytes are zero padding), reusing one
+/// global per distinct index within the module.
 ///
 /// HiSEP-Q's vector unit does not implement `vmv.s.x`/`vmv.v.i` (the instructions LLVM's
 /// generic vector legalizer would otherwise select for `insertelement(undef, ..., 0)`), so
 /// qubit-index vectors must instead be materialized via a memory load (`vle8.v`), which
-/// requires the index to live in addressable memory first.
+/// requires the index to live in addressable memory first. The padding bytes exist solely so
+/// that a `vector<[kQubitIndexVecNumElements]xi8>` load (see `loadQubitIndexVec`) doesn't read
+/// past the global.
 static LLVM::GlobalOp getOrCreateIndexGlobal(OpBuilder& builder, ModuleOp moduleOp,
                                              llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals, int64_t index) {
   auto [it, inserted] = indexGlobals.try_emplace(index);
@@ -85,21 +102,25 @@ static LLVM::GlobalOp getOrCreateIndexGlobal(OpBuilder& builder, ModuleOp module
   builder.setInsertionPointToEnd(moduleOp.getBody());
 
   auto i8Type = builder.getIntegerType(8);
+  auto i8ArrayType = LLVM::LLVMArrayType::get(i8Type, kQubitIndexVecNumElements);
   std::string name = (".qcc_qv_idx_" + llvm::Twine(index)).str();
 
-  auto global = LLVM::GlobalOp::create(builder, moduleOp.getLoc(), i8Type, /*isConstant=*/true, LLVM::Linkage::Internal,
-                                       name, builder.getIntegerAttr(i8Type, index));
+  std::string bytes(1, static_cast<char>(index));
+  bytes.resize(kQubitIndexVecNumElements, '\0');
+
+  auto global = LLVM::GlobalOp::create(builder, moduleOp.getLoc(), i8ArrayType, /*isConstant=*/true,
+                                       LLVM::Linkage::Internal, name, builder.getStringAttr(bytes));
   it->second = global;
   return global;
 }
 
-/// Encodes a qubit index as a `vector<[1]xi8>` scalable vector for QV intrinsics, by loading
-/// it from a dedicated one-byte global rather than synthesizing it in-register (see
-/// `getOrCreateIndexGlobal`).
+/// Encodes a qubit index as a `vector<[kQubitIndexVecNumElements]xi8>` scalable vector for QV
+/// intrinsics, by loading it from a dedicated global rather than synthesizing it in-register
+/// (see `getOrCreateIndexGlobal`).
 static Value loadQubitIndexVec(OpBuilder& builder, Location loc, ModuleOp moduleOp,
                                llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals, int64_t index) {
   auto i8Type = builder.getIntegerType(8);
-  auto vecType = VectorType::get({1}, i8Type, /*scalableDims=*/{true});
+  auto vecType = VectorType::get({kQubitIndexVecNumElements}, i8Type, /*scalableDims=*/{true});
 
   LLVM::GlobalOp global = getOrCreateIndexGlobal(builder, moduleOp, indexGlobals, index);
   Value addr = LLVM::AddressOfOp::create(builder, loc, global);
@@ -112,7 +133,7 @@ namespace {
 /// corresponding `llvm.call_intrinsic "llvm.riscv.qv.*"(vec, ...)`.
 ///
 /// Qubit pointer arguments (produced by `llvm.inttoptr` of a constant index)
-/// are re-encoded as `vector<[1]xi8>` scalable vectors.
+/// are re-encoded as `vector<[kQubitIndexVecNumElements]xi8>` scalable vectors.
 struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
   QISCallLowering(MLIRContext* context, llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals)
       : OpRewritePattern(context), indexGlobals(indexGlobals) {}
