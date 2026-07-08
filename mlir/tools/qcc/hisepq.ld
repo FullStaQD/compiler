@@ -21,8 +21,20 @@
  * default, see qcc.entry_point / entry-point-name in JaspToQC.td) and the
  * target machine is configured with function sections, so that function is
  * emitted into its own `.text.main` input section. Pulling that section to
- * the front of the output .text guarantees it lands at address 0 regardless
+ * the front of the output .text guarantees it lands at BOOT_ADDR regardless
  * of how the rest of the module is ordered.
+ *
+ * The Ibex core that executes this image does not fetch its first
+ * instruction from address 0: `ibex_if_stage` hardwires the post-reset
+ * fetch address to `{boot_addr_i[31:8], 8'h80}` (see PC_BOOT in
+ * ibex_if_stage.sv), and vproc_top.sv instantiates it with boot_addr_i =
+ * 0, so the very first fetch is always from byte address 0x80. The first
+ * 0x80 bytes are also where a vectored mtvec (also derived from the same
+ * boot_addr_i) sends synchronous exceptions, i.e. they are reserved as the
+ * (unused, but real) trap-vector region. `main` must therefore start at
+ * BOOT_ADDR, not address 0 -- placing it at 0 only appears to work because
+ * an illegal-instruction trap on whatever garbage sits at 0x80 happens to
+ * vector back to address 0.
  *
  * .rodata/.data/.bss are bundled together into the "data" region starting
  * at TEXT_REGION_SIZE; an explicit PHDRS split (rather than relying on
@@ -30,6 +42,7 @@
  * exactly at TEXT_REGION_SIZE regardless of linker defaults.
  */
 
+BOOT_ADDR = 0x00000080;
 TEXT_REGION_SIZE = 0x1000;
 
 OUTPUT_ARCH(riscv)
@@ -43,7 +56,7 @@ PHDRS
 
 SECTIONS
 {
-  . = 0x00000000;
+  . = BOOT_ADDR;
 
   .text : {
     KEEP(*(.text.main))

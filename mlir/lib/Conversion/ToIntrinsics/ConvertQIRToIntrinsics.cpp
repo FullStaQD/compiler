@@ -53,6 +53,20 @@ static StringRef mapQISToIntrinsic(StringRef qisName) {
       .Default("");
 }
 
+/// Returns true when `funcOp` is tagged as the entry point via the `passthrough` LLVM function
+/// attribute set by `ConvertQCToQIR::setEntryPointAttrs`.
+static bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
+  auto passthrough = funcOp->getAttrOfType<ArrayAttr>("passthrough");
+  if (!passthrough) {
+    return false;
+  }
+
+  return llvm::any_of(passthrough, [](Attribute attr) {
+    auto strAttr = dyn_cast<StringAttr>(attr);
+    return strAttr && strAttr.getValue() == "entry_point";
+  });
+}
+
 /// Returns true when `name` is a QIR runtime / QIS symbol that this pass
 /// handles (and therefore must not appear in the output).
 static bool isHandledQIRSymbol(StringRef name) {
@@ -276,6 +290,7 @@ protected:
     }
 
     removeQIRDeclarations();
+    haltEntryPoint();
   }
 
 private:
@@ -290,6 +305,33 @@ private:
     for (auto funcOp : toErase) {
       funcOp.erase();
     }
+  }
+
+  /// The hisep-q entry point is executed directly from the hardware's fixed boot address (see
+  /// hisepq.ld) and has no caller: `ra` holds whatever garbage the core reset with. Emitting a
+  /// plain `llvm.return` (which the RISC-V backend lowers to `ret`) would jump there, so replace
+  /// every return in the entry point with an infinite self-branch instead -- the usual bare-metal
+  /// "halt here" idiom.
+  void haltEntryPoint() {
+    getOperation()->walk([&](LLVM::LLVMFuncOp funcOp) {
+      if (!isEntryPointFunc(funcOp)) {
+        return;
+      }
+
+      SmallVector<LLVM::ReturnOp> returns;
+      funcOp.walk([&](LLVM::ReturnOp op) { returns.push_back(op); });
+
+      for (LLVM::ReturnOp returnOp : returns) {
+        OpBuilder builder(returnOp);
+        auto* haltBlock = builder.createBlock(&funcOp.getBody(), funcOp.getBody().end());
+        builder.setInsertionPointToStart(haltBlock);
+        LLVM::BrOp::create(builder, returnOp.getLoc(), ValueRange{}, haltBlock);
+
+        builder.setInsertionPoint(returnOp);
+        LLVM::BrOp::create(builder, returnOp.getLoc(), ValueRange{}, haltBlock);
+        returnOp.erase();
+      }
+    });
   }
 };
 
