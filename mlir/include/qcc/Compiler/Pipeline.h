@@ -18,8 +18,10 @@ namespace qcc {
 /// (pipeline), and the runtime.
 enum class Target : uint8_t { Qir, HisepQ };
 
-/// The stage to compile to and emit.
-enum class Stage : uint8_t { Mlir, LlvmIr, Assembly, Object };
+/// The stage to compile to and emit. `Elf` and `Mem` require --target=hisep-q: qcc links the
+/// object code (via hisepq.ld, embedded into the binary) and, for `Mem`, converts the resulting
+/// ELF into a Verilog $readmemh memory file (see qcc/Support/Elf2Mem.h).
+enum class Stage : uint8_t { Mlir, LlvmIr, Assembly, Object, Elf, Mem };
 
 struct PipelineOptions {
   /// The backend to compile for. For `Target::HisepQ`, the final
