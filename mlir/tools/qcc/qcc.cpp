@@ -11,7 +11,6 @@
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
-#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
@@ -35,29 +34,25 @@
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/SystemUtils.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
-
-#include <cstdint>
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
 
 namespace cl = llvm::cl;
 
 static cl::OptionCategory qccCategory("QCC options");
 
-namespace {
-/// The target determines the backend to compile for, the actual passes
-/// (pipeline), and the runtime.
-enum class Target : uint8_t { Qir, HisepQ };
-
-/// The stage to compile to and emit.
-enum class Stage : uint8_t { Mlir, LlvmIr, Native };
-} // namespace
+using qcc::Stage;
+using qcc::Target;
 
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
@@ -67,31 +62,29 @@ int main(int argc, char** argv) {
   const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
   const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
                                             cl::cat(qccCategory));
-  const cl::opt<Target> target(
-      "target", cl::desc("Target pipeline to compile for"), cl::init(Target::Qir),
-      cl::values(clEnumValN(Target::Qir, "qir", "QIR (LLVM-based) target"),
-                 clEnumValN(Target::HisepQ, "hisep-q", "HiSEP-Q QISA target (not yet implemented)")),
-      cl::cat(qccCategory));
+  const cl::opt<Target> target("target", cl::desc("Target pipeline to compile for"), cl::init(Target::Qir),
+                               cl::values(clEnumValN(Target::Qir, "qir", "QIR (LLVM-based) target"),
+                                          clEnumValN(Target::HisepQ, "hisep-q", "HiSEP-Q QISA target")),
+                               cl::cat(qccCategory));
   const cl::opt<Stage> compileTo(
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
-      cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
-                 clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR (QIR for the QIR target)"),
-                 clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
+      cl::values(
+          clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
+          clEnumValN(Stage::LlvmIr, "ll", "LLVM IR: QIR for the QIR target and intrinsics for the HiSEP-Q target"),
+          clEnumValN(Stage::LlvmIr, "llvmir", "alias for .ll"),
+          clEnumValN(Stage::Assembly, "s", "Assembly output (requires --target=hisep-q)"),
+          clEnumValN(Stage::Assembly, "assembly", "alias for .s"),
+          clEnumValN(Stage::Object, "o", "Object file output (requires --target=hisep-q)"),
+          clEnumValN(Stage::Object, "object", "alias for .o")),
       cl::cat(qccCategory));
-  const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
-                             cl::init(false), cl::cat(qccCategory));
+  const cl::opt<std::string> mtriple(
+      "mtriple", cl::desc("Target triple for native code generation (default: riscv32-unknown-unknown for hisep-q)"),
+      cl::init(""), cl::cat(qccCategory));
+  const cl::opt<std::string> mattr(
+      "mattr", cl::desc("Target attributes for native code generation (default: +experimental-xqv for hisep-q)"),
+      cl::init(""), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
-
-  if (target == Target::HisepQ) {
-    llvm::errs() << "error: the 'hisep-q' target is not yet implemented\n";
-    return 1;
-  }
-
-  if (compileTo == Stage::Native) {
-    llvm::errs() << "error: the 'native' stage is not yet implemented\n";
-    return 1;
-  }
 
   mlir::DialectRegistry registry;
 
@@ -139,9 +132,7 @@ int main(int argc, char** argv) {
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     return 1;
   }
-
-  // TODO: Assemble pipeline based on target once a second valid target is added.
-  qcc::buildQuantumPipeline(pm);
+  qcc::buildQuantumPipeline(pm, {.target = target, .stage = compileTo});
 
   if (mlir::failed(pm.run(*module))) {
     return 1;
@@ -153,40 +144,67 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Refuse to dump binary onto a terminal:
-  if (binary && llvm::CheckBitcodeOutputToConsole(outFile->os())) {
-    return 1;
-  }
-
   switch (compileTo) {
   case Stage::Mlir:
-    if (binary) {
-      if (mlir::failed(mlir::writeBytecodeToFile(*module, outFile->os()))) {
-        llvm::errs() << "failed to write MLIR bytecode\n";
-        return 1;
-      }
-    } else {
-      module->print(outFile->os());
-    }
+    module->print(outFile->os());
     break;
-  case Stage::LlvmIr: {
+  case Stage::LlvmIr:
+  case Stage::Assembly:
+  case Stage::Object: {
     llvm::LLVMContext llvmContext;
     std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
     if (!llvmModule) {
       llvm::errs() << "failed to translate the module to LLVM IR\n";
       return 1;
     }
-    if (binary) {
-      llvm::WriteBitcodeToFile(*llvmModule, outFile->os());
-    } else {
+
+    if (compileTo == Stage::LlvmIr) {
       llvmModule->print(outFile->os(), /*AAW=*/nullptr);
+      break;
+    }
+
+    auto fileType =
+        (compileTo == Stage::Object) ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+    auto& os = static_cast<llvm::raw_pwrite_stream&>(outFile->os());
+
+    switch (target) {
+    case Target::HisepQ: {
+      LLVMInitializeRISCVTargetInfo();
+      LLVMInitializeRISCVTarget();
+      LLVMInitializeRISCVTargetMC();
+      LLVMInitializeRISCVAsmPrinter();
+
+      std::string attrsStr = mattr.empty() ? "+experimental-xqv" : mattr.getValue();
+      llvm::Triple triple(llvm::Triple::normalize(mtriple.empty() ? "riscv32-unknown-unknown" : mtriple.getValue()));
+
+      std::string errorStr;
+      const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(/*MArch=*/"", triple, errorStr);
+      if (theTarget == nullptr) {
+        llvm::errs() << "could not find target '" << triple.str() << "': " << errorStr << "\n";
+        return 1;
+      }
+
+      llvm::TargetOptions targetOptions;
+      std::unique_ptr<llvm::TargetMachine> targetMachine(
+          theTarget->createTargetMachine(triple, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
+
+      llvmModule->setDataLayout(targetMachine->createDataLayout());
+      llvmModule->setTargetTriple(triple);
+
+      llvm::legacy::PassManager codegenPM;
+      if (targetMachine->addPassesToEmitFile(codegenPM, os, /*DwoOut=*/nullptr, fileType)) {
+        llvm::errs() << "target machine cannot emit files of this type\n";
+        return 1;
+      }
+      codegenPM.run(*llvmModule);
+      break;
+    }
+    case Target::Qir:
+      llvm::errs() << "error: assembly/object output is not supported for --target=qir\n";
+      return 1;
     }
     break;
   }
-  case Stage::Native:
-    llvm_unreachable("the 'native' stage is rejected during option validation");
-  default:
-    llvm_unreachable("--compile-to should always have a value (default value if nothing is set explicitly)");
   }
 
   outFile->keep(); // otherwise file gets deleted

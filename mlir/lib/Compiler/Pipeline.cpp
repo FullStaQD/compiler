@@ -12,6 +12,7 @@
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -31,7 +32,7 @@
 
 namespace qcc {
 
-void buildQuantumPipeline(mlir::PassManager& pm) {
+void buildQuantumPipeline(mlir::PassManager& pm, const PipelineOptions& options) {
 
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
@@ -130,6 +131,15 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(mlir::createCSEPass());
   pm.addPass(mlir::createRemoveDeadValuesPass());
+
+  // conversion from LLVM QIR to LLVM with intrinsics to lower to HiSEP-Q assembly.
+  switch (options.target) {
+  case Target::HisepQ:
+    pm.addPass(qcc::createConvertQIRToIntrinsics());
+    break;
+  case Target::Qir:
+    break;
+  }
 }
 
 } // namespace qcc

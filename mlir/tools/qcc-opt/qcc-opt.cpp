@@ -10,11 +10,13 @@
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
+#include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h"
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
@@ -89,6 +91,10 @@ int main(int argc, char** argv) {
   qcc::registerTmpRaiseSCFToAffinePass();
   qcc::registerWhileToFor();
   qcc::registerJaspToQC();
+  qcc::registerJaspCheckStaticQubitAllocation();
+  qcc::registerConvertMemrefToStaticQubits();
+  mlir::registerConvertFuncToLLVMPass();
+  qcc::registerConvertQIRToIntrinsics();
   qcc::registerConvertQCToQIR();
   qcc::registerPrepToQIR();
   qcc::registerFinalizeToQIR();
