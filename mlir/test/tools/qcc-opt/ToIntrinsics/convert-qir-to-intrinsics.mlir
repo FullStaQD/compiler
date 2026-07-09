@@ -97,7 +97,12 @@ llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
 // CHECK-DAG:     %[[ADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
 // CHECK:         %[[VEC:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> vector<[4]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"(%[[VEC]], %[[ZERO]], %[[ZERO]], %[[ONE]])
-// CHECK:         llvm.return %[[UNDEF_I1]] : i1
+// The entry point has no caller, so its `llvm.return` is replaced with an infinite
+// self-branch "halt here" idiom rather than an actual `ret` (see `haltEntryPoint`).
+// CHECK-NOT:     llvm.return
+// CHECK:         llvm.br ^[[HALT:.*]]
+// CHECK:       ^[[HALT]]:
+// CHECK:         llvm.br ^[[HALT]]
 
 
 llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
@@ -131,7 +136,7 @@ llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
 // One shared internal-linkage global per distinct qubit index, reused across
 // call sites (single_qubit_gates and measurement/rt_calls_erased both use
 // index 0, so only four globals total exist for indices 0-3).
-// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_0"("\00\00\00\00") : !llvm.array<4 x i8>
-// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_1"("\01\00\00\00") : !llvm.array<4 x i8>
-// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_2"("\02\00\00\00") : !llvm.array<4 x i8>
-// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_3"("\03\00\00\00") : !llvm.array<4 x i8>
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_0"("\00\00\00\00") {addr_space = 0 : i32}
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_1"("\01\00\00\00") {addr_space = 0 : i32}
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_2"("\02\00\00\00") {addr_space = 0 : i32}
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_3"("\03\00\00\00") {addr_space = 0 : i32}

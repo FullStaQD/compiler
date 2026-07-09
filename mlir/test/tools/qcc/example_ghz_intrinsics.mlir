@@ -39,16 +39,21 @@ func.func @main() attributes { qcc.entry_point } {
 // CHECK-LABEL: llvm.func @main()
 // CHECK-NOT:     llvm.call @__quantum__qis
 // CHECK-NOT:     llvm.call @__quantum__rt
-// CHECK-DAG:     %[[Q0:.*]] = llvm.mlir.constant(0 : i8) : i8
-// CHECK-DAG:     %[[Q1:.*]] = llvm.mlir.constant(1 : i8) : i8
-// CHECK-DAG:     %[[Q2:.*]] = llvm.mlir.constant(2 : i8) : i8
+// CHECK-DAG:     llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
+// CHECK-DAG:     llvm.mlir.addressof @".qcc_qv_idx_1" : !llvm.ptr
+// CHECK-DAG:     llvm.mlir.addressof @".qcc_qv_idx_2" : !llvm.ptr
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.h"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
-// CHECK:         llvm.return
+// The entry point has no caller, so its `llvm.return` is replaced with an infinite
+// self-branch "halt here" idiom rather than an actual `ret` (see `haltEntryPoint`).
+// CHECK-NOT:     llvm.return
+// CHECK:         llvm.br ^[[HALT:.*]]
+// CHECK:       ^[[HALT]]:
+// CHECK:         llvm.br ^[[HALT]]
 
 // Declarations for the gates used (and their rt helpers) are removed.
 // Unmapped declarations (s, sdg, t, tdg, rz) declared by PrepToQIR but unused
