@@ -9,11 +9,11 @@
 // Default is LLVM-IR:
 // RUN: qcc %s | FileCheck %s --check-prefix=CHECK-LLVM
 
-// Assembly/object require --target=hisep-q:
-// RUN: not qcc --compile-to=a %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
-// RUN: not qcc --compile-to=assembly %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
-// RUN: not qcc --compile-to=o %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
-// RUN: not qcc --compile-to=object %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
+// Assembly/object are not supported for --target=qir (they require --target=hisep-q):
+// RUN: not qcc --target=qir --compile-to=s %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
+// RUN: not qcc --target=qir --compile-to=assembly %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
+// RUN: not qcc --target=qir --compile-to=o %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
+// RUN: not qcc --target=qir --compile-to=object %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERR-NATIVE
 
 func.func @main() attributes { qcc.entry_point } {
     %0 = qc.static 0 : !qc.qubit
@@ -25,4 +25,4 @@ func.func @main() attributes { qcc.entry_point } {
 
 // CHECK-MLIR: llvm.func @main()
 // CHECK-LLVM: define void @main()
-// CHECK-ERR-NATIVE: error: assembly/object output is only supported for --target=hisep-q
+// CHECK-ERR-NATIVE: error: assembly/object output is not supported for --target=qir
