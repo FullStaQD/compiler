@@ -41,12 +41,12 @@ fi
 
 cd "$LLVM_DIR"
 
-LLVM_QISA_PATCHES=("$LLVM_3RD"/patches/qisa/*.patch)
-
 # Discard any interrupted `git am` and any local changes, then reset to the
 # pinned base so patches always apply onto a known-clean tree.
 git am --abort 2>/dev/null || true
-git checkout -f "$BASE_REV"
+git checkout -f -B fullstaqd-patches "$BASE_REV"
+
+LLVM_QISA_PATCHES=("$LLVM_3RD"/patches/qisa/*.patch)
 
 for p in "${LLVM_QISA_PATCHES[@]}"; do
   git am --whitespace=nowarn "$p"
