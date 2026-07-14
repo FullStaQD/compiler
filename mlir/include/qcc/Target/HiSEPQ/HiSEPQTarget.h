@@ -18,6 +18,6 @@
 namespace qcc {
 
 /// Assembles the lowering pipeline for the HiSEP-Q target.
-void buildHiSEPQPipeline(mlir::PassManager& pm); // FIXME: more systematic name? buildPipelineForXXX ?
+void buildPipelineHiSEPQ(mlir::PassManager& pm);
 
 } // namespace qcc

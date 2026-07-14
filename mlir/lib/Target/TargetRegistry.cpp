@@ -27,12 +27,12 @@ llvm::ArrayRef<TargetInfo> getTargets() {
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
                       .available = true,
-                      .buildPipeline = [](mlir::PassManager& pm) { buildQIRPipeline(pm); }});
+                      .buildPipeline = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }});
 #if QCC_ENABLE_HISEP_Q
     result.push_back({.name = "hisep-q",
                       .description = "HiSEP-Q QISA target (RISC-V based)",
                       .available = true,
-                      .buildPipeline = [](mlir::PassManager& pm) { buildHiSEPQPipeline(pm); }});
+                      .buildPipeline = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); }});
 #else
     result.push_back({.name = "hisep-q",
                       .description = "HiSEP-Q QISA target (RISC-V based)",

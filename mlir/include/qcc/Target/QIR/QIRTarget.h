@@ -18,6 +18,6 @@
 namespace qcc {
 
 /// Assembles the lowering pipeline for the QIR target.
-void buildQIRPipeline(mlir::PassManager& pm);
+void buildPipelineQIR(mlir::PassManager& pm);
 
 } // namespace qcc

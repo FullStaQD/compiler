@@ -31,7 +31,7 @@
 
 namespace qcc {
 
-void buildQIRPipeline(mlir::PassManager& pm) {
+void buildPipelineQIR(mlir::PassManager& pm) {
 
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());

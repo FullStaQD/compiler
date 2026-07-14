@@ -19,7 +19,7 @@
 
 namespace qcc {
 
-void buildHiSEPQPipeline(mlir::PassManager& /*pm*/) {
+void buildPipelineHiSEPQ(mlir::PassManager& /*pm*/) {
   // Intentionally empty until the HiSEP-Q pipeline lands.
 }
 
