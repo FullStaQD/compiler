@@ -29,13 +29,14 @@ cd /path/to/llvm-fork
 # Configure. Note that HiSEP-Q is a subtarget of RISCV.
 cmake -G Ninja -S llvm -B build/dev \
   -DLLVM_ENABLE_RTTI=ON \
+  -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR" \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DLLVM_BUILD_EXAMPLES=OFF \
   -DLLVM_ENABLE_LLD=ON \
-  -DLLVM_ENABLE_PROJECTS="mlir;llvm" \
+  -DLLVM_ENABLE_PROJECTS="mlir;llvm;clang;clang-tools-extra" \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_INSTALL_UTILS=ON \
   -DLLVM_OPTIMIZED_TABLEGEN=ON \

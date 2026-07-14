@@ -13,7 +13,6 @@
 
 #pragma once
 
-// FIXME: closer look.
-// Non-zero when qcc was built with the HiSEP-Q backend (i.e. against the
-// HiSEP-Q LLVM fork). Use with `#if QCC_ENABLE_HISEP_Q`.
+// Non-zero when qcc was built with the HiSEP-Q target. Use with `#if
+// QCC_ENABLE_HISEP_Q`.
 #cmakedefine01 QCC_ENABLE_HISEP_Q

@@ -15,7 +15,6 @@
 #include <mlir/Pass/PassManager.h>
 
 namespace qcc {
-// FIXME: how about const-correctness here?
 /// Describes a compilation target selectable via `qcc --target=<name>`.
 struct TargetInfo {
   /// The `--target` value, e.g. "qir".
