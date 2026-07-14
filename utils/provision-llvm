@@ -49,5 +49,5 @@ git am --abort 2>/dev/null || true
 git checkout -f "$BASE_REV"
 
 for p in "${LLVM_QISA_PATCHES[@]}"; do
-  git am "$p"
+  git am --whitespace=nowarn "$p"
 done
