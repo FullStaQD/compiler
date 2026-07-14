@@ -21,26 +21,26 @@
 namespace qcc {
 
 llvm::ArrayRef<TargetInfo> getTargets() {
-  // FIXME: the pre-processor directives look a bit unergonomic here.
   static const std::vector<TargetInfo> backends = [] {
     std::vector<TargetInfo> result;
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
                       .available = true,
                       .buildPipeline = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }});
-#if QCC_ENABLE_HISEP_Q
-    result.push_back({.name = "hisep-q",
-                      .description = "HiSEP-Q QISA target (RISC-V based)",
-                      .available = true,
-                      .buildPipeline = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); }});
-#else
-    result.push_back({.name = "hisep-q",
+
+    TargetInfo hisepq{.name = "hisep-q",
                       .description = "HiSEP-Q QISA target (RISC-V based)",
                       .available = false,
-                      .buildPipeline = nullptr});
+                      .buildPipeline = nullptr};
+#if QCC_ENABLE_HISEP_Q
+    hisepq.available = true;
+    hisepq.buildPipeline = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); };
 #endif
+    result.push_back(std::move(hisepq));
+
     return result;
   }();
+
   return backends;
 }
 
