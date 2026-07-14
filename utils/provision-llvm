@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# FIXME: can git rev-parse make the path handling more stable here?
+
+BASE_REV=$(cat ../third-party/llvm/base.rev) # FIXME: path handling
+LLVM_DIR=/home/vscode/external/llvm-project-patched   # FIXME: should be an argument.
+
+git clone https://github.com/llvm/llvm-project.git "$LLVM_DIR" \
+  --filter=blob:none
+
+cd "$LLVM_DIR"
+git checkout "$BASE_REV"
+
+for p in /workspaces/compiler/third-party/llvm/patches/qisa/*.patch; do # FIXME: path handling
+  git am "$p"
+done
