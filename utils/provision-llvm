@@ -2,17 +2,42 @@
 
 set -euo pipefail
 
-# FIXME: can git rev-parse make the path handling more stable here?
+usage() {
+  cat <<EOF
+Usage: ${0##*/} [LLVM_DIR]
 
-BASE_REV=$(cat ../third-party/llvm/base.rev) # FIXME: path handling
-LLVM_DIR=/home/vscode/external/llvm-project-patched   # FIXME: should be an argument.
+Clone llvm-project at the pinned base revision and apply the qisa patches.
 
-git clone https://github.com/llvm/llvm-project.git "$LLVM_DIR" \
-  --filter=blob:none
+Arguments:
+  LLVM_DIR   Directory to clone llvm-project into.
+             Defaults to \$HOME/external/llvm-project-patched.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+# Anchor all repo-relative paths to the repo root, resolved from this script's
+# own location, so the script works regardless of the current directory.
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)
+
+LLVM_SRC="$REPO_ROOT/third-party/llvm"
+BASE_REV=$(cat "$LLVM_SRC/base.rev")
+LLVM_DIR="${1:-$HOME/external/llvm-project-patched}"
+
+if [[ -d "$LLVM_DIR/.git" ]]; then
+  echo "Repo already cloned at $LLVM_DIR, skipping clone."
+else
+  git clone https://github.com/llvm/llvm-project.git "$LLVM_DIR" \
+    --filter=blob:none
+fi
 
 cd "$LLVM_DIR"
 git checkout "$BASE_REV"
 
-for p in /workspaces/compiler/third-party/llvm/patches/qisa/*.patch; do # FIXME: path handling
+for p in "$LLVM_SRC"/patches/qisa/*.patch; do
   git am "$p"
 done
