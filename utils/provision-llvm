@@ -8,6 +8,9 @@ Usage: ${0##*/} [LLVM_DIR]
 
 Clone llvm-project at the pinned base revision and apply the qisa patches.
 
+If the repo already exists at the given path cloning will be skipped. Beware that local changes 
+will be overwritten.
+
 Arguments:
   LLVM_DIR   Directory to clone llvm-project into.
              Defaults to \$HOME/external/llvm-project-patched.
@@ -19,8 +22,6 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
-# Anchor all repo-relative paths to the repo root, resolved from this script's
-# own location, so the script works regardless of the current directory.
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)
 
@@ -39,30 +40,9 @@ cd "$LLVM_DIR"
 
 PATCHES=("$LLVM_SRC"/patches/qisa/*.patch)
 
-# Recover from a previous run whose `git am` was interrupted; otherwise the
-# checkout below would fail with "you are in the middle of an am session".
-if [[ -d "$(git rev-parse --git-path rebase-apply)" ]]; then
-  echo "Found an interrupted git am session, aborting it."
-  git am --abort
-fi
-
-# Fast path: if every patch already reverse-applies, it is present in the tree,
-# so there is nothing to do.
-all_applied=true
-for p in "${PATCHES[@]}"; do
-  if ! git apply --reverse --check "$p" 2>/dev/null; then
-    all_applied=false
-    break
-  fi
-done
-
-if $all_applied; then
-  echo "Patches already applied; nothing to do."
-  exit 0
-fi
-
-# Rebuild from the pinned base: -f discards any partial/leftover state and drops
-# prior patch commits, so `git am` always applies onto a clean base.
+# Discard any interrupted `git am` and any local changes, then reset to the
+# pinned base so patches always apply onto a known-clean tree.
+git am --abort 2>/dev/null || true
 git checkout -f "$BASE_REV"
 
 for p in "${PATCHES[@]}"; do
