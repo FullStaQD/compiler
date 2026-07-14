@@ -33,7 +33,7 @@ llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr) -> ()
 llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
 
 
-llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
+llvm.func @single_qubit_gates() {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %q0 = llvm.inttoptr %c0 : i64 to !llvm.ptr
   %c1 = llvm.mlir.constant(1 : i64) : i64
@@ -57,7 +57,7 @@ llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"(%[[VEC1]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 
 
-llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
+llvm.func @cx_gate() {
   %c2 = llvm.mlir.constant(2 : i64) : i64
   %ctrl = llvm.inttoptr %c2 : i64 to !llvm.ptr
   %c3 = llvm.mlir.constant(3 : i64) : i64
@@ -97,15 +97,13 @@ llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
 // CHECK-DAG:     %[[ADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
 // CHECK:         %[[VEC:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> vector<[4]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"(%[[VEC]], %[[ZERO]], %[[ZERO]], %[[ONE]])
-// The entry point has no caller, so its `llvm.return` is replaced with an infinite
-// self-branch "halt here" idiom rather than an actual `ret` (see `haltEntryPoint`).
-// CHECK-NOT:     llvm.return
-// CHECK:         llvm.br ^[[HALT:.*]]
-// CHECK:       ^[[HALT]]:
-// CHECK:         llvm.br ^[[HALT]]
+// `measurement` is the sole `entry_point`-tagged function in this module, so it has a real
+// caller now (the synthesized `_start` below) and keeps an ordinary `llvm.return` instead of
+// being rewritten into a halt loop (see synthesizeStartFunction).
+// CHECK:         llvm.return
 
 
-llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
+llvm.func @rt_calls_erased() {
   %null = llvm.mlir.zero : !llvm.ptr
   llvm.call @__quantum__rt__initialize(%null) : (!llvm.ptr) -> ()
 
@@ -140,3 +138,15 @@ llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_1"("\01\00\00\00") {addr_space = 0 : i32}
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_2"("\02\00\00\00") {addr_space = 0 : i32}
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_3"("\03\00\00\00") {addr_space = 0 : i32}
+
+// The hardware jumps straight to BOOT_ADDR at reset with no caller, so qcc synthesizes a
+// `_start` function that becomes the real hardware entry point instead of `measurement`: it
+// initializes `sp` from the linker-provided `__stack_top` symbol (see hisepq.ld), calls
+// `measurement` with a real `jalr` (so it can use an ordinary `ret`), and halts in an infinite
+// loop if that call ever returns (see synthesizeStartFunction).
+// CHECK: llvm.mlir.global external constant @__stack_top()
+// CHECK: llvm.func @_start()
+// CHECK:   llvm.mlir.addressof @__stack_top : !llvm.ptr
+// CHECK:   llvm.mlir.addressof @measurement : !llvm.ptr
+// CHECK:   llvm.inline_asm{{.*}}"mv sp, $0\0Ajalr ra, 0($1)\0A1:\0Aj 1b"
+// CHECK:   llvm.unreachable

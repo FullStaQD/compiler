@@ -48,12 +48,9 @@ func.func @main() attributes { qcc.entry_point } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"({{.*}})
-// The entry point has no caller, so its `llvm.return` is replaced with an infinite
-// self-branch "halt here" idiom rather than an actual `ret` (see `haltEntryPoint`).
-// CHECK-NOT:     llvm.return
-// CHECK:         llvm.br ^[[HALT:.*]]
-// CHECK:       ^[[HALT]]:
-// CHECK:         llvm.br ^[[HALT]]
+// `main` has a real caller now (the synthesized `_start` below), so it keeps an ordinary
+// `llvm.return` instead of being rewritten into a halt loop (see synthesizeStartFunction).
+// CHECK:         llvm.return
 
 // Declarations for the gates used (and their rt helpers) are removed.
 // Unmapped declarations (s, sdg, t, tdg, rz) declared by PrepToQIR but unused
@@ -66,3 +63,15 @@ func.func @main() attributes { qcc.entry_point } {
 // CHECK-NOT: llvm.func @__quantum__rt__read_result
 // CHECK-NOT: llvm.func @__quantum__rt__bool_record_output
 // CHECK-NOT: llvm.func @__quantum__rt__int_record_output
+
+// The hardware jumps straight to BOOT_ADDR at reset with no caller, so qcc synthesizes a
+// `_start` function that becomes the real hardware entry point instead of `main`: it
+// initializes `sp` from the linker-provided `__stack_top` symbol (see hisepq.ld), calls `main`
+// with a real `jalr` (so `main` can use an ordinary `ret`), and halts in an infinite loop if
+// that call ever returns (see synthesizeStartFunction).
+// CHECK: llvm.mlir.global external constant @__stack_top()
+// CHECK: llvm.func @_start()
+// CHECK:   llvm.mlir.addressof @__stack_top : !llvm.ptr
+// CHECK:   llvm.mlir.addressof @main : !llvm.ptr
+// CHECK:   llvm.inline_asm{{.*}}"mv sp, $0\0Ajalr ra, 0($1)\0A1:\0Aj 1b"
+// CHECK:   llvm.unreachable

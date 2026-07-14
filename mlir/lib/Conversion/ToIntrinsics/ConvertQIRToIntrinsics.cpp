@@ -169,6 +169,7 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
     auto moduleOp = callOp->getParentOfType<ModuleOp>();
 
     Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
+    // TODO: Only vl=1 is supported for now, a more general implementation is missing.
     Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
 
     SmallVector<Value> args;
@@ -290,7 +291,7 @@ protected:
     }
 
     removeQIRDeclarations();
-    haltEntryPoint();
+    synthesizeStartFunction();
   }
 
 private:
@@ -307,31 +308,75 @@ private:
     }
   }
 
-  /// The hisep-q entry point is executed directly from the hardware's fixed boot address (see
-  /// hisepq.ld) and has no caller: `ra` holds whatever garbage the core reset with. Emitting a
-  /// plain `llvm.return` (which the RISC-V backend lowers to `ret`) would jump there, so replace
-  /// every return in the entry point with an infinite self-branch instead -- the usual bare-metal
-  /// "halt here" idiom.
-  void haltEntryPoint() {
-    getOperation()->walk([&](LLVM::LLVMFuncOp funcOp) {
+  /// The hisep-q hardware jumps directly to the fixed boot address (see hisepq.ld) at reset --
+  /// there is no caller, so `ra`/`sp` hold whatever garbage the core reset with. Rather than let
+  /// the user's entry point (tagged via ConvertQCToQIR::setEntryPointAttrs) sit at that address
+  /// with no valid stack, synthesize a `_start` function that becomes the new hardware entry
+  /// point instead: it initializes `sp` from the linker-provided `__stack_top` symbol (see
+  /// hisepq.ld), calls the entry point with a real `jalr` so it can return normally, and halts
+  /// in an infinite loop if that call ever returns -- the usual bare-metal "halt here" idiom.
+  ///
+  /// The whole sequence is emitted as a single inline-asm block rather than separate
+  /// `llvm.call`/write-register operations: an ordinary `llvm.call` to the entry point would let
+  /// the RISC-V backend decide `_start` needs a stack frame to save `ra` across that call, and
+  /// prologue/epilogue insertion happens at the very start of the function regardless of where
+  /// in the IR the "first" instruction sits -- i.e. that frame-setup code could run before our
+  /// own `sp` initialization does. Folding everything into one inline-asm operand with no other
+  /// stack-touching IR around it sidesteps that ordering risk entirely.
+  void synthesizeStartFunction() {
+    LLVM::LLVMFuncOp entryPoint;
+    WalkResult result = getOperation()->walk([&](LLVM::LLVMFuncOp funcOp) {
       if (!isEntryPointFunc(funcOp)) {
-        return;
+        return WalkResult::advance();
       }
-
-      SmallVector<LLVM::ReturnOp> returns;
-      funcOp.walk([&](LLVM::ReturnOp op) { returns.push_back(op); });
-
-      for (LLVM::ReturnOp returnOp : returns) {
-        OpBuilder builder(returnOp);
-        auto* haltBlock = builder.createBlock(&funcOp.getBody(), funcOp.getBody().end());
-        builder.setInsertionPointToStart(haltBlock);
-        LLVM::BrOp::create(builder, returnOp.getLoc(), ValueRange{}, haltBlock);
-
-        builder.setInsertionPoint(returnOp);
-        LLVM::BrOp::create(builder, returnOp.getLoc(), ValueRange{}, haltBlock);
-        returnOp.erase();
+      if (entryPoint) {
+        funcOp.emitError("convert-qir-to-intrinsics: multiple functions tagged as the entry "
+                         "point ('")
+            << entryPoint.getName() << "' and '" << funcOp.getName()
+            << "'); only one hardware boot address exists, so exactly one entry point is "
+               "required";
+        return WalkResult::interrupt();
       }
+      entryPoint = funcOp;
+      return WalkResult::advance();
     });
+    if (result.wasInterrupted()) {
+      return signalPassFailure();
+    }
+    if (!entryPoint) {
+      return;
+    }
+
+    ModuleOp moduleOp = getOperation();
+    OpBuilder builder(moduleOp.getContext());
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+    Location loc = entryPoint.getLoc();
+
+    // extern char __stack_top[]; -- a linker-provided symbol (hisepq.ld), never read through,
+    // only ever address-taken to recover the address the linker assigned it.
+    auto i8Type = builder.getIntegerType(8);
+    auto stackTopType = LLVM::LLVMArrayType::get(i8Type, 0);
+    auto stackTop = LLVM::GlobalOp::create(builder, loc, stackTopType, /*isConstant=*/true, LLVM::Linkage::External,
+                                           "__stack_top", /*value=*/Attribute());
+
+    auto startFuncType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(builder.getContext()), {});
+    auto startFunc = LLVM::LLVMFuncOp::create(builder, loc, "_start", startFuncType);
+
+    Block* entryBlock = startFunc.addEntryBlock(builder);
+    builder.setInsertionPointToStart(entryBlock);
+
+    Value stackTopAddr = LLVM::AddressOfOp::create(builder, loc, stackTop);
+    Value entryAddr = LLVM::AddressOfOp::create(builder, loc, entryPoint);
+
+    auto asmDialect = LLVM::AsmDialectAttr::get(builder.getContext(), LLVM::AsmDialect::AD_ATT);
+    LLVM::InlineAsmOp::create(builder, loc, /*resultTypes=*/TypeRange(),
+                              /*operands=*/ValueRange{stackTopAddr, entryAddr},
+                              /*asm_string=*/"mv sp, $0\njalr ra, 0($1)\n1:\nj 1b",
+                              /*constraints=*/"r,r", /*has_side_effects=*/true,
+                              /*is_align_stack=*/false, LLVM::TailCallKind::None,
+                              /*asm_dialect=*/asmDialect, /*operand_attrs=*/ArrayAttr());
+
+    LLVM::UnreachableOp::create(builder, loc);
   }
 };
 
