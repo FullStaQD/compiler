@@ -31,7 +31,6 @@ struct TargetInfo {
 /// Returns all known backends, available or not.
 llvm::ArrayRef<TargetInfo> getTargets();
 
-// FIXME: better return type (currently *raw* pointer)?
 /// Looks up a backend by its `--target` name, or returns nullptr if no backend
 /// with that name is known.
 const TargetInfo* lookupTarget(llvm::StringRef name);
