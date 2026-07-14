@@ -2,18 +2,21 @@
 
 set -euo pipefail
 
+LLVM_DIR_DEFAULT=$HOME/external/llvm-project-patched
+
 usage() {
   cat <<EOF
 Usage: ${0##*/} [LLVM_DIR]
 
 Clone llvm-project at the pinned base revision and apply all patches.
 
-If the repo already exists at the given path cloning will be skipped. Beware that local changes 
-will be overwritten.
+If the repo already exists at the given path cloning will be skipped. Local changes will be
+overwritten. If patches are updated just re-run this script it will abandon the old patches and
+apply the new ones.
 
 Arguments:
   LLVM_DIR   Directory to clone llvm-project into.
-             Defaults to \$HOME/external/llvm-project-patched.
+             Defaults to $LLVM_DIR_DEFAULT.
 EOF
 }
 
@@ -27,7 +30,7 @@ REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)
 
 LLVM_3RD="$REPO_ROOT/third-party/llvm"
 BASE_REV=$(cat "$LLVM_3RD/base.rev")
-LLVM_DIR="${1:-$HOME/external/llvm-project-patched}"
+LLVM_DIR="${1:-$LLVM_DIR_DEFAULT}"
 
 if [[ -d "$LLVM_DIR/.git" ]]; then
   echo "Repo already cloned at $LLVM_DIR, skipping clone."
