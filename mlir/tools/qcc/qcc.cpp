@@ -53,9 +53,10 @@ static cl::OptionCategory qccCategory("QCC options");
 namespace {
 /// The stage to compile to and emit.
 enum class Stage : uint8_t { Mlir, LlvmIr, Native };
+} // namespace
 
 /// Prints all known targets and whether they are usable in this build.
-void printTargets() {
+static void printTargets() {
   llvm::outs() << "Available targets for --target:\n";
   for (const qcc::BackendInfo& backend : qcc::getBackends()) {
     llvm::outs() << "  " << backend.name;
@@ -65,7 +66,6 @@ void printTargets() {
     llvm::outs() << " - " << backend.description << "\n";
   }
 }
-} // namespace
 
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
