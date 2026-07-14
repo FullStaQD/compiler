@@ -71,9 +71,8 @@ std::unique_ptr<llvm::TargetMachine> createHisepQTargetMachine(llvm::Module& llv
   LLVMInitializeRISCVTarget();
   LLVMInitializeRISCVTargetMC();
   LLVMInitializeRISCVAsmPrinter();
-  // Needed to parse the inline asm ConvertQIRToIntrinsics emits for the synthesized `_start`
-  // function (see synthesizeStartFunction): without it the MC streamer has no asm parser for
-  // this target and inline asm operands can't be lowered to machine code.
+  // The MC streamer needs an asm parser to lower the inline asm that ConvertQIRToIntrinsics emits
+  // in `_start` (see emitStartFunc).
   LLVMInitializeRISCVAsmParser();
 
   std::string attrsStr = mattr.empty() ? "+experimental-xqv" : mattr.str();

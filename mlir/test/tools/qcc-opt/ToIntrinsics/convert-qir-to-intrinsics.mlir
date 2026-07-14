@@ -9,18 +9,8 @@
 
 // RUN: qcc-opt %s -convert-qir-to-intrinsics | FileCheck %s
 
-// Input: a module as produced by the ToQIR pipeline.
-// Each qubit is an `!llvm.ptr` obtained via `llvm.inttoptr` of a constant index.
-// QIS gate calls use those ptrs as operands.
-//
-// Expected output: every QIS call is replaced by an `llvm.call_intrinsic` call
-// with the qubit encoded as a `vector<[4]xi8>` scalable vector, loaded from a
-// dedicated 4-byte global holding that index in its first byte (HiSEP-Q's
-// vector unit does not implement `vmv.s.x`/`vmv.v.i`, so the index cannot be
-// synthesized in-register; it's 4 elements wide, not 1, because this target's
-// ELEN=32 makes a 1-element vector legalize to the illegal LMUL=mf8).
-// One global is created per distinct index and shared across all call sites in
-// the module.
+// The input is a module as produced by the ToQIR pipeline: qubits are `!llvm.ptr` values obtained
+// from `llvm.inttoptr` of a constant index, and gates are calls taking those ptrs.
 
 llvm.func @__quantum__rt__initialize(!llvm.ptr) -> ()
 llvm.func @__quantum__rt__read_result(!llvm.ptr) -> i1 attributes {arg_attrs = [{llvm.readonly}]}
@@ -97,9 +87,8 @@ llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
 // CHECK-DAG:     %[[ADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
 // CHECK:         %[[VEC:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> vector<[4]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"(%[[VEC]], %[[ZERO]], %[[ZERO]], %[[ONE]])
-// `measurement` is the sole `entry_point`-tagged function in this module, so it has a real
-// caller now (the synthesized `_start` below) and keeps an ordinary `llvm.return` instead of
-// being rewritten into a halt loop (see synthesizeStartFunction).
+// `measurement` is the entry point of this module. It is called by `_start` (see below) and keeps
+// an ordinary return.
 // CHECK:         llvm.return
 
 
@@ -131,19 +120,15 @@ llvm.func @rt_calls_erased() {
 // CHECK-NOT: llvm.func @__quantum__rt__read_result
 // CHECK-NOT: llvm.func @__quantum__rt__bool_record_output
 
-// One shared internal-linkage global per distinct qubit index, reused across
-// call sites (single_qubit_gates and measurement/rt_calls_erased both use
-// index 0, so only four globals total exist for indices 0-3).
+// One global per distinct qubit index, shared across call sites: index 0 is used by three of the
+// functions above, yet indices 0-3 amount to four globals.
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_0"("\00\00\00\00") {addr_space = 0 : i32}
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_1"("\01\00\00\00") {addr_space = 0 : i32}
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_2"("\02\00\00\00") {addr_space = 0 : i32}
 // CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_3"("\03\00\00\00") {addr_space = 0 : i32}
 
-// The hardware jumps straight to BOOT_ADDR at reset with no caller, so qcc synthesizes a
-// `_start` function that becomes the real hardware entry point instead of `measurement`: it
-// initializes `sp` from the linker-provided `__stack_top` symbol (see hisepq.ld), calls
-// `measurement` with a real `jalr` (so it can use an ordinary `ret`), and halts in an infinite
-// loop if that call ever returns (see synthesizeStartFunction).
+// `_start` supersedes `measurement` as the entry point of the hardware: it sets up the stack, calls
+// `measurement`, and halts in an infinite loop if that call returns (see emitStartFunc).
 // CHECK: llvm.mlir.global external constant @__stack_top()
 // CHECK: llvm.func @_start()
 // CHECK:   llvm.mlir.addressof @__stack_top : !llvm.ptr

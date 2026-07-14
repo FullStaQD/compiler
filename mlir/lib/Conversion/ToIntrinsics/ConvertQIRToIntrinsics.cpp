@@ -15,68 +15,122 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 
+#include <array>
 #include <cstdint>
-#include <mlir/Pass/Pass.h>
 #include <optional>
+#include <string>
 
 using namespace mlir;
 
-/// Element count used for the scalable `vector<[N]xi8>` type that carries a qubit index into
-/// the QV intrinsics (see `loadQubitIndexVec`).
-///
-/// This target declares `zve32x` (ELEN=32), and the RVV spec requires LMUL >= SEW/ELEN, i.e.
-/// LMUL >= 8/32 = mf4 at SEW=8. A single-element vector (`vector<[1]xi8>`) legalizes to the
-/// smallest fractional LMUL that can hold it, mf8, which is below that minimum and traps as an
-/// illegal instruction on this hardware. `vector<[4]xi8>` legalizes to mf2 (comfortably legal,
-/// and the exact LMUL used by HiSEP-Q's own reference-compiler output), while the actual runtime
-/// element count processed by the QV intrinsic call is still 1 (see the `vl` argument in
-/// `QISCallLowering`) -- only the container's minimum legal size changes, not the semantics.
-static constexpr int64_t kQubitIndexVecNumElements = 4;
+//===----------------------------------------------------------------------===//
+// The QIR symbols this pass lowers
+//===----------------------------------------------------------------------===//
 
-/// Maps a QIR QIS function name to its RISC-V QV intrinsic counterpart.
-/// Returns an empty string for unrecognized / unsupported names.
-static StringRef mapQISToIntrinsic(StringRef qisName) {
-  return llvm::StringSwitch<StringRef>(qisName)
-      .Case(qcc::qirQisH, "llvm.riscv.qv.h")
-      .Case(qcc::qirQisX, "llvm.riscv.qv.x")
-      .Case(qcc::qirQisCX, "llvm.riscv.qv.cx")
-      .Case(qcc::qirQisMZ, "llvm.riscv.qv.mz")
-      .Default("");
+namespace {
+
+/// A QIS gate supported by this target, and the QV intrinsic it lowers to.
+///
+/// The QIS names come from `Constants.h`, the intrinsics from IntrinsicsRISCVXQV.td.
+struct QVGate {
+  llvm::StringLiteral qisName;
+  llvm::StringLiteral intrinsic;
+  unsigned numQubits;
+};
+
+constexpr std::array kQVGates = {
+    QVGate{qcc::qirQisH, "llvm.riscv.qv.h", /*numQubits=*/1},
+    QVGate{qcc::qirQisX, "llvm.riscv.qv.x", /*numQubits=*/1},
+    QVGate{qcc::qirQisCX, "llvm.riscv.qv.cx", /*numQubits=*/2},
+    QVGate{qcc::qirQisMZ, "llvm.riscv.qv.mz", /*numQubits=*/1},
+};
+
+/// The QIR runtime functions with no counterpart on the bare-metal intrinsic path.
+///
+/// TODO: `read_result` and the output recording functions have no intrinsic in
+/// IntrinsicsRISCVXQV.td yet. Until then their calls are dropped and their results are `undef`.
+constexpr std::array kDroppedQIRRuntimeFuncs = {
+    qcc::qirRtInit,
+    qcc::qirRtReadResult,
+    qcc::qirRtBoolRecordOutput,
+    qcc::qirRtIntRecordOutput,
+};
+
+/// Returns the lowering of `qisName`, or nullptr if this target does not support that gate.
+const QVGate* findQVGate(StringRef qisName) {
+  const auto* gate = llvm::find_if(kQVGates, [&](const QVGate& gate) { return gate.qisName == qisName; });
+  return gate == kQVGates.end() ? nullptr : gate;
 }
 
-/// Returns true when `funcOp` is tagged as the entry point via the `passthrough` LLVM function
-/// attribute set by `ConvertQCToQIR::setEntryPointAttrs`.
-static bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
-  auto passthrough = funcOp->getAttrOfType<ArrayAttr>("passthrough");
-  if (!passthrough) {
-    return false;
+bool isDroppedQIRRuntimeFunc(StringRef name) { return llvm::is_contained(kDroppedQIRRuntimeFuncs, name); }
+
+/// Whether `name` is a QIR function that this pass rewrites away.
+bool isLoweredQIRFunc(StringRef name) { return findQVGate(name) != nullptr || isDroppedQIRRuntimeFunc(name); }
+
+//===----------------------------------------------------------------------===//
+// Qubit index vectors
+//===----------------------------------------------------------------------===//
+
+/// Width of the scalable `vector<[N]xi8>` that carries a qubit index into the QV intrinsics.
+///
+/// A `vector<[1]xi8>` is illegal on this target: at SEW=8 and ELEN=32 it legalizes to LMUL=mf8,
+/// below the RVV minimum of LMUL >= SEW/ELEN = mf4. Four elements legalize to mf2. Only the first
+/// element is processed, as the intrinsics are called with `vl == 1`.
+constexpr int64_t kQubitIndexVecNumElements = 4;
+
+/// Materializes qubit indices as the scalable vectors that the QV intrinsics take, using one
+/// internal-linkage global per distinct index, shared across the module.
+///
+/// HiSEP-Q's vector unit implements neither `vmv.s.x` nor `vmv.v.i`, so the vector cannot be built
+/// in a register and is loaded (`vle8.v`) from a global instead. Each global holds its index in the
+/// first byte, zero-padded to the width of the vector.
+class QubitIndexVecBuilder {
+public:
+  explicit QubitIndexVecBuilder(ModuleOp moduleOp) : moduleOp(moduleOp) {}
+
+  Value build(OpBuilder& builder, Location loc, int64_t index) {
+    auto vecType = VectorType::get({kQubitIndexVecNumElements}, builder.getI8Type(), /*scalableDims=*/{true});
+
+    Value addr = LLVM::AddressOfOp::create(builder, loc, getOrCreateGlobal(builder, index));
+    return LLVM::LoadOp::create(builder, loc, vecType, addr);
   }
 
-  return llvm::any_of(passthrough, [](Attribute attr) {
-    auto strAttr = dyn_cast<StringAttr>(attr);
-    return strAttr && strAttr.getValue() == "entry_point";
-  });
-}
+private:
+  LLVM::GlobalOp getOrCreateGlobal(OpBuilder& builder, int64_t index) {
+    auto [it, inserted] = globals.try_emplace(index);
+    if (!inserted) {
+      return it->second;
+    }
 
-/// Returns true when `name` is a QIR runtime / QIS symbol that this pass
-/// handles (and therefore must not appear in the output).
-static bool isHandledQIRSymbol(StringRef name) {
-  return name == qcc::qirRtInit || name == qcc::qirRtReadResult || name == qcc::qirRtBoolRecordOutput ||
-         name == qcc::qirRtIntRecordOutput || !mapQISToIntrinsic(name).empty();
-}
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(moduleOp.getBody());
 
-/// Tries to extract the qubit index encoded in a ptr obtained via:
-///   `llvm.inttoptr (llvm.mlir.constant N : i64) : !llvm.ptr`
-static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
+    std::string bytes(kQubitIndexVecNumElements, '\0');
+    bytes[0] = static_cast<char>(index);
+    auto arrayType = LLVM::LLVMArrayType::get(builder.getI8Type(), kQubitIndexVecNumElements);
+
+    it->second =
+        LLVM::GlobalOp::create(builder, moduleOp.getLoc(), arrayType, /*isConstant=*/true, LLVM::Linkage::Internal,
+                               (".qcc_qv_idx_" + llvm::Twine(index)).str(), builder.getStringAttr(bytes));
+    return it->second;
+  }
+
+  ModuleOp moduleOp;
+  llvm::DenseMap<int64_t, LLVM::GlobalOp> globals;
+};
+
+/// Extracts the index of a statically allocated qubit, which `convert-qc-to-qir` materializes as
+/// `llvm.inttoptr (llvm.mlir.constant N : i64) : !llvm.ptr`.
+std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
   auto intToPtrOp = ptrValue.getDefiningOp<LLVM::IntToPtrOp>();
   if (!intToPtrOp) {
     return std::nullopt;
@@ -95,62 +149,15 @@ static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
   return intAttr.getInt();
 }
 
-/// Returns the (possibly newly-created) internal-linkage global constant holding `index` in its
-/// first byte (remaining `kQubitIndexVecNumElements - 1` bytes are zero padding), reusing one
-/// global per distinct index within the module.
-///
-/// HiSEP-Q's vector unit does not implement `vmv.s.x`/`vmv.v.i` (the instructions LLVM's
-/// generic vector legalizer would otherwise select for `insertelement(undef, ..., 0)`), so
-/// qubit-index vectors must instead be materialized via a memory load (`vle8.v`), which
-/// requires the index to live in addressable memory first. The padding bytes exist solely so
-/// that a `vector<[kQubitIndexVecNumElements]xi8>` load (see `loadQubitIndexVec`) doesn't read
-/// past the global.
-static LLVM::GlobalOp getOrCreateIndexGlobal(OpBuilder& builder, ModuleOp moduleOp,
-                                             llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals, int64_t index) {
-  auto [it, inserted] = indexGlobals.try_emplace(index);
-  if (!inserted) {
-    return it->second;
-  }
+//===----------------------------------------------------------------------===//
+// Patterns
+//===----------------------------------------------------------------------===//
 
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(moduleOp.getBody());
-
-  auto i8Type = builder.getIntegerType(8);
-  auto i8ArrayType = LLVM::LLVMArrayType::get(i8Type, kQubitIndexVecNumElements);
-  std::string name = (".qcc_qv_idx_" + llvm::Twine(index)).str();
-
-  std::string bytes(1, static_cast<char>(index));
-  bytes.resize(kQubitIndexVecNumElements, '\0');
-
-  auto global = LLVM::GlobalOp::create(builder, moduleOp.getLoc(), i8ArrayType, /*isConstant=*/true,
-                                       LLVM::Linkage::Internal, name, builder.getStringAttr(bytes));
-  it->second = global;
-  return global;
-}
-
-/// Encodes a qubit index as a `vector<[kQubitIndexVecNumElements]xi8>` scalable vector for QV
-/// intrinsics, by loading it from a dedicated global rather than synthesizing it in-register
-/// (see `getOrCreateIndexGlobal`).
-static Value loadQubitIndexVec(OpBuilder& builder, Location loc, ModuleOp moduleOp,
-                               llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals, int64_t index) {
-  auto i8Type = builder.getIntegerType(8);
-  auto vecType = VectorType::get({kQubitIndexVecNumElements}, i8Type, /*scalableDims=*/{true});
-
-  LLVM::GlobalOp global = getOrCreateIndexGlobal(builder, moduleOp, indexGlobals, index);
-  Value addr = LLVM::AddressOfOp::create(builder, loc, global);
-  return LLVM::LoadOp::create(builder, loc, vecType, addr);
-}
-
-namespace {
-
-/// Rewrites `llvm.call @__quantum__qis__*__body(qubit_ptr, ...)` into the
-/// corresponding `llvm.call_intrinsic "llvm.riscv.qv.*"(vec, ...)`.
-///
-/// Qubit pointer arguments (produced by `llvm.inttoptr` of a constant index)
-/// are re-encoded as `vector<[kQubitIndexVecNumElements]xi8>` scalable vectors.
-struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
-  QISCallLowering(MLIRContext* context, llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals)
-      : OpRewritePattern(context), indexGlobals(indexGlobals) {}
+/// Rewrites `llvm.call @__quantum__qis__*__body(qubit_ptr, ...)` into the corresponding
+/// `llvm.call_intrinsic "llvm.riscv.qv.*"(qubit_vec, ...)`.
+struct QVGateLowering : public OpRewritePattern<LLVM::CallOp> {
+  QVGateLowering(MLIRContext* context, QubitIndexVecBuilder& qubitVecs)
+      : OpRewritePattern(context), qubitVecs(qubitVecs) {}
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
@@ -158,112 +165,75 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
       return failure();
     }
 
-    StringRef intrName = mapQISToIntrinsic(*callee);
-    if (intrName.empty()) {
+    const QVGate* gate = findQVGate(*callee);
+    if (gate == nullptr) {
       return failure();
     }
 
-    auto loc = callOp.getLoc();
-    auto i32Type = rewriter.getI32Type();
-    auto operands = callOp.getArgOperands();
-    auto moduleOp = callOp->getParentOfType<ModuleOp>();
+    Location loc = callOp.getLoc();
 
-    Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
-    // TODO: Only vl=1 is supported for now, a more general implementation is missing.
-    Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
-
+    // Only the leading operands are qubits. `mz__body(qubit_ptr, result_ptr)` also takes a result
+    // ptr, which the hardware does not use.
     SmallVector<Value> args;
-
-    if (*callee == qcc::qirQisCX) {
-      // QVPairIntrinsic: (vs1: vec<[1]xi8>, vs2: vec<[1]xi8>, block_imm: i32, vl: i32)
-      auto ctrlIdx = getQubitIndexFromPtr(operands[0]);
-      auto tgtIdx = getQubitIndexFromPtr(operands[1]);
-      if (!ctrlIdx || !tgtIdx) {
-        return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
-                                "for '__quantum__qis__cx__body'");
-      }
-
-      args = {loadQubitIndexVec(rewriter, loc, moduleOp, indexGlobals, *ctrlIdx),
-              loadQubitIndexVec(rewriter, loc, moduleOp, indexGlobals, *tgtIdx), blockImm, vl};
-    } else {
-      // QVSingleIntrinsic: (vs1: vec<[1]xi8>, rs2: i32, block_imm: i32, vl: i32)
-      // For mz__body: operands[0] = qubit_ptr, operands[1] = result_ptr (discarded).
-      auto qubitIdx = getQubitIndexFromPtr(operands[0]);
-      if (!qubitIdx) {
-        return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
-                                "for '")
+    for (Value qubitPtr : callOp.getArgOperands().take_front(gate->numQubits)) {
+      std::optional<int64_t> index = getQubitIndexFromPtr(qubitPtr);
+      if (!index) {
+        return callOp.emitError("expected a statically allocated qubit, i.e. an `llvm.inttoptr` of a "
+                                "constant, as operand of '")
                << *callee << "'";
       }
-
-      Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
-      args = {loadQubitIndexVec(rewriter, loc, moduleOp, indexGlobals, *qubitIdx), tag, blockImm, vl};
+      args.push_back(qubitVecs.build(rewriter, loc, *index));
     }
 
-    LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(intrName), args);
+    auto i32Const = [&](int32_t value) -> Value {
+      return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(value));
+    };
+
+    //   QVSingleIntrinsic: (vs1: vec, rs2: i32, block_imm: i32, vl: i32)
+    //   QVPairIntrinsic:   (vs1: vec, vs2: vec, block_imm: i32, vl: i32)
+    //
+    // None of the gates above use `rs2`.
+    if (gate->numQubits == 1) {
+      args.push_back(i32Const(0)); // rs2
+    }
+    args.push_back(i32Const(0)); // block_imm
+    /// TODO: support vl > 1 to batch several qubits into one call.
+    args.push_back(i32Const(1)); // vl
+
+    LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(gate->intrinsic), args);
     rewriter.eraseOp(callOp);
     return success();
   }
 
 private:
-  llvm::DenseMap<int64_t, LLVM::GlobalOp>& indexGlobals;
+  QubitIndexVecBuilder& qubitVecs;
 };
 
-/// Replaces `llvm.call @__quantum__rt__read_result(%result_ptr)` with `undef : i1`.
-///
-/// TODO: A proper `qv.read_result` intrinsic is not yet defined in IntrinsicsRISCVXQV.td.
-struct ReadResultLowering : public OpRewritePattern<LLVM::CallOp> {
+/// Drops the calls to `kDroppedQIRRuntimeFuncs` and replaces their results, if any, with `undef`.
+struct QIRRuntimeCallLowering : public OpRewritePattern<LLVM::CallOp> {
   using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
-    if (!callee || *callee != qcc::qirRtReadResult) {
+    if (!callee || !isDroppedQIRRuntimeFunc(*callee)) {
       return failure();
     }
 
-    rewriter.replaceOpWithNewOp<LLVM::UndefOp>(callOp, rewriter.getI1Type());
-    return success();
-  }
-};
-
-/// Erases `llvm.call @__quantum__rt__initialize(ptr)`.
-/// The runtime initialization step is not needed on the bare-metal intrinsic path.
-struct RtInitLowering : public OpRewritePattern<LLVM::CallOp> {
-  using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
-    auto callee = callOp.getCallee();
-    if (!callee || *callee != qcc::qirRtInit) {
-      return failure();
+    SmallVector<Value> undefResults;
+    for (Type resultType : callOp.getResultTypes()) {
+      undefResults.push_back(LLVM::UndefOp::create(rewriter, callOp.getLoc(), resultType));
     }
 
-    rewriter.eraseOp(callOp);
-    return success();
-  }
-};
-
-/// Erases `llvm.call @__quantum__rt__bool_record_output` and
-/// `llvm.call @__quantum__rt__int_record_output`.
-///
-/// TODO: No intrinsic equivalent for output recording exists yet.
-struct RecordOutputLowering : public OpRewritePattern<LLVM::CallOp> {
-  using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
-    auto callee = callOp.getCallee();
-    if (!callee) {
-      return failure();
-    }
-
-    if (*callee != qcc::qirRtBoolRecordOutput && *callee != qcc::qirRtIntRecordOutput) {
-      return failure();
-    }
-
-    rewriter.eraseOp(callOp);
+    rewriter.replaceOp(callOp, undefResults);
     return success();
   }
 };
 
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// Pass
+//===----------------------------------------------------------------------===//
 
 namespace qcc {
 
@@ -272,98 +242,104 @@ namespace qcc {
 
 namespace {
 
+/// Whether `funcOp` carries the `entry_point` passthrough attribute set by
+/// `ConvertQCToQIR::setEntryPointAttrs`.
+bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
+  auto passthrough = funcOp->getAttrOfType<ArrayAttr>("passthrough");
+  if (!passthrough) {
+    return false;
+  }
+
+  return llvm::any_of(passthrough, [](Attribute attr) {
+    auto strAttr = dyn_cast<StringAttr>(attr);
+    return strAttr && strAttr.getValue() == "entry_point";
+  });
+}
+
 struct ConvertQIRToIntrinsics final : impl::ConvertQIRToIntrinsicsBase<ConvertQIRToIntrinsics> {
   using ConvertQIRToIntrinsicsBase::ConvertQIRToIntrinsicsBase;
 
 protected:
   void runOnOperation() override {
     ModuleOp moduleOp = getOperation();
-    auto* ctx = moduleOp.getContext();
 
-    llvm::DenseMap<int64_t, LLVM::GlobalOp> indexGlobals;
+    FailureOr<LLVM::LLVMFuncOp> entryPoint = findEntryPoint(moduleOp);
+    if (failed(entryPoint)) {
+      return signalPassFailure();
+    }
 
-    RewritePatternSet patterns(ctx);
-    patterns.add<QISCallLowering>(ctx, indexGlobals);
-    patterns.add<ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
+    QubitIndexVecBuilder qubitVecs(moduleOp);
+
+    RewritePatternSet patterns(moduleOp.getContext());
+    patterns.add<QVGateLowering>(moduleOp.getContext(), qubitVecs);
+    patterns.add<QIRRuntimeCallLowering>(moduleOp.getContext());
 
     if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
       return signalPassFailure();
     }
 
-    removeQIRDeclarations();
-    synthesizeStartFunction();
+    eraseQIRDeclarations(moduleOp);
+
+    if (*entryPoint) {
+      emitStartFunc(moduleOp, *entryPoint);
+    }
   }
 
 private:
-  /// Removes leftover QIR function declarations whose call sites were erased.
-  void removeQIRDeclarations() {
-    SmallVector<LLVM::LLVMFuncOp> toErase;
-    getOperation()->walk([&](LLVM::LLVMFuncOp funcOp) {
-      if (isHandledQIRSymbol(funcOp.getName())) {
-        toErase.push_back(funcOp);
+  /// Returns the entry point of the module, or a null func if it has none. At most one function may
+  /// be tagged, as the hardware boots at a single address.
+  static FailureOr<LLVM::LLVMFuncOp> findEntryPoint(ModuleOp moduleOp) {
+    LLVM::LLVMFuncOp entryPoint;
+    for (auto funcOp : moduleOp.getOps<LLVM::LLVMFuncOp>()) {
+      if (!isEntryPointFunc(funcOp)) {
+        continue;
       }
-    });
-    for (auto funcOp : toErase) {
+      if (entryPoint) {
+        funcOp.emitError("expected at most one function tagged as the entry point, but found '")
+            << entryPoint.getName() << "' and '" << funcOp.getName() << "'";
+        return failure();
+      }
+      entryPoint = funcOp;
+    }
+    return entryPoint;
+  }
+
+  /// Erases the QIR declarations whose call sites are all gone.
+  static void eraseQIRDeclarations(ModuleOp moduleOp) {
+    SmallVector<LLVM::LLVMFuncOp> deadFuncs;
+    for (auto funcOp : moduleOp.getOps<LLVM::LLVMFuncOp>()) {
+      if (isLoweredQIRFunc(funcOp.getName())) {
+        deadFuncs.push_back(funcOp);
+      }
+    }
+
+    for (auto funcOp : deadFuncs) {
       funcOp.erase();
     }
   }
 
-  /// The hisep-q hardware jumps directly to the fixed boot address (see hisepq.ld) at reset --
-  /// there is no caller, so `ra`/`sp` hold whatever garbage the core reset with. Rather than let
-  /// the user's entry point (tagged via ConvertQCToQIR::setEntryPointAttrs) sit at that address
-  /// with no valid stack, synthesize a `_start` function that becomes the new hardware entry
-  /// point instead: it initializes `sp` from the linker-provided `__stack_top` symbol (see
-  /// hisepq.ld), calls the entry point with a real `jalr` so it can return normally, and halts
-  /// in an infinite loop if that call ever returns -- the usual bare-metal "halt here" idiom.
+  /// Emits `_start`, which supersedes `entryPoint` as the entry point of the hardware.
   ///
-  /// The whole sequence is emitted as a single inline-asm block rather than separate
-  /// `llvm.call`/write-register operations: an ordinary `llvm.call` to the entry point would let
-  /// the RISC-V backend decide `_start` needs a stack frame to save `ra` across that call, and
-  /// prologue/epilogue insertion happens at the very start of the function regardless of where
-  /// in the IR the "first" instruction sits -- i.e. that frame-setup code could run before our
-  /// own `sp` initialization does. Folding everything into one inline-asm operand with no other
-  /// stack-touching IR around it sidesteps that ordering risk entirely.
-  void synthesizeStartFunction() {
-    LLVM::LLVMFuncOp entryPoint;
-    WalkResult result = getOperation()->walk([&](LLVM::LLVMFuncOp funcOp) {
-      if (!isEntryPointFunc(funcOp)) {
-        return WalkResult::advance();
-      }
-      if (entryPoint) {
-        funcOp.emitError("convert-qir-to-intrinsics: multiple functions tagged as the entry "
-                         "point ('")
-            << entryPoint.getName() << "' and '" << funcOp.getName()
-            << "'); only one hardware boot address exists, so exactly one entry point is "
-               "required";
-        return WalkResult::interrupt();
-      }
-      entryPoint = funcOp;
-      return WalkResult::advance();
-    });
-    if (result.wasInterrupted()) {
-      return signalPassFailure();
-    }
-    if (!entryPoint) {
-      return;
-    }
-
-    ModuleOp moduleOp = getOperation();
+  /// HiSEP-Q jumps to the fixed boot address (see hisepq.ld) at reset. There is no caller, and `sp`
+  /// holds whatever the core reset with. `_start` sets `sp` to the linker-provided `__stack_top`,
+  /// calls `entryPoint` with a `jalr` so that it can return normally, and halts in an infinite loop
+  /// if it does.
+  ///
+  /// The sequence must be a single inline-asm block: with a `llvm.call`, the backend saves `ra` in
+  /// a prologue, which is emitted ahead of the `sp` setup.
+  static void emitStartFunc(ModuleOp moduleOp, LLVM::LLVMFuncOp entryPoint) {
     OpBuilder builder(moduleOp.getContext());
     builder.setInsertionPointToEnd(moduleOp.getBody());
     Location loc = entryPoint.getLoc();
 
-    // extern char __stack_top[]; -- a linker-provided symbol (hisepq.ld), never read through,
-    // only ever address-taken to recover the address the linker assigned it.
-    auto i8Type = builder.getIntegerType(8);
-    auto stackTopType = LLVM::LLVMArrayType::get(i8Type, 0);
+    // `extern char __stack_top[];`, defined by hisepq.ld. Only its address is used.
+    auto stackTopType = LLVM::LLVMArrayType::get(builder.getI8Type(), 0);
     auto stackTop = LLVM::GlobalOp::create(builder, loc, stackTopType, /*isConstant=*/true, LLVM::Linkage::External,
                                            "__stack_top", /*value=*/Attribute());
 
     auto startFuncType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(builder.getContext()), {});
     auto startFunc = LLVM::LLVMFuncOp::create(builder, loc, "_start", startFuncType);
-
-    Block* entryBlock = startFunc.addEntryBlock(builder);
-    builder.setInsertionPointToStart(entryBlock);
+    builder.setInsertionPointToStart(startFunc.addEntryBlock(builder));
 
     Value stackTopAddr = LLVM::AddressOfOp::create(builder, loc, stackTop);
     Value entryAddr = LLVM::AddressOfOp::create(builder, loc, entryPoint);
