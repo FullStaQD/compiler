@@ -36,8 +36,35 @@ else
 fi
 
 cd "$LLVM_DIR"
-git checkout "$BASE_REV"
 
-for p in "$LLVM_SRC"/patches/qisa/*.patch; do
+PATCHES=("$LLVM_SRC"/patches/qisa/*.patch)
+
+# Recover from a previous run whose `git am` was interrupted; otherwise the
+# checkout below would fail with "you are in the middle of an am session".
+if [[ -d "$(git rev-parse --git-path rebase-apply)" ]]; then
+  echo "Found an interrupted git am session, aborting it."
+  git am --abort
+fi
+
+# Fast path: if every patch already reverse-applies, it is present in the tree,
+# so there is nothing to do.
+all_applied=true
+for p in "${PATCHES[@]}"; do
+  if ! git apply --reverse --check "$p" 2>/dev/null; then
+    all_applied=false
+    break
+  fi
+done
+
+if $all_applied; then
+  echo "Patches already applied; nothing to do."
+  exit 0
+fi
+
+# Rebuild from the pinned base: -f discards any partial/leftover state and drops
+# prior patch commits, so `git am` always applies onto a clean base.
+git checkout -f "$BASE_REV"
+
+for p in "${PATCHES[@]}"; do
   git am "$p"
 done
