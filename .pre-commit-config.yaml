@@ -11,6 +11,9 @@
 #     prek install
 #
 
+# Patch files must stay byte-exact, so no hook should rewrite them.
+exclude: \.patch$
+
 ci:
   autoupdate_commit_msg: "⬆️🪝 update pre-commit hooks"
   autoupdate_schedule: quarterly
