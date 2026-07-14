@@ -6,7 +6,7 @@ usage() {
   cat <<EOF
 Usage: ${0##*/} [LLVM_DIR]
 
-Clone llvm-project at the pinned base revision and apply the qisa patches.
+Clone llvm-project at the pinned base revision and apply all patches.
 
 If the repo already exists at the given path cloning will be skipped. Beware that local changes 
 will be overwritten.
@@ -25,8 +25,8 @@ fi
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)
 
-LLVM_SRC="$REPO_ROOT/third-party/llvm"
-BASE_REV=$(cat "$LLVM_SRC/base.rev")
+LLVM_3RD="$REPO_ROOT/third-party/llvm"
+BASE_REV=$(cat "$LLVM_3RD/base.rev")
 LLVM_DIR="${1:-$HOME/external/llvm-project-patched}"
 
 if [[ -d "$LLVM_DIR/.git" ]]; then
@@ -38,13 +38,13 @@ fi
 
 cd "$LLVM_DIR"
 
-PATCHES=("$LLVM_SRC"/patches/qisa/*.patch)
+LLVM_QISA_PATCHES=("$LLVM_3RD"/patches/qisa/*.patch)
 
 # Discard any interrupted `git am` and any local changes, then reset to the
 # pinned base so patches always apply onto a known-clean tree.
 git am --abort 2>/dev/null || true
 git checkout -f "$BASE_REV"
 
-for p in "${PATCHES[@]}"; do
+for p in "${LLVM_QISA_PATCHES[@]}"; do
   git am "$p"
 done
