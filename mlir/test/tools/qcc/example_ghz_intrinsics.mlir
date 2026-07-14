@@ -52,8 +52,8 @@ func.func @main() attributes { qcc.entry_point } {
 // ordinary return.
 // CHECK:         llvm.return
 
-// The declarations of the lowered gates and rt functions are removed. The ones PrepToQIR declares
-// but the GHZ circuit does not use (s, sdg, t, tdg, rz) have no intrinsic and stay.
+// No QIS declaration survives: the HiSEP-Q device implements h, x, cx and mz, which are the only
+// ones PrepToQIR declares, and convert-qir-to-intrinsics lowers all four.
 // CHECK-NOT: llvm.func @__quantum__qis__h__body
 // CHECK-NOT: llvm.func @__quantum__qis__x__body
 // CHECK-NOT: llvm.func @__quantum__qis__cx__body
@@ -62,6 +62,10 @@ func.func @main() attributes { qcc.entry_point } {
 // CHECK-NOT: llvm.func @__quantum__rt__read_result
 // CHECK-NOT: llvm.func @__quantum__rt__bool_record_output
 // CHECK-NOT: llvm.func @__quantum__rt__int_record_output
+// The gates the device does not implement are never declared in the first place.
+// CHECK-NOT: llvm.func @__quantum__qis__t__body
+// CHECK-NOT: llvm.func @__quantum__qis__rz__body
+// CHECK-NOT: llvm.func @__quantum__qis__reset__body
 
 // `_start` supersedes `main` as the entry point of the hardware: it sets up the stack, calls
 // `main`, and halts in an infinite loop if that call returns (see emitStartFunc).

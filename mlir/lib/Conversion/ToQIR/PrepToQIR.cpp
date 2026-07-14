@@ -16,6 +16,10 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 
+#include "llvm/ADT/STLExtras.h"
+
+#include <array>
+
 using namespace mlir;
 
 namespace qcc {
@@ -25,35 +29,44 @@ namespace qcc {
 
 namespace {
 
+/// A QIS function of the QIR gate set, and the signature it is declared with.
+struct QISFunc {
+  llvm::StringLiteral name;
+  unsigned numQubits;  ///< qubit ptr parameters
+  bool hasAngle;       ///< takes a leading f64 rotation angle
+  bool isIrreversible; ///< measurement or reset, i.e. not a unitary
+};
+
+constexpr std::array kQISFuncs = {
+    QISFunc{qirQisMZ, /*numQubits=*/2, /*hasAngle=*/false, /*isIrreversible=*/true},
+    QISFunc{qirQisReset, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/true},
+    QISFunc{qirQisH, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisX, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisS, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisSdg, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisT, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisTdg, /*numQubits=*/1, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisCX, /*numQubits=*/2, /*hasAngle=*/false, /*isIrreversible=*/false},
+    QISFunc{qirQisRZ, /*numQubits=*/1, /*hasAngle=*/true, /*isIrreversible=*/false},
+};
+
 struct PrepToQIR final : public impl::PrepToQIRBase<PrepToQIR> {
   using impl::PrepToQIRBase<PrepToQIR>::PrepToQIRBase;
 
 protected:
   void runOnOperation() override {
-    ModuleOp moduleOp = getOperation();
-    auto* ctx = moduleOp.getContext();
-    OpBuilder builder(ctx);
-
     // Runtime functions:
     createVoidFnDecl(qcc::qirRtInit, 1);
     createRtBoolRecordOutputDecl();
     createRtIntRecordOutputDecl();
     createRtReadResultDecl();
 
-    // QIS:
-    auto fnMZ = createVoidFnDecl(qcc::qirQisMZ, 2);
-    fnMZ.setArgAttr(1, "llvm.writeonly", builder.getUnitAttr());
-    fnMZ->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
-    auto fnReset = createVoidFnDecl(qcc::qirQisReset, 1);
-    fnReset->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
-    createVoidFnDecl(qcc::qirQisH, 1);
-    createVoidFnDecl(qcc::qirQisX, 1);
-    createVoidFnDecl(qcc::qirQisS, 1);
-    createVoidFnDecl(qcc::qirQisSdg, 1);
-    createVoidFnDecl(qcc::qirQisT, 1);
-    createVoidFnDecl(qcc::qirQisTdg, 1);
-    createVoidFnDecl(qcc::qirQisCX, 2);
-    createF64PtrFnDecl(qcc::qirQisRZ);
+    // QIS: only what the device implements, so that a gate it does not have cannot be called.
+    for (const QISFunc& qisFunc : kQISFuncs) {
+      if (isNativeGate(qisFunc.name)) {
+        createQISFnDecl(qisFunc);
+      }
+    }
 
     addQIRModuleFlags();
 
@@ -61,8 +74,27 @@ protected:
   }
 
 private:
+  /// Whether the device implements `qisName`. With no `native-gates` given, the pass declares the
+  /// whole QIR gate set.
+  bool isNativeGate(StringRef qisName) const { return nativeGates.empty() || llvm::is_contained(nativeGates, qisName); }
+
+  void createQISFnDecl(const QISFunc& qisFunc) {
+    OpBuilder builder(getOperation().getContext());
+
+    LLVM::LLVMFuncOp fnDecl =
+        qisFunc.hasAngle ? createF64PtrFnDecl(qisFunc.name) : createVoidFnDecl(qisFunc.name, qisFunc.numQubits);
+
+    if (qisFunc.isIrreversible) {
+      fnDecl->setAttr("passthrough", builder.getStrArrayAttr({"irreversible"}));
+    }
+    if (qisFunc.name == qirQisMZ) {
+      // mz(qubit, result): the measurement writes its outcome to the result ptr.
+      fnDecl.setArgAttr(1, "llvm.writeonly", builder.getUnitAttr());
+    }
+  }
+
   /// Inserts `llvm.func` with signature `fnName(ptr, ptr, ...) -> void`.
-  LLVM::LLVMFuncOp createVoidFnDecl(StringRef fnName, int numPtrs) {
+  LLVM::LLVMFuncOp createVoidFnDecl(StringRef fnName, unsigned numPtrs) {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
     OpBuilder builder(ctx);
@@ -182,7 +214,7 @@ private:
   ///
   /// Used for parametric single-qubit QIS gates whose first argument is a
   /// rotation angle (double-precision float) and second is the target qubit pointer.
-  void createF64PtrFnDecl(StringRef fnName) {
+  LLVM::LLVMFuncOp createF64PtrFnDecl(StringRef fnName) {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
     OpBuilder builder(ctx);
@@ -193,7 +225,7 @@ private:
 
     auto fnType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(ctx), {f64Type, ptrType});
 
-    LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
+    return LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), fnName, fnType);
   }
 };
 

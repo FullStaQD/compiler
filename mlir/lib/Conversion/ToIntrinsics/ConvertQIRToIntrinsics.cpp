@@ -7,6 +7,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
+#include "qcc/Conversion/ToIntrinsics/QVGates.h"
 #include "qcc/Conversion/ToQIR/Constants.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -75,6 +76,19 @@ bool isDroppedQIRRuntimeFunc(StringRef name) { return llvm::is_contained(kDroppe
 
 /// Whether `name` is a QIR function that this pass rewrites away.
 bool isLoweredQIRFunc(StringRef name) { return findQVGate(name) != nullptr || isDroppedQIRRuntimeFunc(name); }
+
+} // namespace
+
+llvm::ArrayRef<StringRef> qcc::getQVGateSet() {
+  static const std::array<StringRef, kQVGates.size()> gateSet = [] {
+    std::array<StringRef, kQVGates.size()> names{};
+    llvm::transform(kQVGates, names.begin(), [](const QVGate& gate) { return StringRef(gate.qisName); });
+    return names;
+  }();
+  return gateSet;
+}
+
+namespace {
 
 //===----------------------------------------------------------------------===//
 // Qubit index vectors

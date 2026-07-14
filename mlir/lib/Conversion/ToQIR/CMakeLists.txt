@@ -7,6 +7,7 @@ add_mlir_conversion_library(
   QCCToQIRIncGen
   QCCAuxDialectIncGen
   QCCAuxOpsIncGen
+  AuxOutputRecordingIncGen
   LINK_LIBS
   # Dialects
   MLIRQCDialect
@@ -19,6 +20,10 @@ add_mlir_conversion_library(
   MLIRFuncToLLVM
   MLIRMemRefToLLVM
   MLIRSCFToControlFlow
+  # The passes that `buildQIRPipeline` sequences alongside this library's own
+  MLIRArithToLLVM
+  MLIRControlFlowToLLVM
+  QCCAuxOutputRecording
   # Core MLIR
   MLIRIR
   MLIRPass)

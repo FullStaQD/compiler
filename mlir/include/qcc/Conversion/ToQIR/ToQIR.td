@@ -19,9 +19,18 @@ def PrepToQIR : Pass<"prep-to-qir", "mlir::ModuleOp"> {
       Assumptions:
       - Input IR contains a single top-level module.
 
+      Only the QIS functions the target device implements are declared, as given by
+      `native-gates`. Passing no gate declares the whole QIR gate set, which is what the
+      pass does when run standalone.
+
       TODO:
       - Currently we hardcode the capabilities, must be target specific in the future.
    }];
+
+  let options = [
+    ListOption<"nativeGates", "native-gates", "std::string",
+               "QIS functions the target device implements (empty: the whole QIR gate set)">
+  ];
 
   let dependentDialects = [
     "mlir::LLVM::LLVMDialect"
@@ -58,9 +67,21 @@ def ConvertQCToQIR : Pass<"convert-qc-to-qir", "mlir::func::FuncOp"> {
       - TODO: It expects a global dummy-label to be present for the record function:
         `llvm.mlir.global internal constant @".qir_dummy_label"("arbitrary_label\00") {addr_space = 0 : i32}`.
 
+      A gate that the target device does not implement is an error, as nothing further down the
+      pipeline can execute it. The device declares its gates via `native-gates`; passing none
+      accepts every gate of the QIR gate set, which is what the pass does when run standalone.
+
+      TODO: A non-native gate should be decomposed into native ones rather than rejected. That
+      decomposition belongs to the device (see `QuantumTarget::addDevicePasses`), above this pass.
+
       To satisfy the assumptions you likely want to run `-prep-to-qir` before this pass. Sometime
       after this pass you probably also want to run `-finalize-to-qir`.
    }];
+
+  let options = [
+    ListOption<"nativeGates", "native-gates", "std::string",
+               "QIS functions the target device implements (empty: accept every gate)">
+  ];
 
   let dependentDialects = [
     "mlir::LLVM::LLVMDialect"
