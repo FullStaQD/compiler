@@ -9,8 +9,8 @@
 
 #include "qcc/Target/TargetRegistry.h"
 
-#include "qcc/Compiler/Pipeline.h"
 #include "qcc/Config/Config.h"
+#include "qcc/Target/QIR/QIRTarget.h"
 
 #if QCC_ENABLE_HISEP_Q
 #include "qcc/Target/HiSEPQ/HiSEPQTarget.h"
@@ -27,7 +27,7 @@ llvm::ArrayRef<TargetInfo> getTargets() {
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
                       .available = true,
-                      .buildPipeline = [](mlir::PassManager& pm) { buildQuantumPipeline(pm); }});
+                      .buildPipeline = [](mlir::PassManager& pm) { buildQIRPipeline(pm); }});
 #if QCC_ENABLE_HISEP_Q
     result.push_back({.name = "hisep-q",
                       .description = "HiSEP-Q QISA target (RISC-V based)",

@@ -7,7 +7,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Compiler/Pipeline.h"
+#include "qcc/Target/QIR/QIRTarget.h"
 
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
 #include "qcc/Conversion/Aux_/AuxOutputRecording.h"
@@ -31,7 +31,7 @@
 
 namespace qcc {
 
-void buildQuantumPipeline(mlir::PassManager& pm) {
+void buildQIRPipeline(mlir::PassManager& pm) {
 
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());

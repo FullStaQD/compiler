@@ -1,4 +1,6 @@
-set(QCC_TARGET_LINK_LIBS MLIRPass QCCPipeline)
+add_subdirectory(QIR)
+
+set(QCC_TARGET_LINK_LIBS MLIRPass QCCTargetQIR)
 
 if(QCC_ENABLE_HISEP_Q)
   add_subdirectory(HiSEPQ)
