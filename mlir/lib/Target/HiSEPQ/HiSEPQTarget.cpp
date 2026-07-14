@@ -15,7 +15,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
-#include "qcc/Target/HiSEPQ/HiSEPQBackend.h"
+#include "qcc/Target/HiSEPQ/HiSEPQTarget.h"
 
 namespace qcc {
 

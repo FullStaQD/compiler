@@ -17,7 +17,7 @@
 namespace qcc {
 // FIXME: how about const-correctness here?
 /// Describes a compilation target selectable via `qcc --target=<name>`.
-struct BackendInfo {
+struct TargetInfo {
   /// The `--target` value, e.g. "qir".
   llvm::StringRef name;
   /// Human-readable description shown by `--list-targets`.
@@ -30,11 +30,11 @@ struct BackendInfo {
 };
 
 /// Returns all known backends, available or not.
-llvm::ArrayRef<BackendInfo> getBackends();
+llvm::ArrayRef<TargetInfo> getTargets();
 
 // FIXME: better return type (currently *raw* pointer)?
 /// Looks up a backend by its `--target` name, or returns nullptr if no backend
 /// with that name is known.
-const BackendInfo* lookupBackend(llvm::StringRef name);
+const TargetInfo* lookupTarget(llvm::StringRef name);
 
 } // namespace qcc

@@ -13,17 +13,17 @@
 #include "qcc/Config/Config.h"
 
 #if QCC_ENABLE_HISEP_Q
-#include "qcc/Target/HiSEPQ/HiSEPQBackend.h"
+#include "qcc/Target/HiSEPQ/HiSEPQTarget.h"
 #endif
 
 #include <vector>
 
 namespace qcc {
 
-llvm::ArrayRef<BackendInfo> getBackends() {
+llvm::ArrayRef<TargetInfo> getTargets() {
   // FIXME: the pre-processor directives look a bit unergonomic here.
-  static const std::vector<BackendInfo> backends = [] {
-    std::vector<BackendInfo> result;
+  static const std::vector<TargetInfo> backends = [] {
+    std::vector<TargetInfo> result;
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
                       .available = true,
@@ -44,8 +44,8 @@ llvm::ArrayRef<BackendInfo> getBackends() {
   return backends;
 }
 
-const BackendInfo* lookupBackend(llvm::StringRef name) {
-  for (const BackendInfo& backend : getBackends()) {
+const TargetInfo* lookupTarget(llvm::StringRef name) {
+  for (const TargetInfo& backend : getTargets()) {
     if (backend.name == name) {
       return &backend;
     }

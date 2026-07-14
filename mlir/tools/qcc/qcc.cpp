@@ -58,7 +58,7 @@ enum class Stage : uint8_t { Mlir, LlvmIr, Native };
 /// Prints all known targets and whether they are usable in this build.
 static void printTargets() {
   llvm::outs() << "Available targets for --target:\n";
-  for (const qcc::BackendInfo& backend : qcc::getBackends()) {
+  for (const qcc::TargetInfo& backend : qcc::getTargets()) {
     llvm::outs() << "  " << backend.name;
     if (!backend.available) {
       llvm::outs() << " (unavailable in this build)";
@@ -100,12 +100,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  const qcc::BackendInfo* backend = qcc::lookupBackend(target); // FIXME: rename all this to "target"
-  if (backend == nullptr) {
+  const qcc::TargetInfo* targetInfo = qcc::lookupTarget(target);
+  if (targetInfo == nullptr) {
     llvm::errs() << "error: unknown target '" << target << "' (see --list-targets)\n";
     return 1;
   }
-  if (!backend->available) {
+  if (!targetInfo->available) {
     llvm::errs() << "error: target '" << target
                  << "' is not available in this build; rebuild qcc with -DQCC_ENABLE_XXX=ON\n";
     return 1;
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  backend->buildPipeline(pm);
+  targetInfo->buildPipeline(pm);
 
   if (mlir::failed(pm.run(*module))) {
     return 1;

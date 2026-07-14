@@ -11,8 +11,6 @@
 //
 // ===----------------------------------------------------------------------===//
 
-// FIXME: rename the file? (backend vs target)
-
 #pragma once
 
 #include <mlir/Pass/PassManager.h>
