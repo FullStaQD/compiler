@@ -7,6 +7,7 @@
 //
 // ===----------------------------------------------------------------------===//
 
+#include "qcc/Compiler/Compiler.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
 #include "qcc/Target/TargetRegistry.h"
@@ -164,6 +165,7 @@ int main(int argc, char** argv) {
   }
 
   target->buildPipeline(pm);
+  qcc::buildPipeline(pm, target);
 
   if (mlir::failed(pm.run(*module))) {
     return 1;
