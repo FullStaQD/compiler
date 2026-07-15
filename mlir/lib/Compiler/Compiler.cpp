@@ -23,9 +23,19 @@
 
 #include <llvm/Support/ErrorHandling.h>
 
+/// Lower Qrisp to QC, QCO and standard MLIR dialects.
+static void addLoweringQrisp(mlir::PassManager& pm);
+
 namespace qcc {
 
-void buildPipeline(mlir::PassManager& pm, const Target* /*target*/) {
+void buildPipeline(mlir::PassManager& pm, const Target* target) {
+  addLoweringQrisp(pm);
+  target->buildPipeline(pm);
+}
+
+} // namespace qcc
+
+static void addLoweringQrisp(mlir::PassManager& pm) {
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
 
@@ -110,5 +120,3 @@ void buildPipeline(mlir::PassManager& pm, const Target* /*target*/) {
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
 }
-
-} // namespace qcc
