@@ -16,7 +16,7 @@
 
 namespace qcc {
 /// Describes a compilation target selectable via `qcc --target=<name>`.
-struct TargetInfo {
+struct Target {
   /// The `--target` value, e.g. "qir".
   llvm::StringRef name;
   /// Human-readable description shown by `--list-targets`.
@@ -29,10 +29,10 @@ struct TargetInfo {
 };
 
 /// Returns all known backends, available or not.
-llvm::ArrayRef<TargetInfo> getTargets();
+llvm::ArrayRef<Target> getTargets();
 
 /// Looks up a backend by its `--target` name, or returns nullptr if no backend
 /// with that name is known.
-const TargetInfo* lookupTarget(llvm::StringRef name);
+const Target* lookupTarget(llvm::StringRef name);
 
 } // namespace qcc

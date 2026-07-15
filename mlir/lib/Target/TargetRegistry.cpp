@@ -20,18 +20,18 @@
 
 namespace qcc {
 
-llvm::ArrayRef<TargetInfo> getTargets() {
-  static const std::vector<TargetInfo> backends = [] {
-    std::vector<TargetInfo> result;
+llvm::ArrayRef<Target> getTargets() {
+  static const std::vector<Target> backends = [] {
+    std::vector<Target> result;
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
                       .available = true,
                       .buildPipeline = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }});
 
-    TargetInfo hisepq{.name = "hisep-q",
-                      .description = "HiSEP-Q QISA target (RISC-V based)",
-                      .available = false,
-                      .buildPipeline = nullptr};
+    Target hisepq{.name = "hisep-q",
+                  .description = "HiSEP-Q QISA target (RISC-V based)",
+                  .available = false,
+                  .buildPipeline = nullptr};
 #if QCC_ENABLE_HISEP_Q
     hisepq.available = true;
     hisepq.buildPipeline = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); };
@@ -44,8 +44,8 @@ llvm::ArrayRef<TargetInfo> getTargets() {
   return backends;
 }
 
-const TargetInfo* lookupTarget(llvm::StringRef name) {
-  for (const TargetInfo& backend : getTargets()) {
+const Target* lookupTarget(llvm::StringRef name) {
+  for (const Target& backend : getTargets()) {
     if (backend.name == name) {
       return &backend;
     }

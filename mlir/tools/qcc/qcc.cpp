@@ -58,7 +58,7 @@ enum class Stage : uint8_t { Mlir, LlvmIr, Native };
 /// Prints all known targets and whether they are usable in this build.
 static void printTargets() {
   llvm::outs() << "Available targets for --target:\n";
-  for (const qcc::TargetInfo& backend : qcc::getTargets()) {
+  for (const qcc::Target& backend : qcc::getTargets()) {
     llvm::outs() << "  " << backend.name;
     if (!backend.available) {
       llvm::outs() << " (unavailable in this build)";
@@ -75,8 +75,8 @@ int main(int argc, char** argv) {
   const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::cat(qccCategory));
   const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
                                             cl::cat(qccCategory));
-  const cl::opt<std::string> target("target", cl::desc("Target backend to compile for (see --list-targets)"),
-                                    cl::init("qir"), cl::value_desc("name"), cl::cat(qccCategory));
+  const cl::opt<std::string> targetName("target", cl::desc("Target backend to compile for (see --list-targets)"),
+                                        cl::init("qir"), cl::value_desc("name"), cl::cat(qccCategory));
   const cl::opt<bool> listTargets("list-targets", cl::desc("List the available --target backends and exit"),
                                   cl::init(false), cl::cat(qccCategory));
   const cl::opt<Stage> compileTo(
@@ -100,13 +100,13 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  const qcc::TargetInfo* targetInfo = qcc::lookupTarget(target);
-  if (targetInfo == nullptr) {
-    llvm::errs() << "error: unknown target '" << target << "' (see --list-targets)\n";
+  const qcc::Target* target = qcc::lookupTarget(targetName);
+  if (target == nullptr) {
+    llvm::errs() << "error: unknown target '" << targetName << "' (see --list-targets)\n";
     return 1;
   }
-  if (!targetInfo->available) {
-    llvm::errs() << "error: target '" << target
+  if (!target->available) {
+    llvm::errs() << "error: target '" << targetName
                  << "' is not available in this build; rebuild qcc with -DQCC_ENABLE_XXX=ON\n";
     return 1;
   }
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  targetInfo->buildPipeline(pm);
+  target->buildPipeline(pm);
 
   if (mlir::failed(pm.run(*module))) {
     return 1;
