@@ -1,6 +1,5 @@
-// RUN: qcc %s -o %t.ll
-// RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
-// RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
+// RUN: qcc %s | FileCheck %s --check-prefix=CHECK-QIR
+// RUN: qcc %s | qir-runner -s 5 | FileCheck %s --check-prefix=CHECK-SIM
 
 // GENERATED FROM QRISP VERSION  git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
 
