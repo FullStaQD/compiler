@@ -76,7 +76,9 @@ protected:
 private:
   /// Whether the device implements `qisName`. With no `native-gates` given, the pass declares the
   /// whole QIR gate set.
-  bool isNativeGate(StringRef qisName) const { return nativeGates.empty() || llvm::is_contained(nativeGates, qisName); }
+  [[nodiscard]] bool isNativeGate(StringRef qisName) const {
+    return nativeGates.empty() || llvm::is_contained(nativeGates, qisName);
+  }
 
   void createQISFnDecl(const QISFunc& qisFunc) {
     OpBuilder builder(getOperation().getContext());

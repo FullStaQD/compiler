@@ -50,13 +50,13 @@ class QuantumTarget {
 public:
   virtual ~QuantumTarget() = default;
 
-  virtual llvm::StringRef getName() const = 0;
+  [[nodiscard]] virtual llvm::StringRef getName() const = 0;
 
   /// The QIS functions this device implements, by the names of `ToQIR/Constants.h`.
   ///
   /// A circuit reaching QIR may only use these: a gate outside the set has no hardware to run on.
   /// The passes of the pipeline are told about them through the `native-gates` pass option.
-  virtual llvm::ArrayRef<llvm::StringRef> getNativeGates() const = 0;
+  [[nodiscard]] virtual llvm::ArrayRef<llvm::StringRef> getNativeGates() const = 0;
 
   /// Appends the passes that adapt a circuit to this device.
   virtual void addDevicePasses(mlir::PassManager& pm) const = 0;
@@ -71,20 +71,20 @@ class ControlTarget {
 public:
   virtual ~ControlTarget() = default;
 
-  virtual llvm::StringRef getName() const = 0;
+  [[nodiscard]] virtual llvm::StringRef getName() const = 0;
 
   /// The stages this control hardware can emit. The driver rejects the other ones up front, so the
   /// hooks below are only called for a stage listed here.
-  virtual llvm::ArrayRef<Stage> getSupportedStages() const = 0;
+  [[nodiscard]] virtual llvm::ArrayRef<Stage> getSupportedStages() const = 0;
 
-  bool supportsStage(Stage stage) const;
+  [[nodiscard]] bool supportsStage(Stage stage) const;
 
   /// Whether this control hardware can execute the QIS function `qisName`.
   ///
   /// The default accepts every gate: a controller that emits the QIR calls unchanged puts no
   /// constraint on the gate set. One that lowers them to instructions only executes the gates its
   /// instruction set covers.
-  virtual bool canExecuteGate(llvm::StringRef qisName) const;
+  [[nodiscard]] virtual bool canExecuteGate(llvm::StringRef qisName) const;
 
   /// Appends the passes that take the circuit of `device`, in the qc dialect, down to what this
   /// control hardware executes.
@@ -100,7 +100,7 @@ public:
                                                                    const CodeGenOptions& options) const;
 
   /// The linker script that lays out `Stage::Elf`.
-  virtual llvm::StringRef getLinkerScript() const;
+  [[nodiscard]] virtual llvm::StringRef getLinkerScript() const;
 
   /// Converts the ELF image linked for `Stage::Elf` into the memory image of `Stage::Mem`.
   virtual llvm::Error writeMemoryImage(const llvm::MemoryBuffer& elf, llvm::raw_ostream& os) const;
@@ -117,11 +117,11 @@ public:
   virtual ~Platform() = default;
 
   /// The name that selects this platform on the command line, and the help text next to it.
-  virtual llvm::StringRef getName() const = 0;
-  virtual llvm::StringRef getDescription() const = 0;
+  [[nodiscard]] virtual llvm::StringRef getName() const = 0;
+  [[nodiscard]] virtual llvm::StringRef getDescription() const = 0;
 
-  virtual const QuantumTarget& getQuantumTarget() const = 0;
-  virtual const ControlTarget& getControlTarget() const = 0;
+  [[nodiscard]] virtual const QuantumTarget& getQuantumTarget() const = 0;
+  [[nodiscard]] virtual const ControlTarget& getControlTarget() const = 0;
 
   /// Checks that the control hardware can execute every gate the device implements.
   ///

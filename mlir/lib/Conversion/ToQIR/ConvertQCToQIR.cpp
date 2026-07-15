@@ -133,7 +133,7 @@ public:
     gates.insert(nativeGates.begin(), nativeGates.end());
   }
 
-  bool contains(StringRef qisName) const { return gates.empty() || gates.contains(qisName); }
+  [[nodiscard]] bool contains(StringRef qisName) const { return gates.empty() || gates.contains(qisName); }
 
 private:
   llvm::StringSet<> gates;

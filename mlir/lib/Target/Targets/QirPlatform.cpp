@@ -24,9 +24,9 @@ namespace {
 /// circuit needs no adaptation to run on it.
 class IdealDevice : public QuantumTarget {
 public:
-  llvm::StringRef getName() const override { return "ideal"; }
+  [[nodiscard]] llvm::StringRef getName() const override { return "ideal"; }
 
-  llvm::ArrayRef<llvm::StringRef> getNativeGates() const override {
+  [[nodiscard]] llvm::ArrayRef<llvm::StringRef> getNativeGates() const override {
     static constexpr std::array<llvm::StringRef, 10> kGates = {qirQisH,   qirQisX,  qirQisS,  qirQisSdg, qirQisT,
                                                                qirQisTdg, qirQisRZ, qirQisCX, qirQisMZ,  qirQisReset};
     return kGates;
@@ -38,9 +38,9 @@ public:
 /// No control hardware: QIR is where the compilation ends, and nothing executes it.
 class NoController : public ControlTarget {
 public:
-  llvm::StringRef getName() const override { return "none"; }
+  [[nodiscard]] llvm::StringRef getName() const override { return "none"; }
 
-  llvm::ArrayRef<Stage> getSupportedStages() const override {
+  [[nodiscard]] llvm::ArrayRef<Stage> getSupportedStages() const override {
     static constexpr Stage kStages[] = {Stage::Mlir, Stage::LlvmIr};
     return kStages;
   }
@@ -56,11 +56,11 @@ public:
 /// controller and stops at LLVM IR.
 class QirPlatform : public Platform {
 public:
-  llvm::StringRef getName() const override { return "qir"; }
-  llvm::StringRef getDescription() const override { return "QIR, as LLVM IR calling the QIS functions"; }
+  [[nodiscard]] llvm::StringRef getName() const override { return "qir"; }
+  [[nodiscard]] llvm::StringRef getDescription() const override { return "QIR, as LLVM IR calling the QIS functions"; }
 
-  const QuantumTarget& getQuantumTarget() const override { return device; }
-  const ControlTarget& getControlTarget() const override { return controller; }
+  [[nodiscard]] const QuantumTarget& getQuantumTarget() const override { return device; }
+  [[nodiscard]] const ControlTarget& getControlTarget() const override { return controller; }
 
 private:
   IdealDevice device;

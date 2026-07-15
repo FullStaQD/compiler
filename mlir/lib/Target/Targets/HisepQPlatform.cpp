@@ -46,9 +46,9 @@ constexpr llvm::StringLiteral kDefaultFeatures = "+experimental-xqv";
 /// encoding belong here too.
 class HisepQDevice : public QuantumTarget {
 public:
-  llvm::StringRef getName() const override { return "hisep-q-qpu"; }
+  [[nodiscard]] llvm::StringRef getName() const override { return "hisep-q-qpu"; }
 
-  llvm::ArrayRef<llvm::StringRef> getNativeGates() const override {
+  [[nodiscard]] llvm::ArrayRef<llvm::StringRef> getNativeGates() const override {
     static constexpr std::array<llvm::StringRef, 4> kGates = {qirQisH, qirQisX, qirQisCX, qirQisMZ};
     return kGates;
   }
@@ -64,9 +64,9 @@ public:
 /// image that the opcode simulator loads.
 class HisepQController : public ControlTarget {
 public:
-  llvm::StringRef getName() const override { return "riscv32-xqv"; }
+  [[nodiscard]] llvm::StringRef getName() const override { return "riscv32-xqv"; }
 
-  llvm::ArrayRef<Stage> getSupportedStages() const override {
+  [[nodiscard]] llvm::ArrayRef<Stage> getSupportedStages() const override {
     static constexpr Stage kStages[] = {Stage::Mlir,   Stage::LlvmIr, Stage::Assembly,
                                         Stage::Object, Stage::Elf,    Stage::Mem};
     return kStages;
@@ -74,7 +74,9 @@ public:
 
   /// The QV extension has one instruction per gate it supports, so the gates this controller can
   /// execute are exactly the ones `convert-qir-to-intrinsics` knows how to lower.
-  bool canExecuteGate(llvm::StringRef qisName) const override { return llvm::is_contained(getQVGateSet(), qisName); }
+  [[nodiscard]] bool canExecuteGate(llvm::StringRef qisName) const override {
+    return llvm::is_contained(getQVGateSet(), qisName);
+  }
 
   /// QIR is an intermediate here: the QIS calls it produces become QV intrinsics, which the RISC-V
   /// backend then selects into QV instructions.
@@ -118,7 +120,9 @@ public:
     return targetMachine;
   }
 
-  llvm::StringRef getLinkerScript() const override { return {reinterpret_cast<const char*>(kHisepqLd), kHisepqLdSize}; }
+  [[nodiscard]] llvm::StringRef getLinkerScript() const override {
+    return {reinterpret_cast<const char*>(kHisepqLd), kHisepqLdSize};
+  }
 
   llvm::Error writeMemoryImage(const llvm::MemoryBuffer& elf, llvm::raw_ostream& os) const override {
     return convertElfToMem(elf, os);
@@ -128,11 +132,13 @@ public:
 /// HiSEP-Q: the qubits and the RISC-V core that drives them, on one chip.
 class HisepQPlatform : public Platform {
 public:
-  llvm::StringRef getName() const override { return "hisep-q"; }
-  llvm::StringRef getDescription() const override { return "HiSEP-Q, a RISC-V core with the QV vector extension"; }
+  [[nodiscard]] llvm::StringRef getName() const override { return "hisep-q"; }
+  [[nodiscard]] llvm::StringRef getDescription() const override {
+    return "HiSEP-Q, a RISC-V core with the QV vector extension";
+  }
 
-  const QuantumTarget& getQuantumTarget() const override { return device; }
-  const ControlTarget& getControlTarget() const override { return controller; }
+  [[nodiscard]] const QuantumTarget& getQuantumTarget() const override { return device; }
+  [[nodiscard]] const ControlTarget& getControlTarget() const override { return controller; }
 
 private:
   HisepQDevice device;
