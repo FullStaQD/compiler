@@ -3,7 +3,6 @@ add_mlir_library(
   QIRTarget.cpp
   DEPENDS
   AuxOutputRecordingIncGen
-  JaspToQCIncGen
   QCCToQIRIncGen
   LINK_LIBS
   MLIRPass
@@ -11,30 +10,10 @@ add_mlir_library(
   # Dialects
   MLIRFuncDialect
   MLIRArithDialect
-  MLIRSCFDialect
-  MLIRAffineDialect
-  MLIRTensorDialect
-  MLIRLinalgDialect
-  MLIRMemRefDialect
-  MLIRBufferizationDialect
-  QCCJaspDialect
   QCCAuxDialect
   MLIRQCDialect
   # Passes
-  MLIRMemRefTransforms
   MLIRArithTransforms
-  MLIRFuncTransforms
-  MLIRLinalgTransforms
-  MLIRSCFTransforms
-  MLIRAffineToStandard
-  MLIRAffineTransforms
   MLIRQCToQIR
-  MLIRTensorTransforms
-  MLIRBufferizationTransforms
   QCCAuxOutputRecording
-  QCCAffineRaise
-  QCCJaspToQC
-  QCCToQIR
-  # Extensions/Interfaces
-  MLIRFuncInlinerExtension
-  MLIRTransformUtils)
+  QCCToQIR)

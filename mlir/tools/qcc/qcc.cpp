@@ -164,8 +164,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  target->buildPipeline(pm);
   qcc::buildPipeline(pm, target);
+  target->buildPipeline(pm);
 
   if (mlir::failed(pm.run(*module))) {
     return 1;

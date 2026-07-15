@@ -21,7 +21,7 @@
 namespace qcc {
 
 llvm::ArrayRef<Target> getTargets() {
-  static const std::vector<Target> backends = [] {
+  static const std::vector<Target> targets = [] {
     std::vector<Target> result;
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
@@ -41,13 +41,13 @@ llvm::ArrayRef<Target> getTargets() {
     return result;
   }();
 
-  return backends;
+  return targets;
 }
 
 const Target* lookupTarget(llvm::StringRef name) {
-  for (const Target& backend : getTargets()) {
-    if (backend.name == name) {
-      return &backend;
+  for (const Target& target : getTargets()) {
+    if (target.name == name) {
+      return &target;
     }
   }
   return nullptr;
