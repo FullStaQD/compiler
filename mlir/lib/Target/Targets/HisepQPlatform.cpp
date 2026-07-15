@@ -67,8 +67,8 @@ public:
   [[nodiscard]] llvm::StringRef getName() const override { return "riscv32-xqv"; }
 
   [[nodiscard]] llvm::ArrayRef<Stage> getSupportedStages() const override {
-    static constexpr Stage kStages[] = {Stage::Mlir,   Stage::LlvmIr, Stage::Assembly,
-                                        Stage::Object, Stage::Elf,    Stage::Mem};
+    static constexpr std::array<Stage, 6> kStages = {Stage::Mlir,   Stage::LlvmIr, Stage::Assembly,
+                                                     Stage::Object, Stage::Elf,    Stage::Mem};
     return kStages;
   }
 

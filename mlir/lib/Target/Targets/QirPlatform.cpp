@@ -41,7 +41,7 @@ public:
   [[nodiscard]] llvm::StringRef getName() const override { return "none"; }
 
   [[nodiscard]] llvm::ArrayRef<Stage> getSupportedStages() const override {
-    static constexpr Stage kStages[] = {Stage::Mlir, Stage::LlvmIr};
+    static constexpr std::array<Stage, 2> kStages = {Stage::Mlir, Stage::LlvmIr};
     return kStages;
   }
 
