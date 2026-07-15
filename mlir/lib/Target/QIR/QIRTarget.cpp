@@ -20,7 +20,7 @@
 
 namespace qcc {
 
-void buildPipelineQIR(mlir::PassManager& pm) {
+void addLoweringPassesQIR(mlir::PassManager& pm) {
   pm.addPass(qcc::createAuxOutputRecording());
   pm.addPass(qcc::createPrepToQIR());
   mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();

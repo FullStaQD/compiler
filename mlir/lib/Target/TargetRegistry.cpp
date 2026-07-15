@@ -24,11 +24,11 @@ llvm::ArrayRef<Target> getTargets() {
   static const std::vector<Target> targets = {
       {.name = "qir",
        .description = "QIR (LLVM-based) target",
-       .addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }},
+       .addLoweringPasses = [](mlir::PassManager& pm) { addLoweringPassesQIR(pm); }},
 #if QCC_ENABLE_HISEP_Q
       {.name = "hisep-q",
        .description = "HiSEP-Q QISA target (RISC-V based)",
-       .addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); }},
+       .addLoweringPasses = [](mlir::PassManager& pm) { addLoweringPassesHiSEPQ(pm); }},
 #endif
   };
 

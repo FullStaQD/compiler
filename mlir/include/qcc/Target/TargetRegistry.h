@@ -35,8 +35,8 @@ struct Target {
 /// Returns the targets compiled into this build.
 llvm::ArrayRef<Target> getTargets();
 
-/// Looks up a backend by its `--target` name, or returns nullptr if no backend
-/// with that name is known.
+/// Looks up a target by its name (as expected by `--target`), or returns
+/// nullptr if no backend with that name is known.
 const Target* lookupTarget(llvm::StringRef name);
 
 } // namespace qcc

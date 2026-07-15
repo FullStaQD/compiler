@@ -17,7 +17,7 @@
 
 namespace qcc {
 
-/// Assembles the lowering pipeline for the HiSEP-Q target.
-void buildPipelineHiSEPQ(mlir::PassManager& pm);
+/// `Target::addLoweringPasses` for the HiSEP-Q target.
+void addLoweringPassesHiSEPQ(mlir::PassManager& pm);
 
 } // namespace qcc
