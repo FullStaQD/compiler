@@ -9,10 +9,12 @@
 
 #pragma once
 
+#include "mlir/Pass/PassManager.h"
+
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
+
 #include <functional>
-#include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/StringRef.h>
-#include <mlir/Pass/PassManager.h>
 
 namespace qcc {
 // Simplified form of the descriptor-plus-factory pattern in LLVM's
@@ -26,14 +28,11 @@ struct Target {
   llvm::StringRef name;
   /// Human-readable description shown by `--list-targets`.
   llvm::StringRef description;
-  /// Whether this backend is compiled into the current build.
-  bool available;
-  /// Assembles the lowering pipeline for this target. Only valid (non-null)
-  /// when `available` is true.
+  /// Assembles the lowering pipeline for this target.
   std::function<void(mlir::PassManager&)> addLoweringPasses;
 };
 
-/// Returns all known backends, available or not.
+/// Returns the targets compiled into this build.
 llvm::ArrayRef<Target> getTargets();
 
 /// Looks up a backend by its `--target` name, or returns nullptr if no backend

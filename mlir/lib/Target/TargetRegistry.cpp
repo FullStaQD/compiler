@@ -21,25 +21,16 @@
 namespace qcc {
 
 llvm::ArrayRef<Target> getTargets() {
-  static const std::vector<Target> targets = [] {
-    std::vector<Target> result;
-    result.push_back({.name = "qir",
-                      .description = "QIR (LLVM-based) target",
-                      .available = true,
-                      .addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }});
-
-    Target hisepq{.name = "hisep-q",
-                  .description = "HiSEP-Q QISA target (RISC-V based)",
-                  .available = false,
-                  .addLoweringPasses = nullptr};
+  static const std::vector<Target> targets = {
+      {.name = "qir",
+       .description = "QIR (LLVM-based) target",
+       .addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }},
 #if QCC_ENABLE_HISEP_Q
-    hisepq.available = true;
-    hisepq.addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); };
+      {.name = "hisep-q",
+       .description = "HiSEP-Q QISA target (RISC-V based)",
+       .addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); }},
 #endif
-    result.push_back(std::move(hisepq));
-
-    return result;
-  }();
+  };
 
   return targets;
 }
