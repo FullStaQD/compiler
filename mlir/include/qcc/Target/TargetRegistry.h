@@ -15,6 +15,11 @@
 #include <mlir/Pass/PassManager.h>
 
 namespace qcc {
+// Simplified form of the descriptor-plus-factory pattern in LLVM's
+// `llvm/MC/TargetRegistry.h`: `Target` is a flat, non-polymorphic registry
+// entry carrying metadata plus a factory (`addLoweringPasses`) for the target's
+// behavior. If our implementation must be augmented follow LLVM's lead.
+
 /// Describes a compilation target selectable via `qcc --target=<name>`.
 struct Target {
   /// The `--target` value, e.g. "qir".
@@ -23,9 +28,9 @@ struct Target {
   llvm::StringRef description;
   /// Whether this backend is compiled into the current build.
   bool available;
-  /// Assembles the lowering pipeline for this backend. Only valid (non-null)
+  /// Assembles the lowering pipeline for this target. Only valid (non-null)
   /// when `available` is true.
-  std::function<void(mlir::PassManager&)> buildPipeline;
+  std::function<void(mlir::PassManager&)> addLoweringPasses;
 };
 
 /// Returns all known backends, available or not.

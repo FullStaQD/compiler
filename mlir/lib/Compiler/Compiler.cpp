@@ -30,7 +30,7 @@ namespace qcc {
 
 void buildPipeline(mlir::PassManager& pm, const Target* target) {
   addLoweringQrisp(pm);
-  target->buildPipeline(pm);
+  target->addLoweringPasses(pm);
 }
 
 } // namespace qcc

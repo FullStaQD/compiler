@@ -26,15 +26,15 @@ llvm::ArrayRef<Target> getTargets() {
     result.push_back({.name = "qir",
                       .description = "QIR (LLVM-based) target",
                       .available = true,
-                      .buildPipeline = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }});
+                      .addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineQIR(pm); }});
 
     Target hisepq{.name = "hisep-q",
                   .description = "HiSEP-Q QISA target (RISC-V based)",
                   .available = false,
-                  .buildPipeline = nullptr};
+                  .addLoweringPasses = nullptr};
 #if QCC_ENABLE_HISEP_Q
     hisepq.available = true;
-    hisepq.buildPipeline = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); };
+    hisepq.addLoweringPasses = [](mlir::PassManager& pm) { buildPipelineHiSEPQ(pm); };
 #endif
     result.push_back(std::move(hisepq));
 
