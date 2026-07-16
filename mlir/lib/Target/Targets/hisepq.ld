@@ -9,50 +9,35 @@
  *
  * Linker script for the --target=hisep-q output of qcc.
  *
- * The HiSEP-Q opcode simulator (see caps-tum/HiSEP-Q-2.0, demo/verilator and
- * demo/README.md) loads a "combined" memory image with two fixed regions:
- * instruction words starting at byte address 0, and data starting at the
- * fixed byte address 0x1000 (word address 0x400) -- regardless of how big
- * .text actually is. That reservation is a hardware/toolchain convention,
- * not something elf2mem can infer from the ELF, so it has to be baked into
- * this script.
+ * The HiSEP-Q simulator (caps-tum/HiSEP-Q-2.0, demo/) loads the .mem image
+ * into a single flat word memory with one $readmemh. elf2mem derives the
+ * image's @word markers from the ELF's PT_LOAD vaddrs, so the loader imposes
+ * no fixed addresses on this script; the only hard constraints are BOOT_ADDR
+ * and the testbench memory size (MEM_SZ = 0x40000 bytes).
  *
- * The Ibex core that executes this image does not fetch its first
- * instruction from address 0: `ibex_if_stage` hardwires the post-reset
- * fetch address to `{boot_addr_i[31:8], 8'h80}` (see PC_BOOT in
- * ibex_if_stage.sv), and vproc_top.sv instantiates it with boot_addr_i =
- * 0, so the very first fetch is always from byte address 0x80. The first
- * 0x80 bytes are also where a vectored mtvec (also derived from the same
- * boot_addr_i) sends synchronous exceptions, i.e. they are reserved as the
- * (unused, but real) trap-vector region. Code must therefore start at
- * BOOT_ADDR, not address 0 -- placing it at 0 only appears to work because
- * an illegal-instruction trap on whatever garbage sits at 0x80 happens to
- * vector back to address 0.
+ * BOOT_ADDR = 0x80 is fixed by hardware: `ibex_if_stage` hardwires the
+ * post-reset fetch address to {boot_addr_i[31:8], 8'h80} (see PC_BOOT in
+ * ibex_if_stage.sv) and vproc_top.sv instantiates the core with
+ * boot_addr_i = 0. The 0x80 bytes below it are the trap-vector region of the
+ * vectored mtvec derived from the same boot_addr_i -- unused, but reserved.
  *
- * The hardware jumps to BOOT_ADDR directly at reset -- there is no caller,
- * so `ra`/`sp` hold whatever garbage the core reset with. qcc therefore
- * synthesizes a small `_start` function (see ConvertQIRToIntrinsics.cpp)
- * that initializes `sp` from __stack_top below, calls the user's designated
- * entry point (`main` by default, see qcc.entry_point / entry-point-name in
- * JaspToQC.td) with a real `jal` so it can return normally, and halts in an
- * infinite loop if that call ever returns. The target machine is configured
- * with function sections, so `_start` is emitted into its own `.text._start`
- * input section; pulling that section to the front of the output .text
- * guarantees it lands at BOOT_ADDR regardless of how the rest of the module
- * is ordered. `main` itself is an ordinary function with no placement
- * requirement -- `_start` finds it via a normal call relocation.
+ * The core jumps to BOOT_ADDR at reset with no caller, so `ra`/`sp` hold
+ * garbage. qcc synthesizes a `_start` (see ConvertQIRToIntrinsics.cpp) that
+ * loads `sp` from __stack_top, calls the designated entry point (`main` by
+ * default, see qcc.entry_point in JaspToQC.td), and spins if it returns.
+ * Functions are emitted in per-function sections, so pulling `.text._start`
+ * to the front of .text pins it to BOOT_ADDR.
  *
- * .rodata/.data/.bss are bundled together into the "data" region starting
- * at TEXT_REGION_SIZE; an explicit PHDRS split (rather than relying on
- * lld's default permission-based segment splitting) keeps the boundary
- * exactly at TEXT_REGION_SIZE regardless of linker defaults. A small stack
- * region follows .bss in the same segment, growing down from __stack_top;
- * it needs no initialized bytes, so it costs nothing in the .mem image
- * beyond reserving address space (like .bss, it's zero-filled on load).
+ * All sections share one PT_LOAD so lld doesn't insert page-sized permission
+ * gaps between them (the flat memory has no MMU). Sections pack at word
+ * alignment, and elf2mem materializes the whole segment (p_memsz) into the
+ * image, so layout size is image size. For that reason the stack is not a
+ * section at all: __stack_top is just a symbol STACK_SIZE bytes past the end
+ * of .bss, so the reservation adds nothing to the image. STACK_SIZE is the
+ * headroom `sp` has before it grows down into .bss.
  */
 
 BOOT_ADDR = 0x00000080;
-TEXT_REGION_SIZE = 0x1000;
 STACK_SIZE = 0x1000;
 
 OUTPUT_ARCH(riscv)
@@ -60,8 +45,7 @@ ENTRY(_start)
 
 PHDRS
 {
-  text PT_LOAD;
-  data PT_LOAD;
+  image PT_LOAD;
 }
 
 SECTIONS
@@ -71,31 +55,25 @@ SECTIONS
   .text : {
     KEEP(*(.text._start))
     *(.text .text.*)
-  } :text
+  } :image
 
-  ASSERT(. <= TEXT_REGION_SIZE, "hisepq.ld: .text overflows the reserved instruction region (TEXT_REGION_SIZE)")
-
-  . = TEXT_REGION_SIZE;
-
+  . = ALIGN(4);
   .rodata : {
     *(.rodata .rodata.*)
-  } :data
+  } :image
 
   . = ALIGN(4);
   .data : {
     *(.data .data.*)
-  } :data
+  } :image
 
   . = ALIGN(4);
   .bss : {
     *(.bss .bss.*)
-  } :data
+  } :image
 
-  . = ALIGN(4);
-  .stack (NOLOAD) : {
-    . += STACK_SIZE;
-    __stack_top = .;
-  } :data
+  /* Keep __stack_top 16-byte aligned per the RISC-V psABI. */
+  __stack_top = ALIGN(16) + STACK_SIZE;
 
   /DISCARD/ : {
     *(.comment)
