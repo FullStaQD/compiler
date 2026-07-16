@@ -10,13 +10,9 @@
 #include "qcc/Compiler/Pipeline.h"
 
 #include "qcc/Conversion/AffineRaise/AffineRaise.h"
-#include "qcc/Conversion/Aux_/AuxOutputRecording.h"
 #include "qcc/Conversion/JaspToQC/JaspToQC.h"
-#include "qcc/Conversion/ToQIR/ToQIR.h"
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
@@ -31,8 +27,10 @@
 
 namespace qcc {
 
-void buildQuantumPipeline(mlir::PassManager& pm) {
+namespace {
 
+/// Lowers the JASP input to the qc dialect, and its value semantics to memory semantics.
+void addJaspLoweringPasses(mlir::PassManager& pm) {
   // Qrisp output contains a lot of functions that can be trivially inlined.
   pm.addPass(mlir::createInlinerPass());
 
@@ -67,7 +65,10 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   // To facilitate data flow analysis, memory allocation is "hoisted out of loops" whenever possible.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::bufferization::createBufferLoopHoistingPass());
+}
 
+/// Unrolls the circuit: the hardware has no control flow, so every loop must be gone by the end.
+void addLoopUnrollingPasses(mlir::PassManager& pm) {
   // Leftover `linalg` operations are converted to `affine` loops.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createConvertLinalgToAffineLoopsPass());
 
@@ -95,7 +96,10 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
 
   // Lower leftover affine ops to scf.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createLowerAffinePass());
+}
 
+/// Pins every qubit to a static index, and cleans up what the lowering above left behind.
+void addStaticQubitPasses(mlir::PassManager& pm) {
   // Dynamic to static allocation translation
   pm.addPass(mlir::createCanonicalizerPass());
   pm.addPass(qcc::createJaspCheckStaticQubitAllocation());
@@ -116,20 +120,25 @@ void buildQuantumPipeline(mlir::PassManager& pm) {
   pm.addPass(mlir::createSCCPPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
+}
 
-  // conversion to QIR
-  pm.addPass(qcc::createAuxOutputRecording());
-  pm.addPass(qcc::createPrepToQIR());
-  mlir::OpPassManager& fpm = pm.nest<mlir::func::FuncOp>();
-  fpm.addPass(mlir::createArithToLLVMConversionPass());
-  fpm.addPass(qcc::createConvertQCToQIR());
-  pm.addPass(mlir::createConvertControlFlowToLLVMPass());
-  pm.addPass(qcc::createFinalizeToQIR());
+} // namespace
 
-  // cleanup QIR
-  pm.addPass(mlir::createCanonicalizerPass());
-  pm.addPass(mlir::createCSEPass());
-  pm.addPass(mlir::createRemoveDeadValuesPass());
+void buildQuantumPipeline(mlir::PassManager& pm, const Platform& platform) {
+  const QuantumTarget& device = platform.getQuantumTarget();
+
+  // Hardware agnostic: whatever the platform, a circuit of qc ops on statically indexed qubits.
+  addJaspLoweringPasses(pm);
+  addLoopUnrollingPasses(pm);
+  addStaticQubitPasses(pm);
+
+  // Device aware, while the circuit is still in the qc dialect: gate decomposition, qubit mapping
+  // and QEC encoding.
+  device.addDevicePasses(pm);
+
+  // Controller aware: the whole way down from the circuit to the code of the control hardware. How
+  // it gets there is its own business -- through QIR, or not (see `ControlTarget::addLoweringPasses`).
+  platform.getControlTarget().addLoweringPasses(pm, device);
 }
 
 } // namespace qcc

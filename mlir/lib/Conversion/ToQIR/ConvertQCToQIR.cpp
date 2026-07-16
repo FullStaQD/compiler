@@ -27,20 +27,23 @@
 #include "mlir/Support/WalkResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <cstdint>
+#include <string>
 
 using namespace mlir;
 using namespace qcc;
 
-/// Maps any of the (unitary) gate-ops to their QIR QIS function declaration if possible.
+/// Maps a (unitary) gate-op to the QIR QIS function that performs it, or an empty string when the
+/// QIR gate set has none.
 ///
-/// Returns an empty string upon failure. Succeeds iff the gate is among the supported native gate set.
-///
-/// TODO: The native gate set is currently hardcoded.
+/// This is the vocabulary of QIR, not of any one device. Whether the target device implements the
+/// resulting gate is a separate question, answered by `NativeGateSet`.
 static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
   if (unitaryOp.getNumControls() == 0) {
     return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
@@ -121,6 +124,26 @@ static InFlightDiagnostic emitMissingQIRDeclError(Operation* op, StringRef name)
 
 namespace {
 
+/// The QIS functions the target device implements (see the `native-gates` option).
+///
+/// An empty set accepts every gate, which is what the pass does when run standalone.
+class NativeGateSet {
+public:
+  explicit NativeGateSet(llvm::ArrayRef<std::string> nativeGates) {
+    gates.insert(nativeGates.begin(), nativeGates.end());
+  }
+
+  [[nodiscard]] bool contains(StringRef qisName) const { return gates.empty() || gates.contains(qisName); }
+
+private:
+  llvm::StringSet<> gates;
+};
+
+/// To be used in a rewrite pattern, for a gate the device cannot perform.
+InFlightDiagnostic emitNonNativeGateError(Operation* op, StringRef qisName) {
+  return op->emitError() << "the target device does not implement '" << qisName << "'";
+}
+
 struct QCToQIRTypeConverter final : LLVMTypeConverter {
   explicit QCToQIRTypeConverter(MLIRContext* ctx) : LLVMTypeConverter(ctx) {
     addConversion([ctx](qc::QubitType) { return LLVM::LLVMPointerType::get(ctx); });
@@ -128,11 +151,16 @@ struct QCToQIRTypeConverter final : LLVMTypeConverter {
 };
 
 struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
-  using OpConversionPattern<qc::MeasureOp>::OpConversionPattern;
+  MeasureLowering(TypeConverter& converter, MLIRContext* ctx, const NativeGateSet& nativeGates)
+      : OpConversionPattern(converter, ctx), nativeGates(nativeGates) {}
 
   LogicalResult matchAndRewrite(qc::MeasureOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
     auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    if (!nativeGates.contains(qcc::qirQisMZ)) {
+      return emitNonNativeGateError(op, qcc::qirQisMZ);
+    }
 
     auto mzFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirQisMZ);
     if (!mzFnDecl) {
@@ -156,14 +184,22 @@ struct MeasureLowering : public OpConversionPattern<qc::MeasureOp> {
     rewriter.replaceOp(op, callReadOp);
     return success();
   }
+
+private:
+  const NativeGateSet& nativeGates;
 };
 
 struct ResetLowering : public OpConversionPattern<qc::ResetOp> {
-  using OpConversionPattern<qc::ResetOp>::OpConversionPattern;
+  ResetLowering(TypeConverter& converter, MLIRContext* ctx, const NativeGateSet& nativeGates)
+      : OpConversionPattern(converter, ctx), nativeGates(nativeGates) {}
 
   LogicalResult matchAndRewrite(qc::ResetOp op, OpAdaptor /*adaptor*/,
                                 ConversionPatternRewriter& rewriter) const override {
     auto moduleOp = op->getParentOfType<ModuleOp>();
+
+    if (!nativeGates.contains(qcc::qirQisReset)) {
+      return emitNonNativeGateError(op, qcc::qirQisReset);
+    }
 
     auto resetFnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qcc::qirQisReset);
     if (!resetFnDecl) {
@@ -175,6 +211,9 @@ struct ResetLowering : public OpConversionPattern<qc::ResetOp> {
     rewriter.eraseOp(op);
     return success();
   }
+
+private:
+  const NativeGateSet& nativeGates;
 };
 
 struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
@@ -208,8 +247,8 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
 
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
-  UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
-      : ConversionPattern(converter, MatchAnyOpTypeTag(), 1, ctx) {}
+  UnitaryLowering(TypeConverter& converter, MLIRContext* ctx, const NativeGateSet& nativeGates)
+      : ConversionPattern(converter, MatchAnyOpTypeTag(), 1, ctx), nativeGates(nativeGates) {}
 
   LogicalResult matchAndRewrite(Operation* op, ArrayRef<Value> /*operands*/,
                                 ConversionPatternRewriter& rewriter) const override {
@@ -221,6 +260,13 @@ struct UnitaryLowering : public ConversionPattern {
     auto moduleOp = op->getParentOfType<ModuleOp>();
 
     auto qisName = mapUnitaryToQIS(unitaryOp);
+    if (qisName.empty()) {
+      return unitaryOp.emitError("the gate has no QIR QIS equivalent");
+    }
+    if (!nativeGates.contains(qisName)) {
+      return emitNonNativeGateError(unitaryOp, qisName);
+    }
+
     auto fnDecl = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(qisName);
     if (!fnDecl) {
       return emitMissingQIRDeclError(unitaryOp, qisName);
@@ -238,6 +284,9 @@ struct UnitaryLowering : public ConversionPattern {
 
     return success();
   }
+
+private:
+  const NativeGateSet& nativeGates;
 };
 
 } // namespace
@@ -277,8 +326,11 @@ protected:
     target.addLegalOp<qc::StaticOp>(); // take care of slightly later.
 
     QCToQIRTypeConverter typeConverter(ctx);
+    const NativeGateSet gateSet(nativeGates);
+
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, ResetLowering, RecordIntLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, ResetLowering>(typeConverter, ctx, gateSet);
+    patterns.add<RecordIntLowering>(typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();

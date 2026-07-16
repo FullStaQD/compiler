@@ -1,0 +1,137 @@
+// ===----------------------------------------------------------------------===//
+//
+// Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
+// Exceptions.
+// See <repo-root>/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+// ===----------------------------------------------------------------------===//
+
+// RUN: qcc-opt %s -convert-qir-to-intrinsics | FileCheck %s
+
+// The input is a module as produced by the ToQIR pipeline: qubits are `!llvm.ptr` values obtained
+// from `llvm.inttoptr` of a constant index, and gates are calls taking those ptrs.
+
+llvm.func @__quantum__rt__initialize(!llvm.ptr) -> ()
+llvm.func @__quantum__rt__read_result(!llvm.ptr) -> i1 attributes {arg_attrs = [{llvm.readonly}]}
+llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr) -> ()
+llvm.func @__quantum__qis__h__body(!llvm.ptr) -> ()
+llvm.func @__quantum__qis__x__body(!llvm.ptr) -> ()
+llvm.func @__quantum__qis__cx__body(!llvm.ptr, !llvm.ptr) -> ()
+llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr) -> ()
+
+llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
+
+
+llvm.func @single_qubit_gates() {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %q0 = llvm.inttoptr %c0 : i64 to !llvm.ptr
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %q1 = llvm.inttoptr %c1 : i64 to !llvm.ptr
+
+  llvm.call @__quantum__qis__h__body(%q0) : (!llvm.ptr) -> ()
+  llvm.call @__quantum__qis__x__body(%q1) : (!llvm.ptr) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @single_qubit_gates()
+// CHECK-NOT:     llvm.call @__quantum__qis__h__body
+// CHECK-NOT:     llvm.call @__quantum__qis__x__body
+// CHECK-DAG:     %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-DAG:     %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK-DAG:     %[[ADDR0:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
+// CHECK-DAG:     %[[ADDR1:.*]] = llvm.mlir.addressof @".qcc_qv_idx_1" : !llvm.ptr
+// CHECK:         %[[VEC0:.*]] = llvm.load %[[ADDR0]] : !llvm.ptr -> vector<[4]xi8>
+// CHECK:         llvm.call_intrinsic "llvm.riscv.qv.h"(%[[VEC0]], %[[ZERO]], %[[ZERO]], %[[ONE]])
+// CHECK:         %[[VEC1:.*]] = llvm.load %[[ADDR1]] : !llvm.ptr -> vector<[4]xi8>
+// CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"(%[[VEC1]], %[[ZERO]], %[[ZERO]], %[[ONE]])
+
+
+llvm.func @cx_gate() {
+  %c2 = llvm.mlir.constant(2 : i64) : i64
+  %ctrl = llvm.inttoptr %c2 : i64 to !llvm.ptr
+  %c3 = llvm.mlir.constant(3 : i64) : i64
+  %tgt  = llvm.inttoptr %c3 : i64 to !llvm.ptr
+
+  llvm.call @__quantum__qis__cx__body(%ctrl, %tgt) : (!llvm.ptr, !llvm.ptr) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @cx_gate()
+// CHECK-NOT:     llvm.call @__quantum__qis__cx__body
+// CHECK-DAG:     %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-DAG:     %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK-DAG:     %[[CADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_2" : !llvm.ptr
+// CHECK-DAG:     %[[TADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_3" : !llvm.ptr
+// CHECK-DAG:     %[[CVEC:.*]] = llvm.load %[[CADDR]] : !llvm.ptr -> vector<[4]xi8>
+// CHECK-DAG:     %[[TVEC:.*]] = llvm.load %[[TADDR]] : !llvm.ptr -> vector<[4]xi8>
+// CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"(%[[CVEC]], %[[TVEC]], %[[ZERO]], %[[ONE]])
+
+
+llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %qptr = llvm.inttoptr %c0 : i64 to !llvm.ptr
+  %rptr = llvm.inttoptr %c0 : i64 to !llvm.ptr
+
+  llvm.call @__quantum__qis__mz__body(%qptr, %rptr) : (!llvm.ptr, !llvm.ptr) -> ()
+  %res = llvm.call @__quantum__rt__read_result(%rptr) : (!llvm.ptr) -> i1
+  llvm.return %res : i1
+}
+
+// CHECK-LABEL: llvm.func @measurement()
+// CHECK-NOT:     llvm.call @__quantum__qis__mz__body
+// CHECK-NOT:     llvm.call @__quantum__rt__read_result
+// CHECK-DAG:     %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-DAG:     %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK-DAG:     %[[UNDEF_I1:.*]] = llvm.mlir.undef : i1
+// CHECK-DAG:     %[[ADDR:.*]] = llvm.mlir.addressof @".qcc_qv_idx_0" : !llvm.ptr
+// CHECK:         %[[VEC:.*]] = llvm.load %[[ADDR]] : !llvm.ptr -> vector<[4]xi8>
+// CHECK:         llvm.call_intrinsic "llvm.riscv.qv.mz"(%[[VEC]], %[[ZERO]], %[[ZERO]], %[[ONE]])
+// `measurement` is the entry point of this module. It is called by `_start` (see below) and keeps
+// an ordinary return.
+// CHECK:         llvm.return
+
+
+llvm.func @rt_calls_erased() {
+  %null = llvm.mlir.zero : !llvm.ptr
+  llvm.call @__quantum__rt__initialize(%null) : (!llvm.ptr) -> ()
+
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %qptr = llvm.inttoptr %c0 : i64 to !llvm.ptr
+  llvm.call @__quantum__qis__x__body(%qptr) : (!llvm.ptr) -> ()
+
+  %false = llvm.mlir.constant(0 : i1) : i1
+  %label = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+  llvm.call @__quantum__rt__bool_record_output(%false, %label) : (i1, !llvm.ptr) -> ()
+
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @rt_calls_erased()
+// CHECK-NOT:     llvm.call @__quantum__rt__initialize
+// CHECK-NOT:     llvm.call @__quantum__rt__bool_record_output
+// CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"
+
+// CHECK-NOT: llvm.func @__quantum__qis__h__body
+// CHECK-NOT: llvm.func @__quantum__qis__x__body
+// CHECK-NOT: llvm.func @__quantum__qis__cx__body
+// CHECK-NOT: llvm.func @__quantum__qis__mz__body
+// CHECK-NOT: llvm.func @__quantum__rt__initialize
+// CHECK-NOT: llvm.func @__quantum__rt__read_result
+// CHECK-NOT: llvm.func @__quantum__rt__bool_record_output
+
+// One global per distinct qubit index, shared across call sites: index 0 is used by three of the
+// functions above, yet indices 0-3 amount to four globals.
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_0"("\00\00\00\00") {addr_space = 0 : i32}
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_1"("\01\00\00\00") {addr_space = 0 : i32}
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_2"("\02\00\00\00") {addr_space = 0 : i32}
+// CHECK-DAG: llvm.mlir.global internal constant @".qcc_qv_idx_3"("\03\00\00\00") {addr_space = 0 : i32}
+
+// `_start` supersedes `measurement` as the entry point of the hardware: it sets up the stack, calls
+// `measurement`, and halts in an infinite loop if that call returns (see emitStartFunc).
+// CHECK: llvm.mlir.global external constant @__stack_top()
+// CHECK: llvm.func @_start()
+// CHECK:   llvm.mlir.addressof @__stack_top : !llvm.ptr
+// CHECK:   llvm.mlir.addressof @measurement : !llvm.ptr
+// CHECK:   llvm.inline_asm{{.*}}"mv sp, $0\0Ajalr ra, 0($1)\0A1:\0Aj 1b"
+// CHECK:   llvm.unreachable

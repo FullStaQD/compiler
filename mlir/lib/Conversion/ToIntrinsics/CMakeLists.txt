@@ -1,13 +1,12 @@
 file(GLOB CONVERSION_SOURCES *.cpp)
 
 add_mlir_conversion_library(
-  QCCToQIR
+  QCCToIntrinsics
   ${CONVERSION_SOURCES}
   DEPENDS
-  QCCToQIRIncGen
+  QCCToIntrinsicsIncGen
   QCCAuxDialectIncGen
   QCCAuxOpsIncGen
-  AuxOutputRecordingIncGen
   LINK_LIBS
   # Dialects
   MLIRQCDialect
@@ -18,12 +17,6 @@ add_mlir_conversion_library(
   MLIRLLVMCommonConversion
   MLIRTransforms
   MLIRFuncToLLVM
-  MLIRMemRefToLLVM
-  MLIRSCFToControlFlow
-  # The passes that `buildQIRPipeline` sequences alongside this library's own
-  MLIRArithToLLVM
-  MLIRControlFlowToLLVM
-  QCCAuxOutputRecording
   # Core MLIR
   MLIRIR
   MLIRPass)

@@ -29,7 +29,8 @@ llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
 llvm_config.use_default_substitutions()
 
 # excludes: A list of directories and filenames to exclude from the testsuite.
-config.excludes = []
+# `Inputs` holds inputs that other tests compile, not tests of their own.
+config.excludes = ["Inputs"]
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = Path(config.project_binary_dir) / "test"

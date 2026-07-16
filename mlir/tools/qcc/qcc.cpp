@@ -10,16 +10,13 @@
 #include "qcc/Compiler/Pipeline.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
+#include "qcc/Target/Target.h"
 
-#include "mlir/Bytecode/BytecodeWriter.h"
-#include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Arith/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/Transforms/FuncBufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/AllocationOpInterfaceImpl.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/QC/IR/QCDialect.h"
 #include "mlir/Dialect/SCF/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
@@ -33,76 +30,42 @@
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
-#include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Target/TargetMachine.h"
 
-#include <cstdint>
+#include <optional>
+#include <string>
 
 namespace cl = llvm::cl;
+
+using qcc::ControlTarget;
+using qcc::Platform;
+using qcc::Stage;
 
 static cl::OptionCategory qccCategory("QCC options");
 
 namespace {
-/// The target determines the backend to compile for, the actual passes
-/// (pipeline), and the runtime.
-enum class Target : uint8_t { Qir, HisepQ };
 
-/// The stage to compile to and emit.
-enum class Stage : uint8_t { Mlir, LlvmIr, Native };
-} // namespace
-
-int main(int argc, char** argv) {
-  mlir::registerMLIRContextCLOptions();
-  mlir::registerPassManagerCLOptions();
-  mlir::registerDefaultTimingManagerCLOptions();
-
-  const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
-  const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
-                                            cl::cat(qccCategory));
-  const cl::opt<Target> target(
-      "target", cl::desc("Target pipeline to compile for"), cl::init(Target::Qir),
-      cl::values(clEnumValN(Target::Qir, "qir", "QIR (LLVM-based) target"),
-                 clEnumValN(Target::HisepQ, "hisep-q", "HiSEP-Q QISA target (not yet implemented)")),
-      cl::cat(qccCategory));
-  const cl::opt<Stage> compileTo(
-      "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
-      cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
-                 clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR (QIR for the QIR target)"),
-                 clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
-      cl::cat(qccCategory));
-  const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
-                             cl::init(false), cl::cat(qccCategory));
-
-  cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
-
-  if (target == Target::HisepQ) {
-    llvm::errs() << "error: the 'hisep-q' target is not yet implemented\n";
-    return 1;
-  }
-
-  if (compileTo == Stage::Native) {
-    llvm::errs() << "error: the 'native' stage is not yet implemented\n";
-    return 1;
-  }
-
+/// Registers everything the pipeline needs: the builtin dialects, ours, the interfaces that
+/// bufferization relies on, and the translations to LLVM IR.
+mlir::DialectRegistry buildDialectRegistry() {
   mlir::DialectRegistry registry;
 
-  // Register all builtin dialects and their extensions/interfaces:
   mlir::registerAllDialects(registry);
-
-  // Our dialects:
   registry.insert<jasp::JaspDialect, mlir::qc::QCDialect, qcc::aux::AuxDialect>();
 
-  // Register the specific interface implementations for the pipeline
-  // Note: OneShotBufferize requires these for the "Standard" dialects
+  // OneShotBufferize requires these for the "standard" dialects.
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::linalg::registerBufferizableOpInterfaceExternalModels(registry);
   mlir::scf::registerBufferizableOpInterfaceExternalModels(registry);
@@ -111,10 +74,213 @@ int main(int argc, char** argv) {
   mlir::memref::registerAllocationOpInterfaceExternalModels(registry);
   mlir::func::registerInlinerExtension(registry);
 
-  // For emitting LLVM IR:
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
 
+  return registry;
+}
+
+std::unique_ptr<llvm::Module> translateToLLVMIR(mlir::ModuleOp module, llvm::LLVMContext& llvmContext) {
+  std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
+  if (!llvmModule) {
+    llvm::errs() << "error: failed to translate the module to LLVM IR\n";
+  }
+  return llvmModule;
+}
+
+/// Creates a temporary file that `remover` deletes once it goes out of scope.
+std::optional<llvm::SmallString<128>> createTempFile(llvm::StringRef suffix, llvm::FileRemover& remover) {
+  llvm::SmallString<128> path;
+  if (std::error_code ec = llvm::sys::fs::createTemporaryFile("qcc", suffix, path)) {
+    llvm::errs() << "error: could not create a temporary ." << suffix << " file: " << ec.message() << "\n";
+    return std::nullopt;
+  }
+  remover.setFile(path);
+  return path;
+}
+
+/// Runs the codegen passes that emit `fileType` for `llvmModule` on `os`.
+bool emitNativeFile(llvm::Module& llvmModule, llvm::TargetMachine& targetMachine, llvm::CodeGenFileType fileType,
+                    llvm::raw_pwrite_stream& os) {
+  llvm::legacy::PassManager codegenPM;
+  if (targetMachine.addPassesToEmitFile(codegenPM, os, /*DwoOut=*/nullptr, fileType)) {
+    llvm::errs() << "error: the target machine cannot emit files of this type\n";
+    return false;
+  }
+  codegenPM.run(llvmModule);
+  return true;
+}
+
+/// Writes `llvmModule` to a temporary object file, whose path is returned.
+std::optional<llvm::SmallString<128>> emitObjectFile(llvm::Module& llvmModule, llvm::TargetMachine& targetMachine,
+                                                     llvm::FileRemover& remover) {
+  std::optional<llvm::SmallString<128>> objPath = createTempFile("o", remover);
+  if (!objPath) {
+    return std::nullopt;
+  }
+
+  std::error_code ec;
+  llvm::raw_fd_ostream objFile(*objPath, ec, llvm::sys::fs::OF_None);
+  if (ec) {
+    llvm::errs() << "error: could not open a temporary object file: " << ec.message() << "\n";
+    return std::nullopt;
+  }
+
+  if (!emitNativeFile(llvmModule, targetMachine, llvm::CodeGenFileType::ObjectFile, objFile)) {
+    return std::nullopt;
+  }
+  return objPath;
+}
+
+/// Links `objPath` into an ELF image at `elfPath`, laid out by `linkerScript` (which the target
+/// carries, see `Target::getLinkerScript`) and using `linkerExe` (e.g. "ld.lld") from PATH.
+bool linkElf(llvm::StringRef linkerExe, llvm::StringRef linkerScript, llvm::StringRef objPath,
+             llvm::StringRef elfPath) {
+  llvm::ErrorOr<std::string> linkerPath = llvm::sys::findProgramByName(linkerExe);
+  if (!linkerPath) {
+    llvm::errs() << "error: could not find the linker '" << linkerExe << "' on PATH (override with --linker)\n";
+    return false;
+  }
+
+  llvm::FileRemover scriptRemover;
+  std::optional<llvm::SmallString<128>> scriptPath = createTempFile("ld", scriptRemover);
+  if (!scriptPath) {
+    return false;
+  }
+
+  {
+    std::error_code ec;
+    llvm::raw_fd_ostream scriptFile(*scriptPath, ec, llvm::sys::fs::OF_Text);
+    if (ec) {
+      llvm::errs() << "error: could not write the linker script: " << ec.message() << "\n";
+      return false;
+    }
+    scriptFile << linkerScript;
+  }
+
+  llvm::SmallVector<llvm::StringRef> args = {*linkerPath, "-T", *scriptPath, objPath, "-o", elfPath};
+  std::string errMsg;
+  int rc = llvm::sys::ExecuteAndWait(*linkerPath, args, /*Env=*/std::nullopt, /*Redirects=*/{},
+                                     /*SecondsToWait=*/0, /*MemoryLimit=*/0, &errMsg);
+  if (rc != 0) {
+    llvm::errs() << "error: linking failed" << (errMsg.empty() ? "" : ": " + errMsg) << "\n";
+    return false;
+  }
+  return true;
+}
+
+/// Emits `Stage::Elf` and `Stage::Mem`: compiles `llvmModule` to an object file and links it with
+/// the linker script of `controlTarget`. For `Stage::Mem` the ELF is a scratch file, which the
+/// control target then converts into the memory image its hardware loads.
+int emitImage(llvm::Module& llvmModule, llvm::TargetMachine& targetMachine, const ControlTarget& controlTarget,
+              Stage stage, llvm::StringRef outputFilename, llvm::StringRef linkerExe) {
+  llvm::FileRemover objRemover;
+  std::optional<llvm::SmallString<128>> objPath = emitObjectFile(llvmModule, targetMachine, objRemover);
+  if (!objPath) {
+    return 1;
+  }
+
+  llvm::FileRemover elfRemover;
+  llvm::SmallString<128> elfPath(outputFilename);
+  if (stage == Stage::Mem) {
+    std::optional<llvm::SmallString<128>> tempElfPath = createTempFile("elf", elfRemover);
+    if (!tempElfPath) {
+      return 1;
+    }
+    elfPath = *tempElfPath;
+  }
+
+  if (!linkElf(linkerExe, controlTarget.getLinkerScript(), *objPath, elfPath)) {
+    return 1;
+  }
+
+  if (stage == Stage::Elf) {
+    return 0;
+  }
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> elfBuffer = llvm::MemoryBuffer::getFile(elfPath);
+  if (std::error_code ec = elfBuffer.getError()) {
+    llvm::errs() << "error: " << elfPath << ": " << ec.message() << "\n";
+    return 1;
+  }
+
+  std::string errorMessage;
+  auto outFile = mlir::openOutputFile(outputFilename, &errorMessage);
+  if (!outFile) {
+    llvm::errs() << errorMessage << "\n";
+    return 1;
+  }
+
+  if (llvm::Error err = controlTarget.writeMemoryImage(**elfBuffer, outFile->os())) {
+    llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
+    return 1;
+  }
+
+  outFile->keep();
+  return 0;
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
+  mlir::registerMLIRContextCLOptions();
+  mlir::registerPassManagerCLOptions();
+  mlir::registerDefaultTimingManagerCLOptions();
+
+  // `--target` is validated against the registry rather than being a fixed set of options, so a new
+  // platform shows up here without touching the driver.
+  std::string targetNames;
+  for (const Platform* platform : qcc::getPlatforms()) {
+    targetNames += (targetNames.empty() ? "" : ", ") + platform->getName().str();
+  }
+  const std::string targetHelp = "Target to compile for, one of: " + targetNames;
+
+  const cl::opt<std::string> inputFilename(cl::Positional, cl::desc("Input-file"), cl::Required, cl::cat(qccCategory));
+  const cl::opt<std::string> outputFilename("o", cl::desc("Output-file"), cl::value_desc("filename"), cl::init("-"),
+                                            cl::cat(qccCategory));
+  const cl::opt<std::string> targetName("target", cl::desc(targetHelp), cl::value_desc("target"),
+                                        cl::init(qcc::getDefaultPlatform().getName().str()), cl::cat(qccCategory));
+  const cl::opt<Stage> compileTo(
+      "compile-to", cl::desc("Stage to lower to and emit; a target only supports some of them"),
+      cl::init(Stage::LlvmIr),
+      cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
+                 clEnumValN(Stage::LlvmIr, "ll", "LLVM IR"), clEnumValN(Stage::LlvmIr, "llvmir", "alias for ll"),
+                 clEnumValN(Stage::Assembly, "s", "Assembly"), clEnumValN(Stage::Assembly, "assembly", "alias for s"),
+                 clEnumValN(Stage::Object, "o", "Object file"), clEnumValN(Stage::Object, "object", "alias for o"),
+                 clEnumValN(Stage::Elf, "elf", "ELF image, linked with the linker script of the target"),
+                 clEnumValN(Stage::Mem, "mem", "Memory image, ready for the simulator of the target")),
+      cl::cat(qccCategory));
+  const cl::opt<std::string> mtriple("mtriple", cl::desc("Overrides the target triple used for code generation"),
+                                     cl::init(""), cl::cat(qccCategory));
+  const cl::opt<std::string> mattr("mattr", cl::desc("Overrides the target attributes used for code generation"),
+                                   cl::init(""), cl::cat(qccCategory));
+  const cl::opt<std::string> linker(
+      "linker", cl::desc("Linker to invoke for --compile-to=elf/mem (default: ld.lld, resolved via PATH)"),
+      cl::init("ld.lld"), cl::cat(qccCategory));
+
+  cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
+
+  const Platform* platform = qcc::lookupPlatform(targetName);
+  if (platform == nullptr) {
+    llvm::errs() << "error: unknown target '" << targetName << "', expected one of: " << targetNames << "\n";
+    return 1;
+  }
+
+  if (llvm::Error err = platform->verify()) {
+    llvm::errs() << "error: " << llvm::toString(std::move(err)) << "\n";
+    return 1;
+  }
+
+  // How far a platform can compile is decided by its control hardware: the device shapes the
+  // circuit, but only a controller turns it into code.
+  const ControlTarget& controlTarget = platform->getControlTarget();
+  if (!controlTarget.supportsStage(compileTo)) {
+    llvm::errs() << "error: target '" << platform->getName()
+                 << "' does not support --compile-to=" << qcc::getStageName(compileTo) << "\n";
+    return 1;
+  }
+
+  mlir::DialectRegistry registry = buildDialectRegistry();
   mlir::MLIRContext context(registry);
 
   std::string errorMessage;
@@ -127,7 +293,7 @@ int main(int argc, char** argv) {
   llvm::SourceMgr sourceMgr;
   sourceMgr.AddNewSourceBuffer(std::move(inFile), llvm::SMLoc());
 
-  // Enable nice diagnostic printing for parser and pass errors
+  // Enable nice diagnostic printing for parser and pass errors.
   const mlir::SourceMgrDiagnosticHandler diagnosticHandler(sourceMgr, &context);
 
   mlir::OwningOpRef<mlir::ModuleOp> module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
@@ -139,12 +305,49 @@ int main(int argc, char** argv) {
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     return 1;
   }
-
-  // TODO: Assemble pipeline based on target once a second valid target is added.
-  qcc::buildQuantumPipeline(pm);
+  qcc::buildQuantumPipeline(pm, *platform);
 
   if (mlir::failed(pm.run(*module))) {
     return 1;
+  }
+
+  if (compileTo == Stage::Mlir) {
+    auto outFile = mlir::openOutputFile(outputFilename, &errorMessage);
+    if (!outFile) {
+      llvm::errs() << errorMessage << "\n";
+      return 1;
+    }
+    module->print(outFile->os());
+    outFile->keep();
+    return 0;
+  }
+
+  llvm::LLVMContext llvmContext;
+  std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(*module, llvmContext);
+  if (!llvmModule) {
+    return 1;
+  }
+
+  if (compileTo == Stage::LlvmIr) {
+    auto outFile = mlir::openOutputFile(outputFilename, &errorMessage);
+    if (!outFile) {
+      llvm::errs() << errorMessage << "\n";
+      return 1;
+    }
+    llvmModule->print(outFile->os(), /*AAW=*/nullptr);
+    outFile->keep();
+    return 0;
+  }
+
+  // Everything below here is native code, and so needs a target machine.
+  const qcc::CodeGenOptions codeGenOptions = {.triple = mtriple, .features = mattr};
+  std::unique_ptr<llvm::TargetMachine> targetMachine = controlTarget.createTargetMachine(*llvmModule, codeGenOptions);
+  if (!targetMachine) {
+    return 1;
+  }
+
+  if (compileTo == Stage::Elf || compileTo == Stage::Mem) {
+    return emitImage(*llvmModule, *targetMachine, controlTarget, compileTo, outputFilename, linker);
   }
 
   auto outFile = mlir::openOutputFile(outputFilename, &errorMessage);
@@ -153,43 +356,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Refuse to dump binary onto a terminal:
-  if (binary && llvm::CheckBitcodeOutputToConsole(outFile->os())) {
+  auto fileType = compileTo == Stage::Object ? llvm::CodeGenFileType::ObjectFile : llvm::CodeGenFileType::AssemblyFile;
+  auto& os = static_cast<llvm::raw_pwrite_stream&>(outFile->os());
+  if (!emitNativeFile(*llvmModule, *targetMachine, fileType, os)) {
     return 1;
   }
 
-  switch (compileTo) {
-  case Stage::Mlir:
-    if (binary) {
-      if (mlir::failed(mlir::writeBytecodeToFile(*module, outFile->os()))) {
-        llvm::errs() << "failed to write MLIR bytecode\n";
-        return 1;
-      }
-    } else {
-      module->print(outFile->os());
-    }
-    break;
-  case Stage::LlvmIr: {
-    llvm::LLVMContext llvmContext;
-    std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
-    if (!llvmModule) {
-      llvm::errs() << "failed to translate the module to LLVM IR\n";
-      return 1;
-    }
-    if (binary) {
-      llvm::WriteBitcodeToFile(*llvmModule, outFile->os());
-    } else {
-      llvmModule->print(outFile->os(), /*AAW=*/nullptr);
-    }
-    break;
-  }
-  case Stage::Native:
-    llvm_unreachable("the 'native' stage is rejected during option validation");
-  default:
-    llvm_unreachable("--compile-to should always have a value (default value if nothing is set explicitly)");
-  }
-
-  outFile->keep(); // otherwise file gets deleted
-
+  outFile->keep();
   return 0;
 }
