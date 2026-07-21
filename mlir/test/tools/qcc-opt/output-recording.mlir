@@ -17,7 +17,6 @@ func.func @test_entry_point_i64() -> i64 attributes { qcc.entry_point } {
 // CHECK-LABEL:   func.func @test_entry_point_i64() attributes {qcc.entry_point} {
 // CHECK:     %[[constant:.*]] = arith.constant 1 : i64
 // CHECK:     aux.record_int %[[constant]] : i64
-// CHECK:     aux.record_int %[[constant]] : i64
 // CHECK:     return
 // CHECK:   }
 
@@ -33,6 +32,7 @@ func.func @test_void_entry_point() attributes { qcc.entry_point } {
 // CHECK:     %[[constant:.*]] = arith.constant 1 : i64
 // CHECK:     return
 // CHECK:   }
+
 
 //===----------------------------------------------------------------------===//
 // Multiple i64 return values should be transformed
