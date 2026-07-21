@@ -51,7 +51,8 @@ def JaspToQC : Pass<"jasp-to-qc"> {
       to their equivalent operations in the QC dialect.
   }];
 
-  let dependentDialects = ["mlir::qc::QCDialect", "mlir::tensor::TensorDialect", "mlir::memref::MemRefDialect"];
+  let dependentDialects = ["mlir::qc::QCDialect", "mlir::tensor::TensorDialect", "mlir::memref::MemRefDialect",
+                           "mlir::scf::SCFDialect", "mlir::arith::ArithDialect"];
 }
 
 def ConvertMemrefToStaticQubits : Pass<"convert-memref-to-static-qubits"> {

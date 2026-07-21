@@ -14,11 +14,15 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+#include <mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h>
+#include <mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h>
 
 using namespace mlir;
 
@@ -74,6 +78,11 @@ protected:
       RewritePatternSet patterns(ctx);
 
       populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+
+      populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+
+      populateSCFToControlFlowConversionPatterns(patterns);
+      cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
       if (failed(applyFullConversion(moduleOp, target, std::move(patterns)))) {
         return signalPassFailure();

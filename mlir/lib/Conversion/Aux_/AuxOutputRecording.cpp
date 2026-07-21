@@ -88,26 +88,27 @@ protected:
       for (Value v : oldReturnOperands) {
         Type ty = v.getType();
         if (ty.isInteger()) {
-          aux::RecordIntOp::create(builder, loc, v);
-        } else if (isMemRefOfIntegers(ty)) {
-          // TODO: Add support for other types as needed.
-          aux::RecordMemRefOp::create(builder, loc, v);
-        } else {
-          funcOp.emitError("Return types other than integers and memory references are not supported.");
-          return WalkResult::interrupt();
+          if (ty.isInteger()) {
+            aux::RecordIntOp::create(builder, loc, v);
+          } else if (isMemRefOfIntegers(ty)) {
+            // TODO: Add support for other types as needed.
+            aux::RecordMemRefOp::create(builder, loc, v);
+          } else {
+            funcOp.emitError("Return types other than integers and memory references are not supported.");
+            return WalkResult::interrupt();
+          }
         }
-      }
-      // Remove the old return with values and replace with a void return
-      retOp.erase();
-      builder.setInsertionPointToEnd(&body);
-      func::ReturnOp::create(builder, loc);
-      return WalkResult::advance();
-    });
+        // Remove the old return with values and replace with a void return
+        retOp.erase();
+        builder.setInsertionPointToEnd(&body);
+        func::ReturnOp::create(builder, loc);
+        return WalkResult::advance();
+      });
 
-    if (walkResult.wasInterrupted()) {
-      return signalPassFailure();
-    }
+      if (walkResult.wasInterrupted()) {
+        return signalPassFailure();
+      }
   };
-};
+  };
 } // namespace
 } // namespace qcc

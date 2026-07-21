@@ -50,6 +50,15 @@ static StringRef mapUnitaryToQIS(qc::UnitaryOpInterface unitaryOp) {
     return llvm::TypeSwitch<Operation*, StringRef>(unitaryOp)
         .Case<qc::XOp>([](auto) { return qcc::qirQisX; })
         .Case<qc::HOp>([](auto) { return qcc::qirQisH; })
+        .Case<qc::RZOp>([](auto) { return qcc::qirQisRZ; })
+        // The phase gate P(θ) differs from RZ(θ) only by a global phase,
+        // which does not affect measurement outcomes. QIR has no native
+        // phase gate, so we lower P to RZ.
+        .Case<qc::POp>([](auto) { return qcc::qirQisRZ; })
+        .Case<qc::TOp>([](auto) { return qcc::qirQisT; })
+        .Case<qc::TdgOp>([](auto) { return qcc::qirQisTdg; })
+        .Case<qc::SOp>([](auto) { return qcc::qirQisS; })
+        .Case<qc::SdgOp>([](auto) { return qcc::qirQisSdg; })
         .Default([](auto) { return ""; });
   }
 
@@ -223,11 +232,14 @@ struct UnitaryLowering : public ConversionPattern {
       return emitMissingQIRDeclError(unitaryOp, qisName);
     }
 
-    auto allPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
-    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
-    allPtrs.append(targetPtrs);
+    auto args = llvm::to_vector(unitaryOp.getParameters());
 
-    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, allPtrs);
+    auto controlPtrs = qubitsToPtrs(rewriter, unitaryOp.getControls());
+    auto targetPtrs = qubitsToPtrs(rewriter, unitaryOp.getTargets());
+    args.append(controlPtrs);
+    args.append(targetPtrs);
+
+    LLVM::CallOp::create(rewriter, op->getLoc(), fnDecl, args);
     rewriter.eraseOp(op);
 
     return success();
@@ -316,6 +328,7 @@ protected:
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addIllegalDialect<qc::QCDialect>();
+    target.addIllegalDialect<qcc::aux::AuxDialect>();
     target.addIllegalDialect<qcc::aux::AuxDialect>();
     target.addLegalOp<qc::StaticOp>(); // take care of slightly later.
 
