@@ -329,7 +329,6 @@ protected:
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addIllegalDialect<qc::QCDialect>();
     target.addIllegalDialect<qcc::aux::AuxDialect>();
-    target.addIllegalDialect<qcc::aux::AuxDialect>();
     target.addLegalOp<qc::StaticOp>(); // take care of slightly later.
 
     QCToQIRTypeConverter typeConverter(ctx);
