@@ -271,7 +271,7 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
   LogicalResult matchAndRewrite(aux::RecordMemRefOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     auto loc = op.getLoc();
-    auto ctx = rewriter.getContext();
+    auto* ctx = rewriter.getContext();
     StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
 
     // 1. Get the address representation of your dummy label

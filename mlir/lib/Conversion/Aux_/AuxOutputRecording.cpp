@@ -32,7 +32,7 @@ namespace qcc {
 
 using namespace mlir;
 
-bool isMemRefOfIntegers(mlir::Type type) {
+static bool isMemRefOfIntegers(mlir::Type type) {
   // Check if memref is a memref of integer type
   if (auto memrefType = llvm::dyn_cast<mlir::MemRefType>(type)) {
     return llvm::isa<mlir::IntegerType>(memrefType.getElementType());
@@ -77,7 +77,7 @@ protected:
 
       OpBuilder builder(retOp);
 
-      auto size = oldReturnOperands.size();
+      auto size = static_cast<int64_t>(oldReturnOperands.size());
       auto loc = retOp.getLoc();
       if (size > 1) {
         // Indicate that multiple values are returned
