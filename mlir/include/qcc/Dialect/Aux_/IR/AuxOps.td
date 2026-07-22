@@ -61,7 +61,9 @@ def RecordMemRefOp : AuxOp<"record_memref"> {
 
         ```llvm
         llvm.func @__quantum__rt__array_record_output(i64, !llvm.ptr)
+        ...
         llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
+        ...
         llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
         ...
         ```

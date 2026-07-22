@@ -279,6 +279,13 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
 
     // 2. Extract the compile-time static size from the original memref operand
     MemRefType memrefType = cast<MemRefType>(op.getValue().getType());
+
+    // Check if rank is 1 AND it has an identity layout (no strides/offsets)
+    if (memrefType.getRank() != 1 || !memrefType.getLayout().isIdentity()) {
+      // We only support flat merefs for now.
+      return emitError(loc, "expected a flat memref");
+    }
+
     int64_t staticSize = memrefType.getDimSize(0);
 
     // 3. Emit the runtime function tracking the size of the array using pure LLVM constants
@@ -288,8 +295,8 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
     LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtArrayRecordOutput, ValueRange{totalElementsConst, addressOf});
 
     // 4. Extract the aligned pointer from the LLVM memref descriptor struct (adaptor value)
-    // Under the MLIR type converter, a standard MemRef maps to an LLVM struct where
-    // index 1 is the aligned data pointer.
+    // Under the MLIR type converter, a standard MemRef maps to an LLVM struct
+    // where index 1 is the aligned data pointer.
     Value memrefDescriptor = adaptor.getValue();
     Value alignedPtr = LLVM::ExtractValueOp::create(rewriter, loc, memrefDescriptor, 1);
 
