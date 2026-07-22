@@ -8,7 +8,6 @@
 // ===----------------------------------------------------------------------===//
 
 #include "qcc/Conversion/ToQIR/Constants.h"
-#include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -36,6 +35,7 @@
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/Dialect/SCF/IR/SCF.h>
+#include <mlir/Pass/Pass.h>
 
 using namespace mlir;
 using namespace qcc;
