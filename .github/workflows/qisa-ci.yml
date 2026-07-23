@@ -18,8 +18,6 @@ env:
   # Bump this to invalidate the LLVM install cache when the LLVM CMake flags
   # below change (the cache key only tracks base.rev and the QISA patches).
   LLVM_CACHE_VERSION: v1
-  LLVM_INSTALL_DIR: ${{ github.workspace }}/../llvm-install
-  CCACHE_DIR: ${{ github.workspace }}/../ccache-llvm
   # Do not set ccache max size too high. Total cache limit at the time of
   # writing this is 10GB. Note that LLVM install cache competes with this one.
   # See also
@@ -42,17 +40,30 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          # We only install a few small tools; uv's dependency cache would
+          # never invalidate here (no Python project files) and just competes
+          # with the LLVM caches for the repo cache budget.
+          enable-cache: false
 
       # Same tool set as .devcontainer/Dockerfile. LIT_BIN and MLIR_DIR are
       # consumed by the `base` CMake preset; qir-runner is needed by lit tests.
+      # LLVM_INSTALL_DIR and CCACHE_DIR must be absolute paths without `..`
+      # (actions/cache rejects relative pathing), hence $HOME via GITHUB_ENV
+      # instead of the workflow-level env block.
       - name: Install build and test tools
         run: |
           uv tool install cmake
           uv tool install ninja
           uv tool install lit
           uv tool install qirrunner
-          echo "LIT_BIN=$(which lit)" >> "$GITHUB_ENV"
-          echo "MLIR_DIR=$LLVM_INSTALL_DIR/lib/cmake/mlir" >> "$GITHUB_ENV"
+          LLVM_INSTALL_DIR="$HOME/llvm-install"
+          {
+            echo "LLVM_INSTALL_DIR=$LLVM_INSTALL_DIR"
+            echo "CCACHE_DIR=$HOME/ccache-llvm"
+            echo "LIT_BIN=$(which lit)"
+            echo "MLIR_DIR=$LLVM_INSTALL_DIR/lib/cmake/mlir"
+          } >> "$GITHUB_ENV"
 
       - name: Restore patched LLVM install
         id: llvm-cache
