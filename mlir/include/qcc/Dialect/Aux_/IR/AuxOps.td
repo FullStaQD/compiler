@@ -36,10 +36,10 @@ def RecordIntOp : AuxOp<"record_int"> {
         It is used like this:
 
         ```mlir
-        func.func @main() -> i64 attributes { qcc.entry_point } {
+        func.func @main() attributes { qcc.entry_point } {
           ...
           aux.record_int %m7
-          ...
+          return
         }
         ```
 
@@ -72,10 +72,11 @@ def RecordMemRefOp : AuxOp<"record_memref"> {
         It is used like this:
 
         ```mlir
-        func.func @main() -> memref<4 x i64> attributes { qcc.entry_point } {
+        func.func @main() attributes { qcc.entry_point } {
           ...
           aux.record_memref %m7
           ...
+          return
         }
         ```
 
@@ -107,11 +108,12 @@ def RecordTupleOp : AuxOp<"record_tuple"> {
         It is used like this:
 
         ```mlir
-        func.func @main() -> i64, i1 attributes { qcc.entry_point } {
+        func.func @main() attributes { qcc.entry_point } {
           ...
           aux.record_tuple 2
           aux.record_int %m1
           aux.record_int %m2
+          return
         }
         ```
 
