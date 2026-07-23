@@ -87,6 +87,11 @@ jobs:
 
       - name: Provision patched LLVM sources
         if: steps.llvm-cache.outputs.cache-hit != 'true'
+        # The script applies the QISA patches with `git am`, which needs a
+        # committer identity that CI runners do not have configured.
+        env:
+          GIT_COMMITTER_NAME: qcc ci
+          GIT_COMMITTER_EMAIL: qcc@example.com
         run: ./utils/provision-llvm "$RUNNER_TEMP/llvm-project"
 
       # Derived from the configuration in third-party/llvm/README.md, trimmed
