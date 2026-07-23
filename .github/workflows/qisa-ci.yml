@@ -20,7 +20,11 @@ env:
   LLVM_CACHE_VERSION: v1
   LLVM_INSTALL_DIR: ${{ github.workspace }}/../llvm-install
   CCACHE_DIR: ${{ github.workspace }}/../ccache-llvm
-  CCACHE_MAXSIZE: 2G
+  # Do not set ccache max size too high. Total cache limit at the time of
+  # writing this is 10GB. Note that LLVM install cache competes with this one.
+  # See also
+  # https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching.
+  CCACHE_MAXSIZE: 2G # should be plenty, but compare with ccache -s output if in doubt
 
 jobs:
   # Builds qcc with QCC_ENABLE_HISEP_Q=ON and runs the lit suite, which then
@@ -31,7 +35,7 @@ jobs:
   qisa-tests:
     name: 🇨‌ Test QISA 🐧
     runs-on: ubuntu-24.04
-    timeout-minutes: 240
+    timeout-minutes: 300 # we expect 3h + variance on a full re-build
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,8 +59,6 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.LLVM_INSTALL_DIR }}
-          # No restore-keys: a stale LLVM install is useless, so it is either
-          # an exact hit or a full rebuild.
           key: llvm-qisa-${{ runner.os }}-${{ runner.arch }}-${{ env.LLVM_CACHE_VERSION }}-${{ hashFiles('third-party/llvm/base.rev', 'third-party/llvm/patches/qisa/*.patch') }}
 
       # ccache only matters when LLVM itself is rebuilt. The restore-keys
@@ -77,8 +79,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ccache clang lld
 
-      # The LLVM build tree plus install prefix can crowd the ~20 GB of free
-      # disk on hosted runners, so drop large preinstalled toolchains first.
+      # Drop large preinstalled toolchains first to maximize available free disk
+      # space on our runner.
       - name: Free disk space
         if: steps.llvm-cache.outputs.cache-hit != 'true'
         run: |
@@ -95,9 +97,8 @@ jobs:
         run: ./utils/provision-llvm "$RUNNER_TEMP/llvm-project"
 
       # Derived from the configuration in third-party/llvm/README.md, trimmed
-      # for CI: mlir only, Release + assertions, no examples. HiSEP-Q is a
-      # RISCV subtarget. LLVM_INSTALL_UTILS installs and exports FileCheck,
-      # count, and not, which check-qcc depends on (mlir/test/CMakeLists.txt).
+      # for CI. HiSEP-Q is a RISCV subtarget. LLVM_INSTALL_UTILS installs and
+      # exports FileCheck, count, and not, which check-qcc depends on.
       - name: Configure LLVM
         if: steps.llvm-cache.outputs.cache-hit != 'true'
         run: |
@@ -122,9 +123,11 @@ jobs:
         run: |
           cmake --build "$RUNNER_TEMP/llvm-project/build" --target install
           ccache -s
+          df -h /
 
-      # Save even when the build failed or timed out, so a retry can pick up
-      # where the compiler cache left off.
+      # On "always() && ...": Without it github would wrap this into "success()
+      # && ...". Here we want to save even when the build failed or timed out,
+      # so a retry can pick up where the compiler cache left off.
       - name: Save ccache
         if: always() && steps.llvm-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
