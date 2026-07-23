@@ -222,8 +222,7 @@ struct RecordTupleLowering : public OpConversionPattern<aux::RecordTupleOp> {
 
     Type ty = op.getValue().getType();
 
-    llvm::StringRef callee = qirRtTupleRecordOutput;
-    LLVM::CallOp::create(rewriter, loc, TypeRange(), callee, ValueRange{adaptor.getValue(), addressOf});
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtTupleRecordOutput, ValueRange{adaptor.getValue(), addressOf});
 
     rewriter.eraseOp(op);
     return success();
@@ -281,7 +280,7 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
 
     // Check if rank is 1 AND it has an identity layout (no strides/offsets)
     if (memrefType.getRank() != 1 || !memrefType.getLayout().isIdentity()) {
-      // We only support flat merefs for now.
+      // We only support flat memrefs for now.
       return emitError(loc, "expected a flat memref");
     }
 
