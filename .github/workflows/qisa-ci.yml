@@ -160,4 +160,4 @@ jobs:
         run: cmake --build build/release
 
       - name: Test qcc
-        run: cmake --build build/release --target check-qcc
+        run: LIT_OPTS="--time-tests" cmake --build build/release --target check-qcc
