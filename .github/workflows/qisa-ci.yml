@@ -16,7 +16,7 @@ permissions:
 
 env:
   # Bump this to invalidate the LLVM install cache when the LLVM CMake flags
-  # below change (the cache key only tracks base.rev and the QISA patches).
+  # below change (the cache key does not track them).
   LLVM_CACHE_VERSION: v1
   # Do not set ccache max size too high. Total cache limit at the time of
   # writing this is 10GB. Note that LLVM install cache competes with this one.
@@ -41,9 +41,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          # We only install a few small tools; uv's dependency cache would
-          # never invalidate here (no Python project files) and just competes
-          # with the LLVM caches for the repo cache budget.
+          # We only install a few small tools; We *must* turn off the cache
+          # here. The dependency cache would never invalidate (no Python project
+          # files). We would be in danger of serving very old binaries.
           enable-cache: false
 
       # Same tool set as .devcontainer/Dockerfile. LIT_BIN and MLIR_DIR are
