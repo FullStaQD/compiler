@@ -72,7 +72,7 @@ static constexpr llvm::StringLiteral qirRtArrayRecordOutput = "__quantum__rt__ar
 /// Signature: `void(i64,ptr)`.
 ///
 /// The first parameter defines the size of the tuple.
-// The second parameter defines a string label for the result value. Depending
+/// The second parameter defines a string label for the result value. Depending
 /// on the output schema, the label is included in the output or omitted.
 static constexpr llvm::StringLiteral qirRtTupleRecordOutput = "__quantum__rt__tuple_record_output";
 
