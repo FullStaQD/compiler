@@ -88,6 +88,7 @@ def RecordMemRefOp : AuxOp<"record_memref"> {
   let results = (outs);
 
   let assemblyFormat = "$value attr-dict `:` type($value)";
+  let hasVerifier = 1;
 }
 
 def RecordTupleOp : AuxOp<"record_tuple"> {

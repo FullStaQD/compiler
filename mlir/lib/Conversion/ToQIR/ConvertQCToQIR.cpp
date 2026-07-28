@@ -274,13 +274,6 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
 
     // 2. Extract the compile-time static size from the original memref operand
     MemRefType memrefType = cast<MemRefType>(op.getValue().getType());
-
-    // Check if rank is 1 AND it has an identity layout (no strides/offsets)
-    if (memrefType.getRank() != 1 || !memrefType.getLayout().isIdentity()) {
-      // We only support flat memrefs for now.
-      return emitError(loc, "expected a flat memref");
-    }
-
     int64_t staticSize = memrefType.getDimSize(0);
 
     // 3. Emit the runtime function tracking the size of the array using pure LLVM constants
