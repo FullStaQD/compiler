@@ -36,6 +36,10 @@ LogicalResult RecordMemRefOp::verify() {
            << memRefType.getRank() << " and layout " << memRefType.getLayout();
   }
 
+  if (!memRefType.hasStaticShape()) {
+    return emitOpError("expected memref to have a fully static shape, but got dynamic shape ") << memRefType;
+  }
+
   // Ensure the element type is an integer
   if (!memRefType.getElementType().isInteger()) {
     return emitOpError("expected memref element type to be an integer, but got ") << memRefType.getElementType();
