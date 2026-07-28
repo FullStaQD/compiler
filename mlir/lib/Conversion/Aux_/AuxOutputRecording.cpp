@@ -68,8 +68,6 @@ protected:
       auto oldType = funcOp.getFunctionType();
       auto newType = FunctionType::get(funcOp->getContext(), oldType.getInputs(), {});
 
-      funcOp.setType(newType);
-
       auto& body = funcOp.getBody().front();
       auto retOp = cast<func::ReturnOp>(body.getTerminator());
       auto oldReturnOperands = retOp.getOperands();
@@ -96,6 +94,8 @@ protected:
           return WalkResult::interrupt();
         }
       };
+
+      funcOp.setType(newType);
       // Remove the old return with values and replace with a void return
       retOp.erase();
       builder.setInsertionPointToEnd(&body);
