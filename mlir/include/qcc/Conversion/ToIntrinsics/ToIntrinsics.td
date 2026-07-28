@@ -19,7 +19,7 @@ def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp">
       RISC-V QV extension (e.g. `llvm.riscv.qv.h`, `llvm.riscv.qv.cx`).
 
       Each qubit pointer argument (produced by `llvm.inttoptr` of a constant
-      integer index) is re-encoded as a `vector<[1]xi8>` scalable-vector value
+      integer index) is re-encoded as a `vector<[8]xi8>` scalable-vector value
       carrying that index in lane 0, matching the `anyvector` operand that the
       QVSingle / QVPair intrinsics expect.
 
