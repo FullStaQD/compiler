@@ -203,11 +203,9 @@ namespace qcc {
 #define GEN_PASS_DEF_CONVERTQIRTOINTRINSICS
 #include "qcc/Conversion/ToIntrinsics/ToIntrinsics.h.inc"
 
-namespace {
-
 /// Whether `funcOp` carries the `entry_point` passthrough attribute set by
 /// `ConvertQCToQIR::setEntryPointAttrs`.
-bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
+static bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
   auto passthrough = funcOp->getAttrOfType<ArrayAttr>("passthrough");
   if (!passthrough) {
     return false;
@@ -218,6 +216,8 @@ bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
     return strAttr && strAttr.getValue() == "entry_point";
   });
 }
+
+namespace {
 
 struct ConvertQIRToIntrinsics final : impl::ConvertQIRToIntrinsicsBase<ConvertQIRToIntrinsics> {
   using ConvertQIRToIntrinsicsBase::ConvertQIRToIntrinsicsBase;

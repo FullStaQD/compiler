@@ -9,6 +9,7 @@
 
 #include "qcc/Support/Elf2Mem.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -16,7 +17,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -65,15 +65,16 @@ Error convertElfToMem(const MemoryBuffer& elfBuffer, raw_ostream& os) {
       return bytesOrErr.takeError();
     }
 
-    segments.push_back({static_cast<uint32_t>(phdr.p_vaddr), *bytesOrErr, static_cast<uint32_t>(phdr.p_memsz)});
+    segments.push_back({.addr = static_cast<uint32_t>(phdr.p_vaddr),
+                        .fileBytes = *bytesOrErr,
+                        .memSize = static_cast<uint32_t>(phdr.p_memsz)});
   }
 
   if (segments.empty()) {
     return createStringError(inconvertibleErrorCode(), "no loadable (PT_LOAD) segments found");
   }
 
-  std::sort(segments.begin(), segments.end(),
-            [](const Segment& lhs, const Segment& rhs) { return lhs.addr < rhs.addr; });
+  llvm::sort(segments, [](const Segment& lhs, const Segment& rhs) { return lhs.addr < rhs.addr; });
 
   for (size_t i = 0; i < segments.size(); ++i) {
     if (segments[i].addr % 4 != 0) {
