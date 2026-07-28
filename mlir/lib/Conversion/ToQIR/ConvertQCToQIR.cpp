@@ -30,7 +30,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-#include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/Dialect/SCF/IR/SCF.h>
@@ -219,8 +218,6 @@ struct RecordTupleLowering : public OpConversionPattern<aux::RecordTupleOp> {
 
     auto addressOf =
         LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
-
-    Type ty = op.getValue().getType();
 
     LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtTupleRecordOutput, ValueRange{adaptor.getValue(), addressOf});
 

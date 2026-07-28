@@ -20,7 +20,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 #include <llvm/Support/Casting.h>
-#include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/Support/WalkResult.h>
