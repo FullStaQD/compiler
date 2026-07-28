@@ -16,3 +16,8 @@ func.func @main() attributes { qcc.entry_point } {
 // CHECK-ASM: qv.h
 // CHECK-OBJ: <main>:
 // CHECK-OBJ: qv.h
+
+// `_start` is the synthesized boot entry point (see hisepq.ld): it sets up the stack and calls
+// `main`, so it must also show up in native output.
+// CHECK-ASM: _start:
+// CHECK-OBJ: <_start>:

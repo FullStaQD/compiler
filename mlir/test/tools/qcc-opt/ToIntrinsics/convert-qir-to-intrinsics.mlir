@@ -28,7 +28,7 @@ llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr) -> ()
 llvm.mlir.global internal constant @".qir_dummy_label"("dummy_label\00") {addr_space = 0 : i32}
 
 
-llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
+llvm.func @single_qubit_gates() {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %q0 = llvm.inttoptr %c0 : i64 to !llvm.ptr
   %c1 = llvm.mlir.constant(1 : i64) : i64
@@ -53,7 +53,7 @@ llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"(%[[VEC1]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 
 
-llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
+llvm.func @cx_gate() {
   %c2 = llvm.mlir.constant(2 : i64) : i64
   %ctrl = llvm.inttoptr %c2 : i64 to !llvm.ptr
   %c3 = llvm.mlir.constant(3 : i64) : i64
@@ -75,7 +75,7 @@ llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"(%[[CVEC]], %[[TVEC]], %[[ZERO]], %[[ONE]])
 
 
-llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
+llvm.func @measurement() -> i1 {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %qptr = llvm.inttoptr %c0 : i64 to !llvm.ptr
   %rptr = llvm.inttoptr %c0 : i64 to !llvm.ptr
@@ -98,7 +98,7 @@ llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
 // CHECK:         llvm.return %[[UNDEF_I1]] : i1
 
 
-llvm.func @rt_calls_erased() attributes { passthrough = ["entry_point"] } {
+llvm.func @rt_calls_erased() {
   %null = llvm.mlir.zero : !llvm.ptr
   llvm.call @__quantum__rt__initialize(%null) : (!llvm.ptr) -> ()
 

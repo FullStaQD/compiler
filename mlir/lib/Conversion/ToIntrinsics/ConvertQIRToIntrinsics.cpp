@@ -10,6 +10,7 @@
 #include "qcc/Conversion/ToQIR/Constants.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -17,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -203,6 +205,20 @@ namespace qcc {
 
 namespace {
 
+/// Whether `funcOp` carries the `entry_point` passthrough attribute set by
+/// `ConvertQCToQIR::setEntryPointAttrs`.
+bool isEntryPointFunc(LLVM::LLVMFuncOp funcOp) {
+  auto passthrough = funcOp->getAttrOfType<ArrayAttr>("passthrough");
+  if (!passthrough) {
+    return false;
+  }
+
+  return llvm::any_of(passthrough, [](Attribute attr) {
+    auto strAttr = dyn_cast<StringAttr>(attr);
+    return strAttr && strAttr.getValue() == "entry_point";
+  });
+}
+
 struct ConvertQIRToIntrinsics final : impl::ConvertQIRToIntrinsicsBase<ConvertQIRToIntrinsics> {
   using ConvertQIRToIntrinsicsBase::ConvertQIRToIntrinsicsBase;
 
@@ -210,6 +226,11 @@ protected:
   void runOnOperation() override {
     ModuleOp moduleOp = getOperation();
     auto* ctx = moduleOp.getContext();
+
+    FailureOr<LLVM::LLVMFuncOp> entryPoint = findEntryPoint(moduleOp);
+    if (failed(entryPoint)) {
+      return signalPassFailure();
+    }
 
     RewritePatternSet patterns(ctx);
     patterns.add<QISCallLowering, ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
@@ -219,9 +240,31 @@ protected:
     }
 
     removeQIRDeclarations();
+
+    if (*entryPoint) {
+      emitStartFunc(moduleOp, *entryPoint);
+    }
   }
 
 private:
+  /// Returns the entry point of the module, or a null func if it has none. At most one function may
+  /// be tagged, as the hardware boots at a single address.
+  static FailureOr<LLVM::LLVMFuncOp> findEntryPoint(ModuleOp moduleOp) {
+    LLVM::LLVMFuncOp entryPoint;
+    for (auto funcOp : moduleOp.getOps<LLVM::LLVMFuncOp>()) {
+      if (!isEntryPointFunc(funcOp)) {
+        continue;
+      }
+      if (entryPoint) {
+        funcOp.emitError("expected at most one function tagged as the entry point, but found '")
+            << entryPoint.getName() << "' and '" << funcOp.getName() << "'";
+        return failure();
+      }
+      entryPoint = funcOp;
+    }
+    return entryPoint;
+  }
+
   /// Removes leftover QIR function declarations whose call sites were erased.
   void removeQIRDeclarations() {
     SmallVector<LLVM::LLVMFuncOp> toErase;
@@ -233,6 +276,43 @@ private:
     for (auto funcOp : toErase) {
       funcOp.erase();
     }
+  }
+
+  /// Emits `_start`, which supersedes `entryPoint` as the entry point of the hardware.
+  ///
+  /// HiSEP-Q jumps to the fixed boot address (see hisepq.ld) at reset. There is no caller, and `sp`
+  /// holds whatever the core reset with. `_start` sets `sp` to the linker-provided `__stack_top`,
+  /// calls `entryPoint` with a `jalr` so that it can return normally, and halts in an infinite loop
+  /// if it does.
+  ///
+  /// The sequence must be a single inline-asm block: with a `llvm.call`, the backend saves `ra` in
+  /// a prologue, which is emitted ahead of the `sp` setup.
+  static void emitStartFunc(ModuleOp moduleOp, LLVM::LLVMFuncOp entryPoint) {
+    OpBuilder builder(moduleOp.getContext());
+    builder.setInsertionPointToEnd(moduleOp.getBody());
+    Location loc = entryPoint.getLoc();
+
+    // `extern char __stack_top[];`, defined by hisepq.ld. Only its address is used.
+    auto stackTopType = LLVM::LLVMArrayType::get(builder.getI8Type(), 0);
+    auto stackTop = LLVM::GlobalOp::create(builder, loc, stackTopType, /*isConstant=*/true, LLVM::Linkage::External,
+                                           "__stack_top", /*value=*/Attribute());
+
+    auto startFuncType = LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(builder.getContext()), {});
+    auto startFunc = LLVM::LLVMFuncOp::create(builder, loc, "_start", startFuncType);
+    builder.setInsertionPointToStart(startFunc.addEntryBlock(builder));
+
+    Value stackTopAddr = LLVM::AddressOfOp::create(builder, loc, stackTop);
+    Value entryAddr = LLVM::AddressOfOp::create(builder, loc, entryPoint);
+
+    auto asmDialect = LLVM::AsmDialectAttr::get(builder.getContext(), LLVM::AsmDialect::AD_ATT);
+    LLVM::InlineAsmOp::create(builder, loc, /*resultTypes=*/TypeRange(),
+                              /*operands=*/ValueRange{stackTopAddr, entryAddr},
+                              /*asm_string=*/"mv sp, $0\njalr ra, 0($1)\n1:\nj 1b",
+                              /*constraints=*/"r,r", /*has_side_effects=*/true,
+                              /*is_align_stack=*/false, LLVM::TailCallKind::None,
+                              /*asm_dialect=*/asmDialect, /*operand_attrs=*/ArrayAttr());
+
+    LLVM::UnreachableOp::create(builder, loc);
   }
 };
 

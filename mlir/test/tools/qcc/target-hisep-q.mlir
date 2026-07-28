@@ -12,6 +12,13 @@
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.h"({{.*}})
 // CHECK:         llvm.return
 
+// `main` is tagged as the entry point, so a `_start` is synthesized that sets up the stack from
+// the linker-provided `__stack_top` and calls it.
+// CHECK: llvm.mlir.global external constant @__stack_top
+// CHECK-LABEL: llvm.func @_start()
+// CHECK:         llvm.inline_asm{{.*}}"mv sp, $0{{.*}}jalr ra, 0($1){{.*}}"
+// CHECK:         llvm.unreachable
+
 func.func @main() attributes { qcc.entry_point } {
     %0 = qc.static 0 : !qc.qubit
     qc.h %0 : !qc.qubit

@@ -44,6 +44,7 @@ void LLVMInitializeRISCVTargetInfo();
 void LLVMInitializeRISCVTarget();
 void LLVMInitializeRISCVTargetMC();
 void LLVMInitializeRISCVAsmPrinter();
+void LLVMInitializeRISCVAsmParser();
 }
 // NOLINTEND(readability-identifier-naming)
 
@@ -63,6 +64,9 @@ bool emitNativeHiSEPQ(llvm::Module& module, llvm::raw_pwrite_stream& os, const N
   LLVMInitializeRISCVTarget();
   LLVMInitializeRISCVTargetMC();
   LLVMInitializeRISCVAsmPrinter();
+  // The MC streamer needs an asm parser to lower the inline asm that ConvertQIRToIntrinsics emits
+  // in `_start` (see emitStartFunc).
+  LLVMInitializeRISCVAsmParser();
 
   const std::string attrsStr = options.mattr.empty() ? "+experimental-xqv" : options.mattr.str();
   llvm::Triple triple(
@@ -75,7 +79,10 @@ bool emitNativeHiSEPQ(llvm::Module& module, llvm::raw_pwrite_stream& os, const N
     return true;
   }
 
-  const llvm::TargetOptions targetOptions;
+  llvm::TargetOptions targetOptions;
+  // hisepq.ld puts `.text._start` at the boot address, which needs each function in its own
+  // `.text.<name>` section.
+  targetOptions.FunctionSections = true;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
       theTarget->createTargetMachine(triple, /*cpu=*/"", attrsStr, targetOptions, std::nullopt));
 
