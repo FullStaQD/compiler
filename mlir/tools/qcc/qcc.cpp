@@ -80,10 +80,16 @@ int main(int argc, char** argv) {
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
       cl::values(clEnumValN(Stage::Mlir, "mlir", "MLIR in the LLVM dialect"),
                  clEnumValN(Stage::LlvmIr, "llvmir", "LLVM IR (QIR for the QIR target)"),
-                 clEnumValN(Stage::Native, "native", "Native target code (QISA, not yet implemented)")),
+                 clEnumValN(Stage::Native, "native", "Native target code (QISA; requires a target with a backend)")),
       cl::cat(qccCategory));
   const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
                              cl::init(false), cl::cat(qccCategory));
+  const cl::opt<std::string> mtriple("mtriple",
+                                     cl::desc("Target triple for native code generation (target default if empty)"),
+                                     cl::init(""), cl::value_desc("triple"), cl::cat(qccCategory));
+  const cl::opt<std::string> mattr(
+      "mattr", cl::desc("Target attribute string for native code generation (target default if empty)"), cl::init(""),
+      cl::value_desc("attrs"), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
@@ -103,8 +109,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  if (compileTo == Stage::Native) {
-    llvm::errs() << "error: the 'native' stage is not yet implemented\n";
+  if (compileTo == Stage::Native && !target->emitNative) {
+    llvm::errs() << "error: native output is not supported for --target=" << targetName << "\n";
     return 1;
   }
 
@@ -197,8 +203,22 @@ int main(int argc, char** argv) {
     }
     break;
   }
-  case Stage::Native:
-    llvm_unreachable("the 'native' stage is rejected during option validation");
+  case Stage::Native: {
+    // Native emission is delegated to the target backend (the only place allowed
+    // to depend on target-specific/fork codegen). `--binary` selects an object
+    // file; otherwise textual assembly is emitted.
+    llvm::LLVMContext llvmContext;
+    std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
+    if (!llvmModule) {
+      llvm::errs() << "failed to translate the module to LLVM IR\n";
+      return 1;
+    }
+    const qcc::NativeCodegenOptions codegenOptions{.mtriple = mtriple, .mattr = mattr, .binary = binary};
+    if (target->emitNative(*llvmModule, static_cast<llvm::raw_pwrite_stream&>(outFile->os()), codegenOptions)) {
+      return 1;
+    }
+    break;
+  }
   default:
     llvm_unreachable("--compile-to should always have a value (default value if nothing is set explicitly)");
   }
