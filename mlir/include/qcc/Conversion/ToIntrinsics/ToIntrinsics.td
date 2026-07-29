@@ -23,14 +23,20 @@ def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp">
       carrying that index in lane 0, matching the `anyvector` operand that the
       QVSingle / QVPair intrinsics expect.
 
-      Additional simplifications are performed on the QIR runtime calls:
-      - `__quantum__rt__initialize` calls are erased (no-op on the intrinsic path).
-      - `__quantum__rt__read_result` calls are replaced with `undef : i1`
+      The QIR runtime calls below have no HiSEP-Q QISA counterpart yet, so the
+      semantics they carry are dropped:
+      - `__quantum__rt__initialize` calls are erased. Per the QIR Adaptive
+        Profile this call also sets all qubits to the zero state, so that
+        initialization is lost.
+      - `__quantum__rt__read_result` calls are replaced with `poison : i1`,
+        i.e. the measurement result is lost.
       - `__quantum__rt__bool_record_output` and `__quantum__rt__int_record_output`
-        calls are erased.
-      - Leftover QIR function declarations are removed from the module.
-      TODO: Add support for the simplified QIR runtime calls. We should be able to
-      support all the QIR Adaptive Profile runtime calls.
+        calls are erased, so program output is not recorded.
+      TODO: Support these once HiSEP-Q specifies the corresponding QISA
+      operations. We should be able to support all the QIR Adaptive Profile
+      runtime calls.
+
+      Leftover QIR function declarations are removed from the module.
 
       Assumptions:
       - The module has been fully lowered by the ToQIR pipeline
