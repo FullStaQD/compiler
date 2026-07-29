@@ -43,7 +43,7 @@ llvm.func @single_qubit_gates() attributes { passthrough = ["entry_point"] } {
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.x"(%[[VEC1]], %[[ZERO]], %[[ZERO]], %[[ONE]])
 
 
-llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
+llvm.func @two_qubit_gates() attributes { passthrough = ["entry_point"] } {
   %c2 = llvm.mlir.constant(2 : i64) : i64
   %ctrl = llvm.inttoptr %c2 : i64 to !llvm.ptr
   %c3 = llvm.mlir.constant(3 : i64) : i64
@@ -53,7 +53,7 @@ llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
   llvm.return
 }
 
-// CHECK-LABEL: llvm.func @cx_gate()
+// CHECK-LABEL: llvm.func @two_qubit_gates()
 // CHECK-NOT:     llvm.call @__quantum__qis__cx__body
 // CHECK-DAG:     %[[CIDX:.*]] = llvm.mlir.constant(2 : i8) : i8
 // CHECK-DAG:     %[[TIDX:.*]] = llvm.mlir.constant(3 : i8) : i8
