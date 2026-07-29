@@ -23,13 +23,14 @@ def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp">
       carrying that index in lane 0, matching the `anyvector` operand that the
       QVSingle / QVPair intrinsics expect.
 
-      Additionally:
+      Additional simplifications are performed on the QIR runtime calls:
       - `__quantum__rt__initialize` calls are erased (no-op on the intrinsic path).
       - `__quantum__rt__read_result` calls are replaced with `undef : i1`
-        (TODO: a proper `qv.read_result` intrinsic is not yet available).
       - `__quantum__rt__bool_record_output` and `__quantum__rt__int_record_output`
         calls are erased.
       - Leftover QIR function declarations are removed from the module.
+      TODO: Add support for the simplified QIR runtime calls. We should be able to
+      support all the QIR Adaptive Profile runtime calls.
 
       Assumptions:
       - The module has been fully lowered by the ToQIR pipeline
