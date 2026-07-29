@@ -84,12 +84,6 @@ int main(int argc, char** argv) {
       cl::cat(qccCategory));
   const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
                              cl::init(false), cl::cat(qccCategory));
-  const cl::opt<std::string> mtriple("mtriple",
-                                     cl::desc("Target triple for native code generation (target default if empty)"),
-                                     cl::init(""), cl::value_desc("triple"), cl::cat(qccCategory));
-  const cl::opt<std::string> mattr(
-      "mattr", cl::desc("Target attribute string for native code generation (target default if empty)"), cl::init(""),
-      cl::value_desc("attrs"), cl::cat(qccCategory));
 
   cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
 
@@ -210,7 +204,7 @@ int main(int argc, char** argv) {
       llvm::errs() << "failed to translate the module to LLVM IR\n";
       return 1;
     }
-    const qcc::NativeCodegenOptions codegenOptions{.mtriple = mtriple, .mattr = mattr, .binary = binary};
+    const qcc::NativeCodegenOptions codegenOptions{.binary = binary};
     if (target->emitNative(*llvmModule, static_cast<llvm::raw_pwrite_stream&>(outFile->os()), codegenOptions)) {
       return 1;
     }

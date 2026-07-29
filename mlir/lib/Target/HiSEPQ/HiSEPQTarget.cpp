@@ -64,9 +64,8 @@ bool emitNativeHiSEPQ(llvm::Module& module, llvm::raw_pwrite_stream& os, const N
   LLVMInitializeRISCVTargetMC();
   LLVMInitializeRISCVAsmPrinter();
 
-  const std::string attrsStr = options.mattr.empty() ? "+experimental-xqv" : options.mattr.str();
-  llvm::Triple triple(
-      llvm::Triple::normalize(options.mtriple.empty() ? "riscv32-unknown-unknown" : options.mtriple.str()));
+  const std::string attrsStr = "+experimental-xqv";
+  llvm::Triple triple(llvm::Triple::normalize("riscv32-unknown-unknown"));
 
   std::string errorStr;
   const llvm::Target* theTarget = llvm::TargetRegistry::lookupTarget(/*MArch=*/"", triple, errorStr);
