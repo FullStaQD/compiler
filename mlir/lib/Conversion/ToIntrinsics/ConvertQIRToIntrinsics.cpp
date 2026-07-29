@@ -157,7 +157,7 @@ struct ReadResultLowering : public OpRewritePattern<LLVM::CallOp> {
 };
 
 /// Erases `llvm.call @__quantum__rt__initialize(ptr)`.
-/// The runtime initialization step is not needed on the bare-metal intrinsic path.
+/// TODO: A proper QISA specification by HiSEP-Q for initialization is needed.
 struct RtInitLowering : public OpRewritePattern<LLVM::CallOp> {
   using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
 
