@@ -1,12 +1,3 @@
-// ===----------------------------------------------------------------------===//
-//
-// Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
-// Exceptions.
-// See <repo-root>/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-// ===----------------------------------------------------------------------===//
-
 // REQUIRES: hisep-q
 
 // RUN: qcc --target=hisep-q --compile-to=mlir -o - %s | FileCheck %s
