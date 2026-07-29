@@ -13,6 +13,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -22,14 +23,14 @@
 
 #include <cstdint>
 #include <limits>
-#include <mlir/Pass/Pass.h>
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
 namespace {
 
-enum class QVClass : unsigned {
+enum class QVClass : std::uint8_t {
   Single = 1, // (vs1: vec<[8]xi8>, rs2: i32, block_imm: i32, vl: i32)
   Pair = 2,   // (vs1: vec<[8]xi8>, vs2: vec<[8]xi8>, block_imm: i32, vl: i32)
 };
@@ -49,10 +50,10 @@ struct QISOpInfo {
 
 static std::optional<QISOpInfo> getQISOpInfo(StringRef qisName) {
   static const llvm::StringMap<QISOpInfo> table = {
-      {qcc::qirQisH, {"llvm.riscv.qv.h", QVClass::Single}},
-      {qcc::qirQisX, {"llvm.riscv.qv.x", QVClass::Single}},
-      {qcc::qirQisCX, {"llvm.riscv.qv.cx", QVClass::Pair}},
-      {qcc::qirQisMZ, {"llvm.riscv.qv.mz", QVClass::Single}},
+      {qcc::qirQisH, {.intrinsicName = "llvm.riscv.qv.h", .qvClass = QVClass::Single}},
+      {qcc::qirQisX, {.intrinsicName = "llvm.riscv.qv.x", .qvClass = QVClass::Single}},
+      {qcc::qirQisCX, {.intrinsicName = "llvm.riscv.qv.cx", .qvClass = QVClass::Pair}},
+      {qcc::qirQisMZ, {.intrinsicName = "llvm.riscv.qv.mz", .qvClass = QVClass::Single}},
   };
   auto it = table.find(qisName);
   return it == table.end() ? std::nullopt : std::optional(it->second);
@@ -93,7 +94,8 @@ static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
 /// `index` must fit in an unsigned i8 (callers are expected to have validated
 /// this already and to report a compiler error otherwise).
 static Value qubitIndexToVec(OpBuilder& builder, Location loc, int64_t index) {
-  assert(index >= 0 && index <= std::numeric_limits<uint8_t>::max() && "qubit index does not fit in i8");
+  assert(index >= 0 && std::cmp_less_equal(index, std::numeric_limits<uint8_t>::max()) &&
+         "qubit index does not fit in i8");
 
   auto i8Type = builder.getIntegerType(8);
   auto i32Type = builder.getI32Type();
@@ -147,7 +149,7 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
         *hadError = true;
         return failure();
       }
-      if (*idx < 0 || *idx > std::numeric_limits<uint8_t>::max()) {
+      if (*idx < 0 || std::cmp_greater(*idx, std::numeric_limits<uint8_t>::max())) {
         callOp.emitError("convert-qir-to-intrinsics: qubit index ") << *idx << " out of range for '" << *callee << "'";
         *hadError = true;
         return failure();
