@@ -64,7 +64,9 @@ llvm.func @cx_gate() attributes { passthrough = ["entry_point"] } {
 // CHECK:         %[[TVEC:.*]] = llvm.insertelement %[[TIDX]], %[[UNDEF_VEC]][%[[ZERO]] : i32] : vector<[8]xi8>
 // CHECK:         llvm.call_intrinsic "llvm.riscv.qv.cx"(%[[CVEC]], %[[TVEC]], %[[ZERO]], %[[ONE]])
 
-
+// TODO: HiSEP-Q doesn't yet have a `qv.read_result` intrinsic, so the `__quantum__rt__read_result`
+// call is replaced with `undef : i1` for now. Once the intrinsic is available, this test should be
+// updated to check for it.
 llvm.func @measurement() -> i1 attributes { passthrough = ["entry_point"] } {
   %c0 = llvm.mlir.constant(0 : i64) : i64
   %qptr = llvm.inttoptr %c0 : i64 to !llvm.ptr
