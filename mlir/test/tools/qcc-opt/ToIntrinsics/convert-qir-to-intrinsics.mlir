@@ -1,12 +1,3 @@
-// ===----------------------------------------------------------------------===//
-//
-// Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
-// Exceptions.
-// See <repo-root>/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-// ===----------------------------------------------------------------------===//
-
 // RUN: qcc-opt %s -convert-qir-to-intrinsics | FileCheck %s
 
 // Input: a module as produced by the ToQIR pipeline.
@@ -15,7 +6,6 @@
 //
 // Expected output: every QIS call is replaced by an `llvm.call_intrinsic` call
 // with the qubit encoded as a `vector<[8]xi8>` scalable vector in lane 0.
-// Constants and undefs are CSE'd into a shared preamble within each function.
 
 llvm.func @__quantum__rt__initialize(!llvm.ptr) -> ()
 llvm.func @__quantum__rt__read_result(!llvm.ptr) -> i1 attributes {arg_attrs = [{llvm.readonly}]}
