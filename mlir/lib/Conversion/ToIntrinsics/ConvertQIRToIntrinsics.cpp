@@ -189,7 +189,7 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
     return success();
   }
 
-  bool* hadError; // Points to storage owned by the pass; valid for one applyPatternsGreedily call.
+  bool* hadError;
 };
 
 /// Replaces `llvm.call @__quantum__rt__read_result(%result_ptr)` with `poison : i1`.
