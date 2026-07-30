@@ -1,7 +1,4 @@
 // REQUIRES: hisep-q
-
-// Native QISA emission: `--compile-to=native` emits assembly, `--binary` an object file.
-
 // RUN: qcc --target=hisep-q --compile-to=native %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: qcc --target=hisep-q --compile-to=native --binary %s -o %t.o
 // RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=CHECK-OBJ

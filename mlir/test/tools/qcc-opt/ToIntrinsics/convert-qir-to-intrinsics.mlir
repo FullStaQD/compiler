@@ -1,6 +1,4 @@
 // RUN: qcc-opt %s -convert-qir-to-intrinsics --split-input-file --verify-diagnostics | FileCheck %s
-// The invalid cases below must make the pass itself fail, not merely leave the
-// call unconverted, so also assert a non-zero exit status.
 // RUN: not qcc-opt %s -convert-qir-to-intrinsics --split-input-file
 
 // Input: a module as produced by the ToQIR pipeline.

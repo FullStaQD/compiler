@@ -5,10 +5,6 @@
 ///
 /// TODO: This must be replaced by a test starting from jasp. Currently the frontend and the
 /// backend do not fit together.
-///
-/// The second RUN line (gated on `hisep-q`) compiles the same circuit with
-/// --target=hisep-q to verify the full pipeline replaces QIS calls with
-/// RISC-V QV intrinsics.
 func.func @main() attributes { qcc.entry_point } {
     %0 = qc.static 0 : !qc.qubit
     %1 = qc.static 1 : !qc.qubit
