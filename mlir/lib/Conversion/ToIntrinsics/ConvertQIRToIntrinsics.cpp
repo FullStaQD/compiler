@@ -135,8 +135,8 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
     unsigned numQubitOperands = info->getNumQubitOperands();
 
     if (operands.size() < numQubitOperands) {
-      callOp.emitError("convert-qir-to-intrinsics: '")
-          << *callee << "' expects at least " << numQubitOperands << " qubit operand(s), got " << operands.size();
+      callOp.emitError("'") << *callee << "' expects at least " << numQubitOperands << " qubit operand(s), got "
+                            << operands.size();
       *hadError = true;
       return failure();
     }
@@ -145,12 +145,12 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
     for (unsigned i = 0; i < numQubitOperands; ++i) {
       auto idx = getQubitIndexFromPtr(operands[i]);
       if (!idx) {
-        callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr for '") << *callee << "'";
+        callOp.emitError("cannot extract qubit index from ptr for '") << *callee << "'";
         *hadError = true;
         return failure();
       }
       if (*idx < 0 || std::cmp_greater(*idx, std::numeric_limits<uint8_t>::max())) {
-        callOp.emitError("convert-qir-to-intrinsics: qubit index ") << *idx << " out of range for '" << *callee << "'";
+        callOp.emitError("qubit index ") << *idx << " out of range for '" << *callee << "'";
         *hadError = true;
         return failure();
       }
