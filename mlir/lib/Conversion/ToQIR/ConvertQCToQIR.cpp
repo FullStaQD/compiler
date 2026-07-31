@@ -208,24 +208,6 @@ struct RecordIntLowering : public OpConversionPattern<aux::RecordIntOp> {
   }
 };
 
-struct RecordTupleLowering : public OpConversionPattern<aux::RecordTupleOp> {
-  using OpConversionPattern<aux::RecordTupleOp>::OpConversionPattern;
-
-  LogicalResult matchAndRewrite(aux::RecordTupleOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    auto loc = op.getLoc();
-    StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
-
-    auto addressOf =
-        LLVM::AddressOfOp::create(rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()), labelName);
-
-    LLVM::CallOp::create(rewriter, loc, TypeRange(), qirRtTupleRecordOutput, ValueRange{adaptor.getValue(), addressOf});
-
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 /// We rely on the fact that the signature of qc gates and the corresponding QIR QIS function fits.
 struct UnitaryLowering : public ConversionPattern {
   UnitaryLowering(TypeConverter& converter, MLIRContext* ctx)
@@ -309,6 +291,34 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
   }
 };
 
+std::tuple<int64_t, Operation*> countRecordsAndGetFirstRecordOp(func::FuncOp funcOp) {
+  int64_t recordCount = 0;
+  Operation* firstRecordOp = nullptr;
+
+  funcOp.walk([&](Operation* op) {
+    if (isa<qcc::aux::RecordMemRefOp, qcc::aux::RecordIntOp>(op)) {
+      recordCount++;
+      if (firstRecordOp == nullptr) {
+        firstRecordOp = op;
+      }
+    }
+  });
+  return std::make_tuple(recordCount, firstRecordOp);
+};
+
+void insertRtTupleRecord(func::FuncOp funcOp, Operation* firstRecordOp, int64_t recordCount) {
+  StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
+  OpBuilder builder(funcOp.getContext());
+  Location loc = firstRecordOp->getLoc();
+
+  builder.setInsertionPoint(firstRecordOp);
+
+  Value countVal = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), builder.getI64IntegerAttr(recordCount));
+  auto addressOf = LLVM::AddressOfOp::create(builder, loc, LLVM::LLVMPointerType::get(builder.getContext()), labelName);
+
+  LLVM::CallOp::create(builder, loc, TypeRange(), qirRtTupleRecordOutput, ValueRange{countVal, addressOf});
+};
+
 } // namespace
 
 namespace qcc {
@@ -339,6 +349,11 @@ protected:
       return signalPassFailure();
     }
 
+    auto [recordCount, firstRecordOp] = countRecordsAndGetFirstRecordOp(funcOp);
+    if (recordCount > 1 && firstRecordOp != nullptr) {
+      insertRtTupleRecord(funcOp, firstRecordOp, recordCount);
+    };
+
     ConversionTarget target(*ctx);
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addIllegalDialect<qc::QCDialect>();
@@ -347,8 +362,8 @@ protected:
 
     QCToQIRTypeConverter typeConverter(ctx);
     RewritePatternSet patterns(ctx);
-    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering, RecordMemrefLowering, RecordTupleLowering,
-                 ResetLowering>(typeConverter, ctx);
+    patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering, RecordMemrefLowering, ResetLowering>(
+        typeConverter, ctx);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();

@@ -47,8 +47,6 @@ func.func @test_multiple_i64() -> (i64, i64) attributes { qcc.entry_point } {
 // CHECK-LABEL:   func.func @test_multiple_i64() attributes {qcc.entry_point} {
 // CHECK:     %[[constant0:.*]] = arith.constant 1 : i64
 // CHECK:     %[[constant1:.*]] = arith.constant 2 : i64
-// CHECK:     %[[num_returns:.*]] = arith.constant 2 : i64
-// CHECK:     aux.record_tuple %[[num_returns]] : i64
 // CHECK:     aux.record_int %[[constant0]] : i64
 // CHECK:     aux.record_int %[[constant1]] : i64
 // CHECK:     return
@@ -83,8 +81,6 @@ func.func @test_multiple_returns() -> (i64, i1) attributes { qcc.entry_point } {
 // CHECK-LABEL:   func.func @test_multiple_returns() attributes {qcc.entry_point} {
 // CHECK:     %[[constant0:.*]] = arith.constant 2 : i64
 // CHECK:     %[[constant1:.*]] = arith.constant true
-// CHECK:     %[[num_returns:.*]] = arith.constant 2 : i64
-// CHECK:     aux.record_tuple %[[num_returns]] : i64
 // CHECK:     aux.record_int %[[constant0]] : i64
 // CHECK:     aux.record_int %[[constant1]] : i1
 // CHECK:     return
@@ -122,8 +118,6 @@ func.func @test_multiple_outputs_with_memref(%argo: memref<4xi64>) -> (memref<4x
 
 // CHECK-LABEL: func.func @test_multiple_outputs_with_memref(%arg0: memref<4xi64>) attributes {qcc.entry_point} {
 // CHECK: %[[constant:.*]] = arith.constant 1 : i64
-// CHECK: %[[num_returns:.*]] = arith.constant 2 : i64
-// CHECK: aux.record_tuple %[[num_returns]] : i64
 // CHECK: aux.record_memref %arg0 : memref<4xi64>
 // CHECK: aux.record_int %[[constant]] : i64
 // CHECK:     return

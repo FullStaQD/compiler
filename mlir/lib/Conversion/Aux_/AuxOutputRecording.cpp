@@ -74,13 +74,8 @@ protected:
 
       OpBuilder builder(retOp);
 
-      auto size = static_cast<int64_t>(oldReturnOperands.size());
+      // auto size = static_cast<int64_t>(oldReturnOperands.size());
       auto loc = retOp.getLoc();
-      if (size > 1) {
-        // Indicate that multiple values are returned
-        auto op = arith::ConstantOp::create(builder, loc, builder.getI64IntegerAttr(size));
-        aux::RecordTupleOp::create(builder, loc, op->getResult(0));
-      }
 
       for (Value v : oldReturnOperands) {
         Type ty = v.getType();

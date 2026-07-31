@@ -57,6 +57,9 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK:           llvm.call @__quantum__rt__read_result
 
     aux.record_int %m5 : i1
+    // CHECK:           %[[LLVM_CONST:.*]] = llvm.mlir.constant(3 : i64) : i64
+    // CHECK:           %[[LABEL_PTR_0:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+    // CHECK:           llvm.call @__quantum__rt__tuple_record_output(%[[LLVM_CONST]], %[[LABEL_PTR_0]]) : (i64, !llvm.ptr) -> ()
     // CHECK:           %[[LABEL_PTR:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
     // CHECK:           llvm.call @__quantum__rt__bool_record_output(%[[MR5]], %[[LABEL_PTR]]) : (i1, !llvm.ptr) -> ()
     aux.record_int %m7 : i1
@@ -77,6 +80,7 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
 llvm.func @__quantum__rt__initialize(!llvm.ptr)
 llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr)
 llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
+llvm.func @__quantum__rt__tuple_record_output(i64, !llvm.ptr)
 llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
 llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
 llvm.func @__quantum__qis__h__body(!llvm.ptr)

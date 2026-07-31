@@ -147,9 +147,9 @@ private:
     builder.setInsertionPointToEnd(moduleOp.getBody());
 
     auto voidType = LLVM::LLVMVoidType::get(ctx);
-    auto i1Type = IntegerType::get(ctx, 1);
+    auto i64Type = IntegerType::get(ctx, 64);
     auto ptrType = LLVM::LLVMPointerType::get(ctx);
-    auto fnType = LLVM::LLVMFunctionType::get(voidType, {i1Type, ptrType});
+    auto fnType = LLVM::LLVMFunctionType::get(voidType, {i64Type, ptrType});
 
     LLVM::LLVMFuncOp::create(builder, moduleOp.getLoc(), qcc::qirRtTupleRecordOutput, fnType);
   }
