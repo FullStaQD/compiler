@@ -20,8 +20,6 @@ include "AuxDialect.td"
 
 class AuxOp<string mnemonic, list<Trait> traits = []> : Op<AuxDialect, mnemonic, traits>;
 
-def FlatIntMemRef : MemRefOf<[AnyInteger]>;
-
 def RecordIntOp : AuxOp<"record_int"> {
   let summary = "Records an integer.";
 
@@ -84,7 +82,7 @@ def RecordMemRefOp : AuxOp<"record_memref"> {
         the QIR function.
     }];
 
-  let arguments = (ins FlatIntMemRef:$value);
+  let arguments = (ins MemRefOf<[AnyInteger]>:$value);
   let results = (outs);
 
   let assemblyFormat = "$value attr-dict `:` type($value)";
