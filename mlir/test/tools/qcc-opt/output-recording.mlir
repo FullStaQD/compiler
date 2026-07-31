@@ -110,6 +110,7 @@ func.func @test_memref_output(%argo: memref<4xi64>) -> memref<4xi64> attributes 
 // CHECK:     return
 // CHECK:   }
 
+// -----
 
 func.func @test_multiple_outputs_with_memref(%argo: memref<4xi64>) -> (memref<4xi64>, i64) attributes { qcc.entry_point } {
   %c = arith.constant 1 : i64
@@ -122,3 +123,10 @@ func.func @test_multiple_outputs_with_memref(%argo: memref<4xi64>) -> (memref<4x
 // CHECK: aux.record_int %[[constant]] : i64
 // CHECK:     return
 // CHECK:   }
+
+// -----
+
+// expected-error @+2 {{expected memref to have a fully static shape, but got dynamic shape}}
+func.func @test_unsupported_returns(%m : memref<?xi64>) -> (memref<?xi64>) attributes { qcc.entry_point } {
+  return %m : memref<?xi64>
+}
