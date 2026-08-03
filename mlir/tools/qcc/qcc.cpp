@@ -198,9 +198,6 @@ int main(int argc, char** argv) {
     break;
   }
   case Stage::Native: {
-    // Native emission is delegated to the target backend (the only place allowed
-    // to depend on target-specific/fork codegen). `--binary` selects an object
-    // file; otherwise textual assembly is emitted.
     llvm::LLVMContext llvmContext;
     std::unique_ptr<llvm::Module> llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
     if (!llvmModule) {
