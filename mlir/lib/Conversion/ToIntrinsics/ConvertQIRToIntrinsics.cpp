@@ -15,35 +15,58 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 
-#include <mlir/Pass/Pass.h>
+#include <cstdint>
+#include <limits>
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
-/// Maps a QIR QIS function name to its RISC-V QV intrinsic counterpart.
-/// Returns an empty string for unrecognized / unsupported names.
-static StringRef mapQISToIntrinsic(StringRef qisName) {
-  return llvm::StringSwitch<StringRef>(qisName)
-      .Case(qcc::qirQisH, "llvm.riscv.qv.h")
-      .Case(qcc::qirQisX, "llvm.riscv.qv.x")
-      .Case(qcc::qirQisCX, "llvm.riscv.qv.cx")
-      .Case(qcc::qirQisMZ, "llvm.riscv.qv.mz")
-      .Default("");
+namespace {
+
+enum class QVClass : std::uint8_t {
+  Single = 1, // (vs1: vec<[8]xi8>, rs2: i32, block_imm: i32, vl: i32)
+  Pair = 2,   // (vs1: vec<[8]xi8>, vs2: vec<[8]xi8>, block_imm: i32, vl: i32)
+};
+
+/// A QIR QIS function's RISC-V QV intrinsic counterpart.
+struct QISOpInfo {
+  StringRef intrinsicName;
+  QVClass qvClass;
+
+  [[nodiscard]] unsigned getNumQubitOperands() const { return static_cast<unsigned>(qvClass); }
+};
+
+} // namespace
+
+/// Maps a QIR QIS function name to its RISC-V QV intrinsic info.
+/// Returns std::nullopt for unrecognized / unsupported names.
+
+static std::optional<QISOpInfo> getQISOpInfo(StringRef qisName) {
+  static const llvm::StringMap<QISOpInfo> table = {
+      {qcc::qirQisH, {.intrinsicName = "llvm.riscv.qv.h", .qvClass = QVClass::Single}},
+      {qcc::qirQisX, {.intrinsicName = "llvm.riscv.qv.x", .qvClass = QVClass::Single}},
+      {qcc::qirQisCX, {.intrinsicName = "llvm.riscv.qv.cx", .qvClass = QVClass::Pair}},
+      {qcc::qirQisMZ, {.intrinsicName = "llvm.riscv.qv.mz", .qvClass = QVClass::Single}},
+  };
+  auto it = table.find(qisName);
+  return it == table.end() ? std::nullopt : std::optional(it->second);
 }
 
 /// Returns true when `name` is a QIR runtime / QIS symbol that this pass
 /// handles (and therefore must not appear in the output).
 static bool isHandledQIRSymbol(StringRef name) {
   return name == qcc::qirRtInit || name == qcc::qirRtReadResult || name == qcc::qirRtBoolRecordOutput ||
-         name == qcc::qirRtIntRecordOutput || !mapQISToIntrinsic(name).empty();
+         name == qcc::qirRtIntRecordOutput || getQISOpInfo(name).has_value();
 }
 
 /// Tries to extract the qubit index encoded in a ptr obtained via:
@@ -68,17 +91,24 @@ static std::optional<int64_t> getQubitIndexFromPtr(Value ptrValue) {
 }
 
 /// Encodes a qubit index as a `vector<[8]xi8>` scalable vector for QV intrinsics.
-/// The index is inserted into lane 0 of an undef vector. The `nxv8i8` element
+/// The index is inserted into lane 0 of a poison vector. The `nxv8i8` element
 /// type matches the HiSEP-Q RISC-V backend's QV instruction-selection patterns.
+///
+/// `index` must fit in an unsigned i8 (callers are expected to have validated
+/// this already and to report a compiler error otherwise).
 static Value qubitIndexToVec(OpBuilder& builder, Location loc, int64_t index) {
+  assert(index >= 0 && std::cmp_less_equal(index, std::numeric_limits<uint8_t>::max()) &&
+         "qubit index does not fit in i8");
+
   auto i8Type = builder.getIntegerType(8);
   auto i32Type = builder.getI32Type();
   auto vecType = VectorType::get({8}, i8Type, /*scalableDims=*/{true});
 
   Value indexConst = LLVM::ConstantOp::create(builder, loc, i8Type, builder.getIntegerAttr(i8Type, index));
-  Value undef = LLVM::UndefOp::create(builder, loc, vecType);
+  Value poisonVec = LLVM::PoisonOp::create(builder, loc, vecType);
   Value lane = LLVM::ConstantOp::create(builder, loc, i32Type, builder.getI32IntegerAttr(0));
-  return {LLVM::InsertElementOp::create(builder, loc, undef, indexConst, lane)};
+  Value insertElmOp = LLVM::InsertElementOp::create(builder, loc, poisonVec, indexConst, lane);
+  return insertElmOp;
 }
 
 namespace {
@@ -89,7 +119,9 @@ namespace {
 /// Qubit pointer arguments (produced by `llvm.inttoptr` of a constant index)
 /// are re-encoded as `vector<[8]xi8>` scalable vectors.
 struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
-  using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
+  QISCallLowering(MLIRContext* ctx, bool* hadError) : OpRewritePattern(ctx), hadError(hadError) {
+    assert(hadError != nullptr && "hadError must point to storage owned by the pass");
+  }
 
   LogicalResult matchAndRewrite(LLVM::CallOp callOp, PatternRewriter& rewriter) const override {
     auto callee = callOp.getCallee();
@@ -97,51 +129,73 @@ struct QISCallLowering : public OpRewritePattern<LLVM::CallOp> {
       return failure();
     }
 
-    StringRef intrName = mapQISToIntrinsic(*callee);
-    if (intrName.empty()) {
+    std::optional<QISOpInfo> info = getQISOpInfo(*callee);
+    if (!info) {
       return failure();
+    }
+
+    auto operands = callOp.getArgOperands();
+    unsigned numQubitOperands = info->getNumQubitOperands();
+
+    if (operands.size() < numQubitOperands) {
+      callOp.emitError("'") << *callee << "' expects at least " << numQubitOperands << " qubit operand(s), got "
+                            << operands.size();
+      *hadError = true;
+      return failure();
+    }
+
+    SmallVector<int64_t> qubitIndices;
+    for (unsigned i = 0; i < numQubitOperands; ++i) {
+      auto idx = getQubitIndexFromPtr(operands[i]);
+      if (!idx) {
+        callOp.emitError("cannot extract qubit index from ptr for '") << *callee << "'";
+        *hadError = true;
+        return failure();
+      }
+      if (*idx < 0 || std::cmp_greater(*idx, std::numeric_limits<uint8_t>::max())) {
+        callOp.emitError("qubit index ") << *idx << " out of range for '" << *callee << "'";
+        *hadError = true;
+        return failure();
+      }
+      qubitIndices.push_back(*idx);
     }
 
     auto loc = callOp.getLoc();
     auto i32Type = rewriter.getI32Type();
-    auto operands = callOp.getArgOperands();
 
     Value blockImm = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
     Value vl = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(1));
 
     SmallVector<Value> args;
-
-    if (*callee == qcc::qirQisCX) {
-      // QVPairIntrinsic: (vs1: vec<[8]xi8>, vs2: vec<[8]xi8>, block_imm: i32, vl: i32)
-      auto ctrlIdx = getQubitIndexFromPtr(operands[0]);
-      auto tgtIdx = getQubitIndexFromPtr(operands[1]);
-      if (!ctrlIdx || !tgtIdx) {
-        return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
-                                "for '__quantum__qis__cx__body'");
-      }
-
-      args = {qubitIndexToVec(rewriter, loc, *ctrlIdx), qubitIndexToVec(rewriter, loc, *tgtIdx), blockImm, vl};
-    } else {
-      // QVSingleIntrinsic: (vs1: vec<[8]xi8>, rs2: i32, block_imm: i32, vl: i32)
-      // For mz__body: operands[0] = qubit_ptr, operands[1] = result_ptr (discarded).
-      auto qubitIdx = getQubitIndexFromPtr(operands[0]);
-      if (!qubitIdx) {
-        return callOp.emitError("convert-qir-to-intrinsics: cannot extract qubit index from ptr "
-                                "for '")
-               << *callee << "'";
-      }
-
+    switch (info->qvClass) {
+    case QVClass::Single: {
+      // (vs1: vec<[8]xi8>, rs2: i32, block_imm: i32, vl: i32)
+      // For mz__body: operands[0] = qubit_ptr, operands[1] = result_ptr (unused here; see ReadResultLowering).
       Value tag = LLVM::ConstantOp::create(rewriter, loc, i32Type, rewriter.getI32IntegerAttr(0));
-      args = {qubitIndexToVec(rewriter, loc, *qubitIdx), tag, blockImm, vl};
+      args.push_back(qubitIndexToVec(rewriter, loc, qubitIndices[0]));
+      args.push_back(tag);
+      args.push_back(blockImm);
+      args.push_back(vl);
+      break;
+    }
+    case QVClass::Pair:
+      // (vs1: vec<[8]xi8>, vs2: vec<[8]xi8>, block_imm: i32, vl: i32)
+      args.push_back(qubitIndexToVec(rewriter, loc, qubitIndices[0]));
+      args.push_back(qubitIndexToVec(rewriter, loc, qubitIndices[1]));
+      args.push_back(blockImm);
+      args.push_back(vl);
+      break;
     }
 
-    LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(intrName), args);
+    LLVM::CallIntrinsicOp::create(rewriter, loc, rewriter.getStringAttr(info->intrinsicName), args);
     rewriter.eraseOp(callOp);
     return success();
   }
+
+  bool* hadError;
 };
 
-/// Replaces `llvm.call @__quantum__rt__read_result(%result_ptr)` with `undef : i1`.
+/// Replaces `llvm.call @__quantum__rt__read_result(%result_ptr)` with `poison : i1`.
 ///
 /// TODO: A proper `qv.read_result` intrinsic is not yet defined in IntrinsicsRISCVXQV.td.
 struct ReadResultLowering : public OpRewritePattern<LLVM::CallOp> {
@@ -153,13 +207,13 @@ struct ReadResultLowering : public OpRewritePattern<LLVM::CallOp> {
       return failure();
     }
 
-    rewriter.replaceOpWithNewOp<LLVM::UndefOp>(callOp, rewriter.getI1Type());
+    rewriter.replaceOpWithNewOp<LLVM::PoisonOp>(callOp, rewriter.getI1Type());
     return success();
   }
 };
 
 /// Erases `llvm.call @__quantum__rt__initialize(ptr)`.
-/// The runtime initialization step is not needed on the bare-metal intrinsic path.
+/// TODO: A proper QISA specification by HiSEP-Q for initialization is needed.
 struct RtInitLowering : public OpRewritePattern<LLVM::CallOp> {
   using OpRewritePattern<LLVM::CallOp>::OpRewritePattern;
 
@@ -232,10 +286,12 @@ protected:
       return signalPassFailure();
     }
 
+    bool hadError = false;
     RewritePatternSet patterns(ctx);
-    patterns.add<QISCallLowering, ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
+    patterns.add<QISCallLowering>(ctx, &hadError);
+    patterns.add<ReadResultLowering, RtInitLowering, RecordOutputLowering>(ctx);
 
-    if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(moduleOp, std::move(patterns))) || hadError) {
       return signalPassFailure();
     }
 

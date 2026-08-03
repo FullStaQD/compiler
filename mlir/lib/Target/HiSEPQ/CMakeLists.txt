@@ -13,7 +13,6 @@ set(LLVM_LINK_COMPONENTS
     SelectionDAG
     AsmPrinter)
 
-add_mlir_library(
-  QCCTargetHiSEPQ HiSEPQTarget.cpp LINK_LIBS MLIRPass
-  # Shared QIR lowering + the QIR->intrinsics conversion:
-  QCCTargetQIR QCCToIntrinsics)
+set(QCC_TARGET_HiSEPQ_LINK_LIBS MLIRPass QCCTargetQIR QCCToIntrinsics)
+
+add_mlir_library(QCCTargetHiSEPQ HiSEPQTarget.cpp LINK_LIBS ${QCC_TARGET_HiSEPQ_LINK_LIBS})

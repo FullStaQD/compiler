@@ -23,18 +23,24 @@ def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp">
       carrying that index in lane 0, matching the `anyvector` operand that the
       QVSingle / QVPair intrinsics expect.
 
-      Additionally:
-      - `__quantum__rt__initialize` calls are erased (no-op on the intrinsic path).
-      - `__quantum__rt__read_result` calls are replaced with `undef : i1`
-        (TODO: a proper `qv.read_result` intrinsic is not yet available).
+      The QIR runtime calls below have no HiSEP-Q QISA counterpart yet, so they
+      are dropped:
+      - `__quantum__rt__initialize` calls are erased.
+      - `__quantum__rt__read_result` calls are replaced with `poison : i1`,
+        i.e. the measurement result is lost.
       - `__quantum__rt__bool_record_output` and `__quantum__rt__int_record_output`
-        calls are erased.
-      - Leftover QIR function declarations are removed from the module.
-      - If a function carries the `entry_point` passthrough attribute (set by
-        `ConvertQCToQIR::setEntryPointAttrs`), a `_start` function is emitted
-        that sets up the stack (from the linker-provided `__stack_top` symbol,
-        see hisepq.ld) and calls it, superseding it as the hardware's actual
-        entry point.
+        calls are erased, so program output is not recorded.
+      TODO: Support these once HiSEP-Q specifies the corresponding QISA
+      operations. We should be able to support all the QIR Adaptive Profile
+      runtime calls.
+
+      Leftover QIR function declarations are removed from the module.
+
+      Additionally, if a function carries the `entry_point` passthrough
+      attribute (set by `ConvertQCToQIR::setEntryPointAttrs`), a `_start`
+      function is emitted that sets up the stack (from the linker-provided
+      `__stack_top` symbol, see hisepq.ld) and calls it, superseding it as
+      the hardware's actual entry point.
 
       Assumptions:
       - The module has been fully lowered by the ToQIR pipeline

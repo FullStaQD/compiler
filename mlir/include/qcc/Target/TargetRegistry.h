@@ -25,10 +25,6 @@ namespace qcc {
 
 /// Options controlling native (QISA) code emission for a target.
 struct NativeCodegenOptions {
-  /// Target triple override; empty selects the target's default.
-  llvm::StringRef mtriple;
-  /// Target attribute string override; empty selects the target's default.
-  llvm::StringRef mattr;
   /// Emit a binary object file instead of textual assembly.
   bool binary = false;
 };
