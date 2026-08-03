@@ -48,8 +48,6 @@ bool emitNativeHiSEPQ(llvm::Module& module, llvm::raw_pwrite_stream& os, const N
   LLVMInitializeRISCVTarget();
   LLVMInitializeRISCVTargetMC();
   LLVMInitializeRISCVAsmPrinter();
-  // The MC streamer needs an asm parser to lower the inline asm that ConvertQIRToIntrinsics emits
-  // in `_start` (see emitStartFunc).
   LLVMInitializeRISCVAsmParser();
 
   const std::string attrsStr = "+experimental-xqv";
