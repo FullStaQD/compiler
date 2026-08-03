@@ -37,10 +37,8 @@ def ConvertQIRToIntrinsics : Pass<"convert-qir-to-intrinsics", "mlir::ModuleOp">
       Leftover QIR function declarations are removed from the module.
 
       Additionally, if a function carries the `entry_point` passthrough
-      attribute (set by `ConvertQCToQIR::setEntryPointAttrs`), a `_start`
-      function is emitted that sets up the stack (from the linker-provided
-      `__stack_top` symbol, see hisepq.ld) and calls it, superseding it as
-      the hardware's actual entry point.
+      attribute, a `_start` function is emitted that sets up the stack
+      and calls it, superseding it as the hardware's actual entry point.
 
       Assumptions:
       - The module has been fully lowered by the ToQIR pipeline
