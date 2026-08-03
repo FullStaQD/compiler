@@ -2,10 +2,10 @@
 // RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
 // RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
 
-// GENERATED FROM QRISP VERSION  git+https://github.com/eclipse-qrisp/Qrisp.git@b81ea2f979d21cd8d600e79d8b0c7066fe7cbe1b
+// GENERATED FROM QRISP VERSION 0.9.5
 
 builtin.module @jasp_module {
-  func.func public @main(%arg0 : !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {
+  func.func public @main(%arg0: !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {
     %0 = arith.constant dense<2> : tensor<i64>
     %1, %2 = jasp.create_qubits %0, %arg0 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
     %3 = arith.constant dense<0> : tensor<i64>
