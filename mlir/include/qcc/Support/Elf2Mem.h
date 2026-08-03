@@ -25,8 +25,7 @@ namespace qcc {
 /// address order and dumps their bytes as 32-bit hex words, emitting an `@<address>` line
 /// whenever a segment does not immediately follow the previous one. Getting the memory layout
 /// right (entry code at the hardware's boot address, sensible section placement) is the linker
-/// script's job (see mlir/tools/loader/hisepq.ld); this assumes `elfBuffer` already reflects the
-/// intended layout.
+/// script's job (see mlir/tools/loader/hisepq.ld).
 llvm::Error convertElfToMem(const llvm::MemoryBuffer& elfBuffer, llvm::raw_ostream& os);
 
 } // namespace qcc

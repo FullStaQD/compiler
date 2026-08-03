@@ -22,6 +22,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -30,23 +31,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-
-// `llvm/Support/TargetSelect.h` only declares the `LLVMInitializeRISCV*` entry
-// points when RISCV is in the toolchain's `LLVM_TARGETS_TO_BUILD`. That holds
-// for the HiSEP-Q fork we build and link against, but not necessarily for the
-// LLVM a clang-tidy pass parses with. Declare them explicitly so the file always
-// parses; the symbols resolve at link time against the RISCV component libs
-// pulled in (fork-only) via LLVM_LINK_COMPONENTS.
-// NOLINTBEGIN(readability-identifier-naming): these are LLVM C-API entry points
-// whose names are fixed by LLVM and cannot follow the project's naming style.
-extern "C" {
-void LLVMInitializeRISCVTargetInfo();
-void LLVMInitializeRISCVTarget();
-void LLVMInitializeRISCVTargetMC();
-void LLVMInitializeRISCVAsmPrinter();
-void LLVMInitializeRISCVAsmParser();
-}
-// NOLINTEND(readability-identifier-naming)
 
 namespace qcc {
 

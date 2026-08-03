@@ -335,20 +335,11 @@ private:
   }
 
   /// Emits `_start`, which supersedes `entryPoint` as the entry point of the hardware.
-  ///
-  /// HiSEP-Q jumps to the fixed boot address (see hisepq.ld) at reset. There is no caller, and `sp`
-  /// holds whatever the core reset with. `_start` sets `sp` to the linker-provided `__stack_top`,
-  /// calls `entryPoint` with a `jalr` so that it can return normally, and halts in an infinite loop
-  /// if it does.
-  ///
-  /// The sequence must be a single inline-asm block: with a `llvm.call`, the backend saves `ra` in
-  /// a prologue, which is emitted ahead of the `sp` setup.
   static void emitStartFunc(ModuleOp moduleOp, LLVM::LLVMFuncOp entryPoint) {
     OpBuilder builder(moduleOp.getContext());
     builder.setInsertionPointToEnd(moduleOp.getBody());
     Location loc = entryPoint.getLoc();
 
-    // `extern char __stack_top[];`, defined by hisepq.ld. Only its address is used.
     auto stackTopType = LLVM::LLVMArrayType::get(builder.getI8Type(), 0);
     auto stackTop = LLVM::GlobalOp::create(builder, loc, stackTopType, /*isConstant=*/true, LLVM::Linkage::External,
                                            "__stack_top", /*value=*/Attribute());

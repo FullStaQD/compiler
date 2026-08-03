@@ -90,8 +90,6 @@ Error convertElfToMem(const MemoryBuffer& elfBuffer, raw_ostream& os) {
   std::optional<uint32_t> nextExpectedAddr;
   for (const Segment& seg : segments) {
     if (nextExpectedAddr != seg.addr) {
-      // $readmemh addresses a word array, not bytes: divide by 4 (segment alignment was already
-      // checked above, so this is exact).
       os << format("@%08X\n", seg.addr / 4);
     }
 
