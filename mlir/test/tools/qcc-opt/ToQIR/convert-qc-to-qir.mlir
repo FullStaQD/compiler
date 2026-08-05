@@ -76,11 +76,49 @@ func.func @test() -> i64 attributes { qcc.entry_point } {
     // CHECK:           return %[[EXIT_CODE]] : i64
 }
 
+
+func.func @test_memref_lowering(%ref: memref<3xi64>) -> i64 attributes { qcc.entry_point } {
+    // CHECK-LABEL:   func.func @test_memref_lowering(%arg0: memref<3xi64>) -> i64 attributes {
+    // CHECK-DAG:           %[[CAST:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<3xi64> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+
+   // Supported measurement operations.
+    %q = qc.static 5 : !qc.qubit
+    %m = qc.measure %q : !qc.qubit -> i1
+    // CHECK:           %[[MR5:.*]] = llvm.call @__quantum__rt__read_result(%[[RP5:.*]]) : (!llvm.ptr) -> i1
+    aux.record_int %m : i1
+    // CHECK:           %[[LLVM_CONST:.*]] = llvm.mlir.constant(2 : i64) : i64
+    // CHECK:           %[[LABEL_PTR_0:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+    // CHECK:           llvm.call @__quantum__rt__tuple_record_output(%[[LLVM_CONST]], %[[LABEL_PTR_0]]) : (i64, !llvm.ptr) -> ()
+    // CHECK:           %[[LABEL_PTR_1:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+    // CHECK:           llvm.call @__quantum__rt__bool_record_output(%[[MR5]], %[[LABEL_PTR_1]]) : (i1, !llvm.ptr) -> ()
+    aux.record_memref %ref : memref<3xi64>
+    // CHECK:           %[[LABEL_PTR_2:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
+    // CHECK:           %[[LLVM_CONST_1:.*]] = llvm.mlir.constant(3 : i64) : i64
+    // CHECK:           llvm.call @__quantum__rt__array_record_output(%[[LLVM_CONST_1]], %[[LABEL_PTR_2]]) : (i64, !llvm.ptr) -> ()
+    // CHECK:           %[[value:.*]] = llvm.extractvalue %[[CAST]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK:           %[[CONST_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+    // CHECK:           %[[ELEM_PTR:.*]] = llvm.getelementptr %[[value]][%[[CONST_1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    // CHECK:           %[[LOAD:.*]] = llvm.load %[[ELEM_PTR]] : !llvm.ptr -> i64
+    // CHECK:           llvm.call @__quantum__rt__int_record_output(%[[LOAD]], %[[LABEL_PTR_2]]) : (i64, !llvm.ptr) -> ()
+    // CHECK:           %[[CONST2:.*]] = llvm.mlir.constant(1 : i64) : i64
+    // CHECK:           %[[ELEM_PTR2:.*]] = llvm.getelementptr %[[value]][%[[CONST2]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    // CHECK:           %[[LOAD2:.*]] = llvm.load %[[ELEM_PTR2]] : !llvm.ptr -> i64
+    // CHECK:           llvm.call @__quantum__rt__int_record_output(%[[LOAD2]], %[[LABEL_PTR_2]]) : (i64, !llvm.ptr) -> ()
+    // CHECK:           %[[CONST3:.*]] = llvm.mlir.constant(2 : i64) : i64
+    // CHECK:           %[[ELEM_PTR3:.*]] = llvm.getelementptr %[[value]][%[[CONST3]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    // CHECK:           %[[LOAD3:.*]] = llvm.load %[[ELEM_PTR3]] : !llvm.ptr -> i64
+    // CHECK:           llvm.call @__quantum__rt__int_record_output(%[[LOAD3]], %[[LABEL_PTR_2]]) : (i64, !llvm.ptr) -> ()
+    %exit_code = arith.constant 0 : i64
+    return %exit_code : i64
+}
+
+
 // The pass assumes that these decls already exist.
 llvm.func @__quantum__rt__initialize(!llvm.ptr)
 llvm.func @__quantum__rt__bool_record_output(i1, !llvm.ptr)
 llvm.func @__quantum__rt__int_record_output(i64, !llvm.ptr)
 llvm.func @__quantum__rt__tuple_record_output(i64, !llvm.ptr)
+llvm.func @__quantum__rt__array_record_output(i64, !llvm.ptr)
 llvm.func @__quantum__rt__read_result(!llvm.ptr {llvm.readonly}) -> i1
 llvm.func @__quantum__qis__mz__body(!llvm.ptr, !llvm.ptr {llvm.writeonly}) attributes {passthrough = ["irreversible"]}
 llvm.func @__quantum__qis__h__body(!llvm.ptr)
