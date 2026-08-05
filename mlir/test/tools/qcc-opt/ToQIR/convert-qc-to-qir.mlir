@@ -86,12 +86,10 @@ func.func @test_memref_lowering() -> i64 attributes { qcc.entry_point } {
 // CHECK-LABEL:  func.func @test_memref_lowering()
 // CHECK:     %[[zero:.*]] = llvm.mlir.zero : !llvm.ptr
 // CHECK:     llvm.call @__quantum__rt__initialize(%[[zero]])
-// CHECK:     %[[alloc:.*]] = memref.alloc()
-// CHECK:     %[[cast:.*]] = builtin.unrealized_conversion_cast %[[alloc]] : memref<3xi64> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK:     %[[label:.*]] = llvm.mlir.addressof @".qir_dummy_label"
 // CHECK:     %[[count:.*]] = llvm.mlir.constant(3 : i64)
 // CHECK:     llvm.call @__quantum__rt__array_record_output(%[[count]], %[[label]])
-// CHECK:     %[[extract:.*]] = llvm.extractvalue %[[cast]][1]
+// CHECK:     %[[extract:.*]] = llvm.extractvalue %[[LLVM_STRUCT:.*]][1]
 // CHECK:     %[[zero_idx:.*]] = llvm.mlir.constant(0 : i64)
 // CHECK:     %[[getelem:.*]] = llvm.getelementptr %[[extract]][%[[zero_idx]]]
 // CHECK:     %[[load:.*]] = llvm.load %[[getelem]]
@@ -108,9 +106,9 @@ func.func @test_memref_lowering() -> i64 attributes { qcc.entry_point } {
 // CHECK:     return %[[const]] : i64
 // CHECK:  }
 
-func.func @test_lowering_of_structured_output_recording(%ref: memref<3xi64>) -> i64 attributes { qcc.entry_point } {
+func.func @test_lowering_of_structured_output_recording() -> i64 attributes { qcc.entry_point } {
     // CHECK-LABEL:   func.func @test_lowering_of_structured_output_recording
-    // CHECK-DAG:           %[[CAST:.*]] = builtin.unrealized_conversion_cast %arg0 : memref<3xi64> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    %ref = memref.alloc() : memref<3xi64>
 
    // Supported measurement operations.
     %q = qc.static 5 : !qc.qubit
@@ -126,7 +124,7 @@ func.func @test_lowering_of_structured_output_recording(%ref: memref<3xi64>) -> 
     // CHECK:           %[[LABEL_PTR_2:.*]] = llvm.mlir.addressof @".qir_dummy_label" : !llvm.ptr
     // CHECK:           %[[LLVM_CONST_1:.*]] = llvm.mlir.constant(3 : i64) : i64
     // CHECK:           llvm.call @__quantum__rt__array_record_output(%[[LLVM_CONST_1]], %[[LABEL_PTR_2]]) : (i64, !llvm.ptr) -> ()
-    // CHECK:           %[[value:.*]] = llvm.extractvalue %[[CAST]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK:           %[[value:.*]] = llvm.extractvalue %[[LLVM_STRUCT:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     // CHECK:           %[[CONST_1:.*]] = llvm.mlir.constant(0 : i64) : i64
     // CHECK:           %[[ELEM_PTR:.*]] = llvm.getelementptr %[[value]][%[[CONST_1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     // CHECK:           %[[LOAD:.*]] = llvm.load %[[ELEM_PTR]] : !llvm.ptr -> i64

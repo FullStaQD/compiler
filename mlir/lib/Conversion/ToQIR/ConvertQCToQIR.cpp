@@ -11,6 +11,7 @@
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -364,6 +365,8 @@ protected:
     RewritePatternSet patterns(ctx);
     patterns.add<UnitaryLowering, MeasureLowering, RecordIntLowering, RecordMemrefLowering, ResetLowering>(
         typeConverter, ctx);
+
+    populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
 
     if (failed(applyPartialConversion(funcOp, target, std::move(patterns)))) {
       return signalPassFailure();
