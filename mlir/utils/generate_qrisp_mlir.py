@@ -11,8 +11,7 @@
 
 # /// script
 # dependencies = [
-#   "qrisp==0.9.6",
-#   "xdsl==0.59.0"
+#   "qrisp[xdsl]==0.9.6",
 # ]
 # ///
 
