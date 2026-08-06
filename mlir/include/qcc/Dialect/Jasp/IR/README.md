@@ -4,7 +4,7 @@ The jasp dialect is not owned by us. We have copied it from
 [this folder](https://github.com/eclipse-qrisp/Qrisp/tree/main/src/qrisp/jasp/mlir/dialect_definition)
 from within the qrisp repository.
 
-In order to upgrade copy the files over here and possibly add include guards (or pragma once).
+In order to upgrade, copy the files over here and possibly add include guards (or pragma once).
 
 TODO: Agree on a single source of truth for the dialect definition.
 See also issue https://github.com/FullStaQD/compiler/issues/16.
