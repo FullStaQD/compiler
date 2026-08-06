@@ -1,5 +1,5 @@
-#ifndef INCLUDE_QCC_DIALECT_JASP_IR_JASPDIALECT_TD_
-#define INCLUDE_QCC_DIALECT_JASP_IR_JASPDIALECT_TD_
+#ifndef INCLUDE_QCC_THIRD_PARTY_QRISP_JASPDIALECT_TD_
+#define INCLUDE_QCC_THIRD_PARTY_QRISP_JASPDIALECT_TD_
 
 include "mlir/IR/DialectBase.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -44,4 +44,4 @@ def QubitArrayType : JaspType<"QubitArray", "QubitArray"> {
     let description = "QubitArrays enable expression of dynamically sized programs. They are semantically equivalent to immutable arrays of integers.";
 }
 
-#endif // INCLUDE_QCC_DIALECT_JASP_IR_JASPDIALECT_TD_
+#endif // INCLUDE_QCC_THIRD_PARTY_QRISP_JASPDIALECT_TD_
