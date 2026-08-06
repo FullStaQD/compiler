@@ -1,14 +1,5 @@
-// ===----------------------------------------------------------------------===//
-//
-// Part of the FullStaQD Project, under the Apache License v2.0 with LLVM
-// Exceptions.
-// See <repo-root>/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-// ===----------------------------------------------------------------------===//
-
-#ifndef INCLUDE_QCC_DIALECT_JASP_IR_JASPOPS_TD_
-#define INCLUDE_QCC_DIALECT_JASP_IR_JASPOPS_TD_
+#ifndef INCLUDE_QCC_THIRD_PARTY_QRISP_JASPOPS_TD_
+#define INCLUDE_QCC_THIRD_PARTY_QRISP_JASPOPS_TD_
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinTypes.td"
@@ -144,4 +135,4 @@ def ParityOp : JaspOp<"parity"> {
     let assemblyFormat = "$measurements attr-dict `:` type($measurements) `->` type($result)";
 }
 
-#endif // INCLUDE_QCC_DIALECT_JASP_IR_JASPOPS_TD_
+#endif // INCLUDE_QCC_THIRD_PARTY_QRISP_JASPOPS_TD_
