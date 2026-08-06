@@ -2,16 +2,16 @@
 // RUN: FileCheck %s --check-prefix=CHECK-QIR < %t.ll
 // RUN: qir-runner --file %t.ll -s 5 | FileCheck %s --check-prefix=CHECK-SIM
 
-// GENERATED FROM QRISP VERSION 0.9.5
+// GENERATED FROM QRISP VERSION 0.9.6
 
 builtin.module @jasp_module {
   func.func public @main(%arg2: !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState) {
     %0 = arith.constant dense<1> : tensor<i64>
-    %1, %2 = jasp.create_qubits %0, %arg2 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
+    %1, %2 = "jasp.create_qubits"(%0, %arg2) : (tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState)
     %3 = arith.constant dense<0> : tensor<i64>
-    %4 = jasp.get_qubit %1, %3 : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
-    %5 = jasp.quantum_gate "x" (%4) , %2 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
-    %6, %7 = jasp.create_qubits %0, %5 : !jasp.QuantumState, tensor<i64> -> !jasp.QubitArray, !jasp.QuantumState
+    %4 = "jasp.get_qubit"(%1, %3) : (!jasp.QubitArray, tensor<i64>) -> !jasp.Qubit
+    %5 = "jasp.quantum_gate"(%4, %2) {gate_type = "x"} : (!jasp.Qubit, !jasp.QuantumState) -> !jasp.QuantumState
+    %6, %7 = "jasp.create_qubits"(%0, %5) : (tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, !jasp.QuantumState)
     %8 = arith.constant dense<3.125000e-01> : tensor<f64>
     %9 = arith.constant dense<4> : tensor<i64>
     %10, %11, %12, %13, %14, %15, %16, %17 = scf.while (%arg91 = %6, %arg92 = %8, %arg93 = %1, %arg94 = %9, %arg95 = %3, %arg96 = %3, %arg97 = %9, %arg98 = %7) : (!jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState) -> (!jasp.QubitArray, tensor<f64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, tensor<i64>, tensor<i64>, !jasp.QuantumState) {
@@ -22,9 +22,9 @@ builtin.module @jasp_module {
     } do {
     ^bb0(%arg3: !jasp.QubitArray, %arg4: tensor<f64>, %arg5: !jasp.QubitArray, %arg6: tensor<i64>, %arg7: tensor<i64>, %arg8: tensor<i64>, %arg9: tensor<i64>, %arg10: !jasp.QuantumState):
       %21 = arith.constant dense<0> : tensor<i64>
-      %22 = jasp.get_qubit %arg3, %21 : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
-      %23 = jasp.reset %22, %arg10 : !jasp.Qubit, !jasp.QuantumState -> !jasp.QuantumState
-      %24 = jasp.quantum_gate "h" (%22) , %23 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
+      %22 = "jasp.get_qubit"(%arg3, %21) : (!jasp.QubitArray, tensor<i64>) -> !jasp.Qubit
+      %23 = "jasp.reset"(%22, %arg10) : (!jasp.Qubit, !jasp.QuantumState) -> !jasp.QuantumState
+      %24 = "jasp.quantum_gate"(%22, %23) {gate_type = "h"} : (!jasp.Qubit, !jasp.QuantumState) -> !jasp.QuantumState
       %25 = arith.constant 3.1415926535897931 : f64
       %26 = tensor.extract %arg4[] : tensor<f64>
       %27 = arith.mulf %25, %26 : f64
@@ -35,21 +35,21 @@ builtin.module @jasp_module {
       %32 = arith.constant 2.000000e+00 : f64
       %33 = math.powf %32, %31 : f64
       %34 = arith.mulf %27, %33 : f64
-      %35 = jasp.get_qubit %arg5, %21 : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
+      %35 = "jasp.get_qubit"(%arg5, %21) : (!jasp.QubitArray, tensor<i64>) -> !jasp.Qubit
       %36 = arith.constant 5.000000e-01 : f64
       %37 = arith.mulf %36, %34 : f64
       %38 = tensor.from_elements %37 : tensor<f64>
-      %39 = jasp.quantum_gate "p" (%35, %38) , %24 : (!jasp.Qubit, tensor<f64>) , !jasp.QuantumState -> !jasp.QuantumState
+      %39 = "jasp.quantum_gate"(%35, %38, %24) {gate_type = "p"} : (!jasp.Qubit, tensor<f64>, !jasp.QuantumState) -> !jasp.QuantumState
       %40 = arith.constant 5.000000e-01 : f64
       %41 = arith.mulf %40, %34 : f64
       %42 = tensor.from_elements %41 : tensor<f64>
-      %43 = jasp.quantum_gate "p" (%22, %42) , %39 : (!jasp.Qubit, tensor<f64>) , !jasp.QuantumState -> !jasp.QuantumState
-      %44 = jasp.quantum_gate "cx" (%22, %35) , %43 : (!jasp.Qubit, !jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
+      %43 = "jasp.quantum_gate"(%22, %42, %39) {gate_type = "p"} : (!jasp.Qubit, tensor<f64>, !jasp.QuantumState) -> !jasp.QuantumState
+      %44 = "jasp.quantum_gate"(%22, %35, %43) {gate_type = "cx"} : (!jasp.Qubit, !jasp.Qubit, !jasp.QuantumState) -> !jasp.QuantumState
       %45 = arith.constant -5.000000e-01 : f64
       %46 = arith.mulf %45, %34 : f64
       %47 = tensor.from_elements %46 : tensor<f64>
-      %48 = jasp.quantum_gate "p" (%35, %47) , %44 : (!jasp.Qubit, tensor<f64>) , !jasp.QuantumState -> !jasp.QuantumState
-      %49 = jasp.quantum_gate "cx" (%22, %35) , %48 : (!jasp.Qubit, !jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
+      %48 = "jasp.quantum_gate"(%35, %47, %44) {gate_type = "p"} : (!jasp.Qubit, tensor<f64>, !jasp.QuantumState) -> !jasp.QuantumState
+      %49 = "jasp.quantum_gate"(%22, %35, %48) {gate_type = "cx"} : (!jasp.Qubit, !jasp.Qubit, !jasp.QuantumState) -> !jasp.QuantumState
       %50 = tensor.extract %arg8[] : tensor<i64>
       %51 = arith.constant 1 : i64
       %52 = arith.subi %50, %51 : i64
@@ -90,8 +90,8 @@ builtin.module @jasp_module {
           %87 = arith.mulf %86, %85 : f64
           %88 = tensor.from_elements %87 : tensor<f64>
           %89 = arith.constant dense<0> : tensor<i64>
-          %90 = jasp.get_qubit %arg25, %89 : !jasp.QubitArray, tensor<i64> -> !jasp.Qubit
-          %91 = jasp.quantum_gate "rz" (%90, %88) , %arg28 : (!jasp.Qubit, tensor<f64>) , !jasp.QuantumState -> !jasp.QuantumState
+          %90 = "jasp.get_qubit"(%arg25, %89) : (!jasp.QubitArray, tensor<i64>) -> !jasp.Qubit
+          %91 = "jasp.quantum_gate"(%90, %88, %arg28) {gate_type = "rz"} : (!jasp.Qubit, tensor<f64>, !jasp.QuantumState) -> !jasp.QuantumState
           scf.yield %91 : !jasp.QuantumState
         }
         %92 = arith.constant 1 : i64
@@ -101,8 +101,8 @@ builtin.module @jasp_module {
         %96 = func.call @_jrange_marker(%95, %arg26) : (tensor<i64>, tensor<i64>) -> tensor<i64>
         scf.yield %arg23, %arg24, %arg25, %arg26, %96, %79 : tensor<i64>, tensor<i64>, !jasp.QubitArray, tensor<i64>, tensor<i64>, !jasp.QuantumState
       }
-      %97 = jasp.quantum_gate "h" (%22) , %61 : (!jasp.Qubit) , !jasp.QuantumState -> !jasp.QuantumState
-      %98, %99 = jasp.measure %arg3, %97 : !jasp.QubitArray, !jasp.QuantumState -> tensor<i64>, !jasp.QuantumState
+      %97 = "jasp.quantum_gate"(%22, %61) {gate_type = "h"} : (!jasp.Qubit, !jasp.QuantumState) -> !jasp.QuantumState
+      %98, %99 = "jasp.measure"(%arg3, %97) : (!jasp.QubitArray, !jasp.QuantumState) -> (tensor<i64>, !jasp.QuantumState)
       %100 = tensor.extract %arg8[] : tensor<i64>
       %101 = tensor.extract %98[] : tensor<i64>
       %102 = arith.constant 0 : i64
@@ -125,7 +125,6 @@ builtin.module @jasp_module {
     func.return %arg0 : tensor<i64>
   }
 }
-
 
 // At precision 4, we expect four measurements of the same auxiliary qubit 1.
 // CHECK-QIR: call void @__quantum__qis__mz__body(ptr inttoptr (i64 1 to ptr), ptr inttoptr (i64 1 to ptr))
