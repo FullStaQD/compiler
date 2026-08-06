@@ -122,6 +122,34 @@ static InFlightDiagnostic emitMissingQIRDeclError(Operation* op, StringRef name)
   return op->emitError() << "missing required declaration of QIR function: '" << name << "'";
 }
 
+std::tuple<int64_t, Operation*> countRecordsAndGetFirstRecordOp(func::FuncOp funcOp) {
+  int64_t recordCount = 0;
+  Operation* firstRecordOp = nullptr;
+
+  funcOp.walk([&](Operation* op) {
+    if (isa<qcc::aux::RecordMemRefOp, qcc::aux::RecordIntOp>(op)) {
+      recordCount++;
+      if (firstRecordOp == nullptr) {
+        firstRecordOp = op;
+      }
+    }
+  });
+  return std::make_tuple(recordCount, firstRecordOp);
+}
+
+void insertRtTupleRecord(func::FuncOp funcOp, Operation* firstRecordOp, int64_t recordCount) {
+  StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
+  OpBuilder builder(funcOp.getContext());
+  Location loc = firstRecordOp->getLoc();
+
+  builder.setInsertionPoint(firstRecordOp);
+
+  Value countVal = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), builder.getI64IntegerAttr(recordCount));
+  auto addressOf = LLVM::AddressOfOp::create(builder, loc, LLVM::LLVMPointerType::get(builder.getContext()), labelName);
+
+  LLVM::CallOp::create(builder, loc, TypeRange(), qirRtTupleRecordOutput, ValueRange{countVal, addressOf});
+}
+
 namespace {
 
 struct QCToQIRTypeConverter final : LLVMTypeConverter {
@@ -290,34 +318,6 @@ struct RecordMemrefLowering : public OpConversionPattern<aux::RecordMemRefOp> {
     rewriter.eraseOp(op);
     return success();
   }
-};
-
-std::tuple<int64_t, Operation*> countRecordsAndGetFirstRecordOp(func::FuncOp funcOp) {
-  int64_t recordCount = 0;
-  Operation* firstRecordOp = nullptr;
-
-  funcOp.walk([&](Operation* op) {
-    if (isa<qcc::aux::RecordMemRefOp, qcc::aux::RecordIntOp>(op)) {
-      recordCount++;
-      if (firstRecordOp == nullptr) {
-        firstRecordOp = op;
-      }
-    }
-  });
-  return std::make_tuple(recordCount, firstRecordOp);
-};
-
-void insertRtTupleRecord(func::FuncOp funcOp, Operation* firstRecordOp, int64_t recordCount) {
-  StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
-  OpBuilder builder(funcOp.getContext());
-  Location loc = firstRecordOp->getLoc();
-
-  builder.setInsertionPoint(firstRecordOp);
-
-  Value countVal = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), builder.getI64IntegerAttr(recordCount));
-  auto addressOf = LLVM::AddressOfOp::create(builder, loc, LLVM::LLVMPointerType::get(builder.getContext()), labelName);
-
-  LLVM::CallOp::create(builder, loc, TypeRange(), qirRtTupleRecordOutput, ValueRange{countVal, addressOf});
 };
 
 } // namespace
