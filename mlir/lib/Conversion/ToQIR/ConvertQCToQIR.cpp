@@ -122,7 +122,7 @@ static InFlightDiagnostic emitMissingQIRDeclError(Operation* op, StringRef name)
   return op->emitError() << "missing required declaration of QIR function: '" << name << "'";
 }
 
-std::tuple<int64_t, Operation*> countRecordsAndGetFirstRecordOp(func::FuncOp funcOp) {
+static std::tuple<int64_t, Operation*> countRecordsAndGetFirstRecordOp(func::FuncOp funcOp) {
   int64_t recordCount = 0;
   Operation* firstRecordOp = nullptr;
 
@@ -137,7 +137,7 @@ std::tuple<int64_t, Operation*> countRecordsAndGetFirstRecordOp(func::FuncOp fun
   return std::make_tuple(recordCount, firstRecordOp);
 }
 
-void insertRtTupleRecord(func::FuncOp funcOp, Operation* firstRecordOp, int64_t recordCount) {
+static void insertRtTupleRecord(func::FuncOp funcOp, Operation* firstRecordOp, int64_t recordCount) {
   StringRef labelName = qcc::qirDummyLabelGlobalSymbolName;
   OpBuilder builder(funcOp.getContext());
   Location loc = firstRecordOp->getLoc();
