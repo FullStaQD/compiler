@@ -1,15 +1,15 @@
 # Qrisp Jasp Dialect
 
-This directory contains the TableGen definition of the `jasp` dialect. **We do not own
-this code** — it is copied verbatim (aside from the modifications noted below) from the
-[Qrisp](https://qrisp.eu) project, which is licensed under the Eclipse Public License 2.0
-(see [`LICENSE`](LICENSE)).
+This directory contains the TableGen definition of the `jasp` dialect. It is
+copied verbatim (aside from the modifications noted below) from the
+[Qrisp](https://qrisp.eu) project, which is licensed under the Eclipse Public
+License 2.0 (see [`LICENSE`](LICENSE)).
 
 ## Provenance
 
 - **Upstream URL:** <https://github.com/eclipse-qrisp/Qrisp/tree/main/src/qrisp/jasp/mlir/dialect_definition>
-- **Commit SHA:** `<FIXME: fill in the exact upstream commit>`
-- **Date copied:** `<FIXME: fill in>`
+- **Commit SHA:** `d011c5a361b287afce73f4ea70e5767f8df117a6`
+- **Date copied:** `2026-08-06`
 - **Files taken:** `JaspDialect.td`, `JaspOps.td`
 - **Modified:** yes
   - Added include guards
