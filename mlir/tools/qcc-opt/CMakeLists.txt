@@ -20,6 +20,7 @@ target_link_libraries(
           MLIROpenMPDialect
           QCCJaspDialect
           QCCAuxDialect
+          QCCQCCDialect
           # Passes
           MLIRMemRefTransforms
           MLIRArithTransforms
@@ -33,6 +34,7 @@ target_link_libraries(
           QCCToQIR
           QCCAuxOutputRecording
           QCCAffineRaise
+          QCCQCCTransforms
           # Extensions/Interfaces
           MLIRFuncInlinerExtension
           MLIRTransformUtils

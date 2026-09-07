@@ -21,7 +21,8 @@ set(LIBS
     MLIRBuiltinToLLVMIRTranslation
     MLIRLLVMToLLVMIRTranslation
     QCCCompiler
-    QCCTarget)
+    QCCTarget
+    QCCQCCDevices)
 
 add_llvm_executable(qcc qcc.cpp DEPENDS ${LIBS})
 

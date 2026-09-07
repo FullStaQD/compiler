@@ -7,9 +7,12 @@
 //
 // ===----------------------------------------------------------------------===//
 
+#include "qcc/Dialect/QCC/IR/QCC.h"
+
 #include "qcc/Compiler/Compiler.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
+#include "qcc/Dialect/QCC/Devices/DeviceLibrary.h"
 #include "qcc/Target/TargetRegistry.h"
 
 #include "mlir/Bytecode/BytecodeWriter.h"
@@ -64,6 +67,26 @@ static void printTargets() {
   }
 }
 
+/// `--target` and `--device` are two different axes, and listing them
+/// separately is the clearest way to say so: a backend decides how code is
+/// emitted, a device decides which machine it runs on.
+static void printDevices() {
+  // Building each description costs a context, but it is what reports the
+  // representation, and the representation is what says how the compiler models
+  // the machine rather than merely what the machine is called.
+  mlir::MLIRContext context;
+  context.loadDialect<qcc::conn::QCCDialect>();
+
+  llvm::outs() << "Available machines for --device:\n";
+  for (const qcc::conn::DeviceEntry& machine : qcc::conn::getDevices()) {
+    llvm::outs() << "  " << machine.name << " - " << machine.description;
+    if (const auto device = machine.build(&context)) {
+      llvm::outs() << " [" << qcc::conn::stringifyRepresentation(device.getRepresentation()) << "]";
+    }
+    llvm::outs() << "\n";
+  }
+}
+
 int main(int argc, char** argv) {
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
@@ -75,6 +98,8 @@ int main(int argc, char** argv) {
   const cl::opt<std::string> targetName("target", cl::desc("Target backend to compile for (see --list-targets)"),
                                         cl::init("qir"), cl::value_desc("name"), cl::cat(qccCategory));
   const cl::opt<bool> listTargets("list-targets", cl::desc("List the available --target backends and exit"),
+                                  cl::init(false), cl::cat(qccCategory));
+  const cl::opt<bool> listDevices("list-devices", cl::desc("List the machines known to --device and exit"),
                                   cl::init(false), cl::cat(qccCategory));
   const cl::opt<Stage> compileTo(
       "compile-to", cl::desc("Stage to lower to and emit"), cl::init(Stage::LlvmIr),
@@ -89,6 +114,11 @@ int main(int argc, char** argv) {
 
   if (listTargets) {
     printTargets();
+    return 0;
+  }
+
+  if (listDevices) {
+    printDevices();
     return 0;
   }
 
