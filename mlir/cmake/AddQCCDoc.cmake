@@ -19,3 +19,21 @@ function(add_qcc_doc doc_filename output_file output_directory command)
   set_target_properties(${output_file}DocGen PROPERTIES FOLDER "QCC/Docs")
   add_dependencies(qcc-doc ${output_file}DocGen)
 endfunction()
+
+# Renders the markdown collected by `qcc-doc` into a static HTML site via Hugo, using the (theme-less) site scaffold in
+# docs/hugo/.
+find_program(HUGO_EXECUTABLE hugo)
+if(HUGO_EXECUTABLE)
+  add_custom_target(
+    qcc-doc-html
+    COMMAND ${HUGO_EXECUTABLE} --source ${PROJECT_SOURCE_DIR}/docs/hugo --contentDir ${PROJECT_BINARY_DIR}/docs
+            --destination ${PROJECT_BINARY_DIR}/docs-html --noBuildLock # don't drop a .hugo_build.lock file into the
+                                                                        # (checked-in) source scaffold
+    DEPENDS qcc-doc
+    COMMENT "Rendering qcc docs to HTML (${PROJECT_BINARY_DIR}/docs-html/index.html)"
+    VERBATIM)
+  set_target_properties(qcc-doc-html PROPERTIES FOLDER "QCC/Docs")
+else()
+  message(STATUS "hugo not found -- the 'qcc-doc-html' target will not be available "
+                 "('qcc-doc' still generates the markdown on its own)")
+endif()
