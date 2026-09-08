@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
   const cl::opt<bool> binary("binary", cl::desc("Emit the binary encoding (obj/bytecode/bitcode) instead of text"),
                              cl::init(false), cl::cat(qccCategory));
 
-  cl::ParseCommandLineOptions(argc, argv, "qcc - quantum compiler collection\n");
+  cl::ParseCommandLineOptions(argc, argv, "qcc - Quantum Compiler Collection\n");
 
   if (listTargets) {
     printTargets();
