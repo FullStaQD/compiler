@@ -118,7 +118,7 @@ struct Group {
   /// Build the first (slot=0) or second (slot=1, if available) qubit vector operand for the merged operation by
   /// collecting each member's qubits in the same slots.
   Value buildMergedOperand(OpBuilder& builder, Location loc, unsigned slot) const {
-    assert(slot == 0 || slot == 1 && "slot can only be 0 or 1");
+    assert((slot == 0 || slot == 1) && "slot can only be 0 or 1");
     SmallVector<Value> elements;
     for (QubitSlotOpInterface member : this->members) {
       TypedValue<VectorType> operand = member.getQubitOperand(slot);
