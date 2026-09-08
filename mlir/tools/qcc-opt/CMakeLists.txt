@@ -20,6 +20,7 @@ target_link_libraries(
           MLIROpenMPDialect
           QCCJaspDialect
           QCCAuxDialect
+          QCCPrelimHLEPDialect
           # Passes
           MLIRMemRefTransforms
           MLIRArithTransforms
@@ -27,6 +28,7 @@ target_link_libraries(
           MLIRLinalgTransforms
           MLIRTensorTransforms
           MLIRBufferizationTransforms
+          QCCPrelimHLEPDialect
           QCCJaspToQC
           MLIRFuncToLLVM
           QCCToHiSEPQ
