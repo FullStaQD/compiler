@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.24...4.2)
 
 project(
-  fullstaqd-compiler # TODO: rename according to the final name when it is decided
-  DESCRIPTION "FullStaQD compiler project"
-  LANGUAGES CXX C)
+  qcc
+  DESCRIPTION "Quantum Compiler Collection, part of FullStaQD"
+  LANGUAGES C CXX)
 
 if(NOT DEFINED CMAKE_CXX_STANDARD OR CMAKE_CXX_STANDARD LESS 20)
   set(CMAKE_CXX_STANDARD
