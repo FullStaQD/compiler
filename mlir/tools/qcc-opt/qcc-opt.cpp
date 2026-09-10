@@ -14,6 +14,8 @@
 #include "qcc/Conversion/ToQIR/ToQIR.h"
 #include "qcc/Dialect/Aux_/IR/Aux_.h"
 #include "qcc/Dialect/Jasp/IR/Jasp.h"
+#include "qcc/Dialect/QCC/IR/QCC.h"
+#include "qcc/Dialect/QCC/Transforms/Passes.h"
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -66,7 +68,8 @@ int main(int argc, char** argv) {
     mlir::DLTIDialect,
     jasp::JaspDialect,
     mlir::qc::QCDialect,
-    qcc::aux::AuxDialect
+    qcc::aux::AuxDialect,
+    qcc::conn::QCCDialect
       // clang-format on
       >();
 
@@ -99,6 +102,12 @@ int main(int argc, char** argv) {
   mlir::registerConvertFuncToLLVMPass();
   qcc::registerConvertQIRToHiSEPQIntrinsics();
   qcc::registerEmitHiSEPQStart();
+  qcc::registerVerifyConnectivity();
+  qcc::registerAttachDevice();
+  qcc::registerPlaceQubits();
+  qcc::registerRoute();
+  qcc::registerOptimizeShuttling();
+  qcc::registerScheduleConcurrency();
 
   // Extension registration
   mlir::arith::registerBufferizableOpInterfaceExternalModels(registry);

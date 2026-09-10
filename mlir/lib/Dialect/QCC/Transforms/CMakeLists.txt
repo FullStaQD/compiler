@@ -1,0 +1,22 @@
+add_mlir_dialect_library(
+  QCCQCCTransforms
+  AttachDevice.cpp
+  OptimizeShuttling.cpp
+  PlaceQubits.cpp
+  Route.cpp
+  ScheduleConcurrency.cpp
+  VerifyConnectivity.cpp
+  DEPENDS
+  QCCQCCTransformsIncGen
+  LINK_LIBS
+  PUBLIC
+  QCCQCCDialect
+  QCCQCCAnalysis
+  QCCQCCDevices
+  MLIRIR
+  MLIRPass
+  MLIRSupport
+  MLIRFuncDialect
+  MLIRQCDialect)
+
+mqt_mlir_target_use_project_options(QCCQCCTransforms)

@@ -1,0 +1,17 @@
+// RUN: qcc --list-devices | FileCheck %s
+
+// `--target` and `--device` are two axes: a backend decides how code is
+// emitted, a machine decides where it runs. They are listed separately so that
+// nothing suggests picking one constrains the other.
+
+// Each machine also reports how the compiler represents a configuration over
+// it, which is derived from its declared properties rather than stated. The
+// four cases are distinct across the library, so a misclassification shows up
+// here rather than as a silent change of checking strategy.
+
+// CHECK: Available machines for --device:
+// CHECK-DAG: sc-grid-4x4 - Superconducting{{.*}}[static]
+// CHECK-DAG: qccd-linear-2 - Trapped-ion QCCD{{.*}}[ordered-partition]
+// CHECK-DAG: qccd-storage-gate - Trapped-ion QCCD{{.*}}[ordered-partition]
+// CHECK-DAG: neutral-atom-3x3 - Neutral atoms{{.*}}[injection]
+// CHECK-DAG: modular-photonic-3 - Three modules on an optical switch{{.*}}[explicit-incidence]
