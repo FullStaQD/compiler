@@ -129,6 +129,19 @@ lit build/dev/mlir/test/ -v --filter "convert"
 
 ---
 
+## Docs
+
+Build docs like so:
+
+```shell
+# Just the markdown files:
+cmake --build build/dev/ --target qcc-doc
+# For the html (open with browser at generated index.html). Needs hugo (e.g. apt install hugo on ubuntu).
+cmake --build build/dev/ --target qcc-doc-html
+```
+
+---
+
 ## Language server
 
 If you use VSCode and would like to enable the custom MLIR LSP server including quantum dialects, add this line to your
