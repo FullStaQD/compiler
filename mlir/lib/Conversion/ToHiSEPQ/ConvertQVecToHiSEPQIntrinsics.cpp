@@ -308,7 +308,7 @@ protected:
       return signalPassFailure();
     }
 
-    // 8 and 16 are the only save values for QEW for our currently hardcoded set of possible LMUL values (see
+    // 8 and 16 are the only safe values for QEW for our currently hardcoded set of possible LMUL values (see
     // HiSEPQMachine).
     if (qubitElementWidth != 8 && qubitElementWidth != 16) {
       emitError(moduleOp.getLoc()) << "'qubit-element-width' expects 8 or 16, got " << Twine(qubitElementWidth);
