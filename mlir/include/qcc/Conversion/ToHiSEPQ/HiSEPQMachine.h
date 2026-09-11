@@ -66,7 +66,7 @@ private:
   /// may depend on the HiSEP-Q LLVM fork.
   static constexpr unsigned rvvBitsPerBlock = 64;
 
-  /// The LMUL register groups the QV instructions address, narrowest first, stored as eighth times
+  /// The LMUL register groups the QV instructions address, narrowest first, stored as eight times
   /// LMUL to keep the fractional ones integral: {mf4, mf2, m1, m2, m4, m8}.
   ///
   /// NOTE: Could become a pass option in the future.
