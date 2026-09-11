@@ -44,7 +44,7 @@ class Value;
 
 namespace qcc::qvec {
 
-/// Whether `type` is a vector of qubits, the type every qubit slot carries.
+/// Whether `type` is a vector with element type `!qco.qubit`.
 inline bool isQubitVector(mlir::Type type) {
   auto vectorType = mlir::dyn_cast<mlir::VectorType>(type);
   return vectorType && mlir::isa<mlir::qco::QubitType>(vectorType.getElementType());
