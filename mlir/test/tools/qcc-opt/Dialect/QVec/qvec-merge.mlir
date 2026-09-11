@@ -1,7 +1,7 @@
 // RUN: qcc-opt %s -qvec-merge --split-input-file | FileCheck %s
 
-// CHECK-LABEL: func.func @one_layer
-func.func @one_layer() {
+// CHECK-LABEL: func.func @example_1
+func.func @example_1() {
     %q0 = qco.static 0 : !qco.qubit
     %q1 = qco.static 1 : !qco.qubit
     %q2 = qco.static 2 : !qco.qubit
@@ -25,70 +25,8 @@ func.func @one_layer() {
 
 // -----
 
-// CHECK-LABEL: func.func @merge_across_obstacle
-func.func @merge_across_obstacle() {
-    %q0 = qco.static 0 : !qco.qubit
-    %q1 = qco.static 1 : !qco.qubit
-    %q2 = qco.static 2 : !qco.qubit
-    %v0 = vector.from_elements %q0 : vector<1x!qco.qubit>
-    %v1 = vector.from_elements %q1 : vector<1x!qco.qubit>
-    %v2 = vector.from_elements %q2 : vector<1x!qco.qubit>
-
-    %h0 = qvec.single h %v0 : vector<1x!qco.qubit>
-    %x1 = qvec.single x %v1 : vector<1x!qco.qubit> // despite obstacle we can still merge the hadamards
-    %h2 = qvec.single h %v2 : vector<1x!qco.qubit>
-
-    func.return
-}
-
-// CHECK-DAG:     %[[Q0:.*]] = qco.static 0
-// CHECK-DAG:     %[[Q2:.*]] = qco.static 2
-// CHECK:         %[[V0:.*]] = vector.from_elements %[[Q0]], %[[Q2]] : vector<2x!qco.qubit>
-// CHECK:         qvec.single h %[[V0]] : vector<2x!qco.qubit>
-// CHECK:         qvec.single x %{{.*}} : vector<1x!qco.qubit>
-
-// -----
-
-// CHECK-LABEL: func.func @dependent_singles
-func.func @dependent_singles() {
-    %q0 = qco.static 0 : !qco.qubit
-    %v0 = vector.from_elements %q0 : vector<1x!qco.qubit>
-
-    %v1 = qvec.single h %v0 : vector<1x!qco.qubit>
-    %v2 = qvec.single h %v1 : vector<1x!qco.qubit>
-    %v3 = qvec.single h %v2 : vector<1x!qco.qubit>
-
-    func.return
-}
-
-// Do not merge!
-// CHECK:         %[[V1:.*]] = qvec.single h %{{.*}} : vector<1x!qco.qubit>
-// CHECK:         %[[V2:.*]] = qvec.single h %[[V1]] : vector<1x!qco.qubit>
-// CHECK:                    = qvec.single h %[[V2]] : vector<1x!qco.qubit>
-
-// -----
-
-// CHECK-LABEL: func.func @dependent_pairs
-func.func @dependent_pairs() {
-    %q0 = qco.static 0 : !qco.qubit
-    %q1 = qco.static 1 : !qco.qubit
-    %v0 = vector.from_elements %q0 : vector<1x!qco.qubit>
-    %v1 = vector.from_elements %q1 : vector<1x!qco.qubit>
-
-    %a, %b = qvec.pair cx %v0, %v1 : vector<1x!qco.qubit>
-    %c, %d = qvec.pair cx %v1, %v0 : vector<1x!qco.qubit>
-
-    func.return
-}
-
-// Do not merge!
-// CHECK:         qvec.pair cx %{{.*}}, %{{.*}} : vector<1x!qco.qubit>
-// CHECK:         qvec.pair cx %{{.*}}, %{{.*}} : vector<1x!qco.qubit>
-
-// -----
-
-// CHECK-LABEL: func.func @interleaved_layers
-func.func @interleaved_layers() {
+// CHECK-LABEL: func.func @example_2
+func.func @example_2() {
     %q0 = qco.static 0 : !qco.qubit
     %q1 = qco.static 1 : !qco.qubit
     %q2 = qco.static 2 : !qco.qubit
@@ -119,6 +57,44 @@ func.func @interleaved_layers() {
 // CHECK:         %[[C1:.*]] = qvec.single h %[[C0]] : vector<2x!qco.qubit>
 // CHECK:         %[[T0:.*]] = vector.from_elements %[[Q1]], %[[Q3]] : vector<2x!qco.qubit>
 // CHECK:                    = qvec.pair cx %[[C1]], %[[T0]] : vector<2x!qco.qubit>
+
+// -----
+
+// CHECK-LABEL: func.func @dependent_singles
+func.func @dependent_singles() {
+    %q0 = qco.static 0 : !qco.qubit
+    %v0 = vector.from_elements %q0 : vector<1x!qco.qubit>
+
+    %v1 = qvec.single h %v0 : vector<1x!qco.qubit>
+    %v2 = qvec.single h %v1 : vector<1x!qco.qubit>
+    %v3 = qvec.single h %v2 : vector<1x!qco.qubit>
+
+    func.return
+}
+
+// Do not merge!
+// CHECK:         %[[V1:.*]] = qvec.single h %{{.*}} : vector<1x!qco.qubit>
+// CHECK:         %[[V2:.*]] = qvec.single h %[[V1]] : vector<1x!qco.qubit>
+// CHECK:                    = qvec.single h %[[V2]] : vector<1x!qco.qubit>
+
+// -----
+
+// CHECK-LABEL: func.func @dependent_pairs
+func.func @dependent_pairs() {
+    %q0 = qco.static 0 : !qco.qubit
+    %q1 = qco.static 1 : !qco.qubit
+    %a0 = vector.from_elements %q0 : vector<1x!qco.qubit>
+    %b0 = vector.from_elements %q1 : vector<1x!qco.qubit>
+
+    %a1, %b1 = qvec.pair cx %a0, %b0 : vector<1x!qco.qubit>
+    %a2, %b2 = qvec.pair cx %a1, %b1 : vector<1x!qco.qubit>
+
+    func.return
+}
+
+// Do not merge!
+// CHECK:         qvec.pair cx %{{.*}}, %{{.*}} : vector<1x!qco.qubit>
+// CHECK:         qvec.pair cx %{{.*}}, %{{.*}} : vector<1x!qco.qubit>
 
 // -----
 

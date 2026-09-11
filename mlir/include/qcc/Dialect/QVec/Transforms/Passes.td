@@ -38,6 +38,7 @@ def QVecMerge : Pass<"qvec-merge", "mlir::ModuleOp"> {
       turns into
 
       ```mlir
+      // %4 represents the union of %v0 and %v1 in that order.
       %5 = qvec.single h %4 : vector<6x!qco.qubit>
       %6 = qvec.single x %3 : vector<3x!qco.qubit>
       ```

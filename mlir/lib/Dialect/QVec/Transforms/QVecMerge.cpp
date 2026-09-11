@@ -38,10 +38,6 @@
 using namespace mlir;
 using namespace qcc::qvec;
 
-//===----------------------------------------------------------------------===//
-// A uniform view of the qvec operations
-//===----------------------------------------------------------------------===//
-
 /// The number of qubits one lane of `op` carries, i.e. the op's current VF.
 static int64_t getVectorLength(QubitLaneOpInterface op) { return op.getQubitResult(0).getType().getNumElements(); }
 
