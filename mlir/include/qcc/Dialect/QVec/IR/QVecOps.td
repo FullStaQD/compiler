@@ -28,7 +28,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // intended semantics.
 class QVecOp<string mnemonic, list<Trait> traits = []>
     : Op<QVecDialect, mnemonic,
-         !listconcat(traits, [MemoryEffects<[MemRead, MemWrite]>, QVec_QubitSlotOpInterface])>;
+         !listconcat(traits, [MemoryEffects<[MemRead, MemWrite]>, QVec_QubitLaneOpInterface])>;
 
 def SingleOp : QVecOp<"single", [AllTypesMatch<["qubits_in", "qubits_out"]>]> {
   let summary = "single-qubit gate across a vector of qubits";
@@ -51,16 +51,16 @@ def SingleOp : QVecOp<"single", [AllTypesMatch<["qubits_in", "qubits_out"]>]> {
     }];
 
   let extraClassDeclaration = [{
-        /// The gate acts on one qubit, hence one slot.
-        unsigned getNumQubitSlots() { return 1; }
+        /// The gate acts on one qubit, hence one lane.
+        unsigned getNumQubitLanes() { return 1; }
 
-        ::mlir::TypedValue<::mlir::VectorType> getQubitOperand(unsigned slot) {
-          assert(slot == 0 && "no such qubit slot");
+        ::mlir::TypedValue<::mlir::VectorType> getQubitOperand(unsigned lane) {
+          assert(lane == 0 && "no such qubit lane");
           return getQubitsIn();
         }
 
-        ::mlir::TypedValue<::mlir::VectorType> getQubitResult(unsigned slot) {
-          assert(slot == 0 && "no such qubit slot");
+        ::mlir::TypedValue<::mlir::VectorType> getQubitResult(unsigned lane) {
+          assert(lane == 0 && "no such qubit lane");
           return getQubitsOut();
         }
     }];
@@ -89,17 +89,17 @@ def PairOp : QVecOp<"pair", [AllTypesMatch<["lhs_in", "rhs_in", "lhs_out", "rhs_
     }];
 
   let extraClassDeclaration = [{
-        /// The gate acts on two qubits: slot 0 is the left operand, slot 1 the right one.
-        unsigned getNumQubitSlots() { return 2; }
+        /// The gate acts on two qubits: lane 0 is the left operand, lane 1 the right one.
+        unsigned getNumQubitLanes() { return 2; }
 
-        ::mlir::TypedValue<::mlir::VectorType> getQubitOperand(unsigned slot) {
-          assert(slot < 2 && "no such qubit slot");
-          return slot == 0 ? getLhsIn() : getRhsIn();
+        ::mlir::TypedValue<::mlir::VectorType> getQubitOperand(unsigned lane) {
+          assert(lane < 2 && "no such qubit lane");
+          return lane == 0 ? getLhsIn() : getRhsIn();
         }
 
-        ::mlir::TypedValue<::mlir::VectorType> getQubitResult(unsigned slot) {
-          assert(slot < 2 && "no such qubit slot");
-          return slot == 0 ? getLhsOut() : getRhsOut();
+        ::mlir::TypedValue<::mlir::VectorType> getQubitResult(unsigned lane) {
+          assert(lane < 2 && "no such qubit lane");
+          return lane == 0 ? getLhsOut() : getRhsOut();
         }
     }];
 }
@@ -126,16 +126,16 @@ def MzOp : QVecOp<"mz", [AllTypesMatch<["qubits_in", "qubits_out"]>,
     }];
 
   let extraClassDeclaration = [{
-        /// One slot for the measured qubits. `bits` is classical and hence outside the slots.
-        unsigned getNumQubitSlots() { return 1; }
+        /// One lane for the measured qubits. `bits` is classical and hence outside the lanes.
+        unsigned getNumQubitLanes() { return 1; }
 
-        ::mlir::TypedValue<::mlir::VectorType> getQubitOperand(unsigned slot) {
-          assert(slot == 0 && "no such qubit slot");
+        ::mlir::TypedValue<::mlir::VectorType> getQubitOperand(unsigned lane) {
+          assert(lane == 0 && "no such qubit lane");
           return getQubitsIn();
         }
 
-        ::mlir::TypedValue<::mlir::VectorType> getQubitResult(unsigned slot) {
-          assert(slot == 0 && "no such qubit slot");
+        ::mlir::TypedValue<::mlir::VectorType> getQubitResult(unsigned lane) {
+          assert(lane == 0 && "no such qubit lane");
           return getQubitsOut();
         }
     }];

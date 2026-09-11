@@ -42,18 +42,18 @@ using namespace qcc::qvec;
 // A uniform view of the qvec operations
 //===----------------------------------------------------------------------===//
 
-/// The number of qubits one slot of `op` carries, i.e. the op's current VF.
-static int64_t getVectorLength(QubitSlotOpInterface op) { return op.getQubitResult(0).getType().getNumElements(); }
+/// The number of qubits one lane of `op` carries, i.e. the op's current VF.
+static int64_t getVectorLength(QubitLaneOpInterface op) { return op.getQubitResult(0).getType().getNumElements(); }
 
 /// Identical bucket key for two ops expresses the fact that they can in principle be merged if no other op blocks and
-/// qubit slots are disjoint. BucketKey = (operation name, secondary bucket key).
+/// qubit lanes are disjoint. BucketKey = (operation name, secondary bucket key).
 using BucketKey = std::pair<OperationName, uint32_t>;
 
 /// Get the second component of the `BucketKey`.
 ///
 /// Returning nullopt at runtime is considered a bug, hence the assert in the impl. We still emit a null-opt to avoid
 /// correctness mistakes during production run. Returning a nullopt just means a possibly missed merge opportunity.
-static std::optional<uint32_t> getSecondaryBucketKey(QubitSlotOpInterface op) {
+static std::optional<uint32_t> getSecondaryBucketKey(QubitLaneOpInterface op) {
   const std::optional<uint32_t> secondaryKey =
       TypeSwitch<Operation*, std::optional<uint32_t>>(op)
           .Case([](SingleOp singleOp) { return static_cast<uint32_t>(singleOp.getGateKind()); })
@@ -109,19 +109,19 @@ namespace {
 
 /// The operations supposed to be merged into one, plus what the admission test needs.
 struct Group {
-  SmallVector<QubitSlotOpInterface> members;
-  /// Total number of qubits per operand slot, i.e. the VF the merged operation would have.
+  SmallVector<QubitLaneOpInterface> members;
+  /// Total number of qubits per operand lane, i.e. the VF the merged operation would have.
   int64_t width = 0;
   /// The qubits the group acts on, i.e. the merged operations would have.
   DenseSet<qco::StaticOp> qubits;
 
-  /// Build the first (slot=0) or second (slot=1, if available) qubit vector operand for the merged operation by
-  /// collecting each member's qubits in the same slots.
-  Value buildMergedOperand(OpBuilder& builder, Location loc, unsigned slot) const {
-    assert((slot == 0 || slot == 1) && "slot can only be 0 or 1");
+  /// Build the first (lane=0) or second (lane=1, if available) qubit vector operand for the merged operation by
+  /// collecting each member's qubits in the same lanes.
+  Value buildMergedOperand(OpBuilder& builder, Location loc, unsigned lane) const {
+    assert((lane == 0 || lane == 1) && "lane can only be 0 or 1");
     SmallVector<Value> elements;
-    for (QubitSlotOpInterface member : this->members) {
-      TypedValue<VectorType> operand = member.getQubitOperand(slot);
+    for (QubitLaneOpInterface member : this->members) {
+      TypedValue<VectorType> operand = member.getQubitOperand(lane);
       for (int64_t index = 0; index < operand.getType().getNumElements(); ++index) {
         elements.push_back(vector::ExtractOp::create(builder, loc, operand, index));
       }
@@ -137,7 +137,7 @@ struct Group {
 /// Returns the list of static qubits this `qvec` op operates on. Or nullopt if any of them cannot be identified.
 ///
 /// The static ops are found by tracing each qubit element through the IR.
-static std::optional<SmallVector<qco::StaticOp>> getStaticQubits(QubitSlotOpInterface op) {
+static std::optional<SmallVector<qco::StaticOp>> getStaticQubits(QubitLaneOpInterface op) {
   SmallVector<qco::StaticOp> qubits;
   for (auto operand : op.getQubitOperands()) {
     for (int64_t index = 0; index < operand.getType().getNumElements(); ++index) {
@@ -160,13 +160,13 @@ static void mergeGroup(const Group& group) {
     return; // trivial case
   }
 
-  QubitSlotOpInterface firstOp = group.members.front();
+  QubitLaneOpInterface firstOp = group.members.front();
   OpBuilder builder(firstOp); // important: sets insertion point right before firstOp.
   Location loc = firstOp->getLoc();
 
   SmallVector<Value, 2> operands;
-  for (unsigned slot = 0, numSlots = firstOp.getNumQubitSlots(); slot < numSlots; ++slot) {
-    operands.push_back(group.buildMergedOperand(builder, loc, slot));
+  for (unsigned lane = 0, numLanes = firstOp.getNumQubitLanes(); lane < numLanes; ++lane) {
+    operands.push_back(group.buildMergedOperand(builder, loc, lane));
   }
 
   Operation* merged =
@@ -185,7 +185,7 @@ static void mergeGroup(const Group& group) {
 
   // Replace uses of members by our newly created merged op.
   int64_t offset = 0;
-  for (QubitSlotOpInterface member : group.members) {
+  for (QubitLaneOpInterface member : group.members) {
     const int64_t width = getVectorLength(member);
     SmallVector<Value> replacements;
     for (Value result : merged->getResults()) {
@@ -197,7 +197,7 @@ static void mergeGroup(const Group& group) {
     offset += width;
   }
 
-  for (QubitSlotOpInterface member : group.members) {
+  for (QubitLaneOpInterface member : group.members) {
     member->erase();
   }
 }
@@ -248,16 +248,16 @@ static void mergeGroup(const Group& group) {
 static void mergeOpsInBlock(Block& block, int64_t limitVF) {
   // Layering. layer(op) = 1 + max(layer(op_pred) for all predecessors op_pred of op).
   DenseMap<Operation*, unsigned> layers;
-  llvm::MapVector<std::pair<unsigned, BucketKey>, SmallVector<QubitSlotOpInterface>> buckets;
+  llvm::MapVector<std::pair<unsigned, BucketKey>, SmallVector<QubitLaneOpInterface>> buckets;
   for (Operation& op : block) {
-    auto slotOp = dyn_cast<QubitSlotOpInterface>(&op);
-    if (!slotOp) {
+    auto laneOp = dyn_cast<QubitLaneOpInterface>(&op);
+    if (!laneOp) {
       continue;
     }
 
     SmallPtrSet<Operation*, 4> producers;
     bool allProducersKnown = true;
-    for (auto operand : slotOp.getQubitOperands()) {
+    for (auto operand : laneOp.getQubitOperands()) {
       allProducersKnown &= collectQubitProducers(operand, producers);
     }
 
@@ -270,7 +270,7 @@ static void mergeOpsInBlock(Block& block, int64_t limitVF) {
     }
 
     // An operation we cannot bucket still takes part in the layering, so that its consumers end up in a later layer.
-    layers[slotOp] = layer;
+    layers[laneOp] = layer;
 
     // If a producer is missing the layer might have a higher value than what we assigned. We do not bucket the op in
     // this case (meaning it does not participate in merging) to avoid mistakes.
@@ -278,11 +278,11 @@ static void mergeOpsInBlock(Block& block, int64_t limitVF) {
       continue;
     }
 
-    const std::optional<uint32_t> secondaryKey = getSecondaryBucketKey(slotOp);
+    const std::optional<uint32_t> secondaryKey = getSecondaryBucketKey(laneOp);
     if (!secondaryKey) {
       continue;
     }
-    buckets[{layer, BucketKey{op.getName(), *secondaryKey}}].push_back(slotOp);
+    buckets[{layer, BucketKey{op.getName(), *secondaryKey}}].push_back(laneOp);
   }
 
   // Sort keys by layer index (ascending).
@@ -296,7 +296,7 @@ static void mergeOpsInBlock(Block& block, int64_t limitVF) {
 
   for (const auto& key : keys) {
     Group group;
-    for (QubitSlotOpInterface candidate : buckets[key]) {
+    for (QubitLaneOpInterface candidate : buckets[key]) {
       const int64_t width = getVectorLength(candidate);
       std::optional staticQubits = getStaticQubits(candidate);
 

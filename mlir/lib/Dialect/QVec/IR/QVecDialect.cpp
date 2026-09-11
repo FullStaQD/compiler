@@ -147,9 +147,9 @@ static QubitStep stepBackVectorElement(Value qubits, int64_t index) {
     return QubitStep(QubitStep::Kind::Origin); // A block argument.
   }
 
-  // A `qvec` operation hands its qubits on slot by slot, element order untouched, so the index carries over.
-  if (auto slotOp = dyn_cast<QubitSlotOpInterface>(definingOp)) {
-    Value tied = slotOp.getTiedQubitOperand(cast<OpResult>(qubits));
+  // A `qvec` operation hands its qubits on lane by lane, element order untouched, so the index carries over.
+  if (auto laneOp = dyn_cast<QubitLaneOpInterface>(definingOp)) {
+    Value tied = laneOp.getTiedQubitOperand(cast<OpResult>(qubits));
     return tied ? stepTo(tied, index) : QubitStep(QubitStep::Kind::Origin);
   }
 
@@ -210,7 +210,7 @@ bool qcc::qvec::collectQubitProducers(TypedValue<VectorType> qubits, SmallPtrSet
   for (int64_t index = 0, numElements = qubits.getType().getNumElements(); index < numElements; ++index) {
     // Every step moves strictly towards a definition, so the walk terminates.
     for (QubitRef qubit{.value = qubits, .index = index};;) {
-      if (auto producer = dyn_cast_if_present<QubitSlotOpInterface>(qubit.value.getDefiningOp())) {
+      if (auto producer = dyn_cast_if_present<QubitLaneOpInterface>(qubit.value.getDefiningOp())) {
         producers.insert(producer);
         break;
       }
